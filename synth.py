@@ -1,6 +1,7 @@
 import numpy as np
 import soundfile as sf
-from scipy.signal import sawtooth, square, butter, lfilter
+import matplotlib.pyplot as plt
+from scipy.signal import sawtooth, square, butter, lfilter, spectrogram
 from patches import PATCHES
 
 SR = 44100
@@ -33,6 +34,37 @@ def lowpass_filter(audio, cutoff=2000):
     b, a = butter(4, normal_cutoff, btype="low")
     return lfilter(b, a, audio)
 
+
+def show_spectrogram(audio):
+    import librosa
+    import librosa.display
+
+    D = librosa.stft(
+        audio,
+        n_fft=4096,
+        hop_length=512
+    )
+
+    S_db = librosa.amplitude_to_db(
+        np.abs(D),
+        ref=np.max
+    )
+
+    plt.figure(figsize=(12, 6))
+
+    librosa.display.specshow(
+        S_db,
+        sr=SR,
+        hop_length=512,
+        x_axis="time",
+        y_axis="log",
+        cmap="viridis"
+    )
+
+    plt.colorbar(format="%+2.0f dB")
+    plt.title("Log-Frequency Spectrogram")
+
+    plt.show()
 
 def render_patch(
     freq=261.63,
@@ -72,5 +104,7 @@ if __name__ == "__main__":
     audio = render_patch(**patch)
 
     sf.write("dark_saw.wav", audio, SR)
+
+    show_spectrogram(audio)
 
     print("Saved dark_saw.wav")

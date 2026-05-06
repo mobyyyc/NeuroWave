@@ -1,7 +1,7 @@
 PATCHES = {
     "dark_saw": {
         "wave": "saw",
-        "cutoff": 600,
+        "cutoff": 2000,
         "level": 0.8,
         "attack": 0.01,
         "decay": 0.2,
