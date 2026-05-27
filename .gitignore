@@ -1,3 +1,15 @@
+# Local Python environments
+.venv/
 venv/
+
+# Python caches
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Generated audio and experiment outputs
 *.wav
+data/generated/
+runs/
+models/
