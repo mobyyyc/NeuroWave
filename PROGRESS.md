@@ -43,7 +43,7 @@ Current active phase: Milestone A - Clean Synth Engine.
 
 Goal: turn the current script into a modular, deterministic, parameterized synth engine without changing the sound accidentally.
 
-- [ ] Add a tiny smoke test command or script that renders the current `dark_saw` path.
+- [x] Add a tiny smoke test command or script that renders the current `dark_saw` path.
 - [ ] Move `SR = 44100` into a central constants location.
 - [ ] Move `adsr()` from `synth.py` into `minisynth/envelopes.py`.
 - [ ] Add a focused unit test for `adsr()` length and value range.
@@ -164,3 +164,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `1bec0d4 Ignore local development artifacts`
 - Added initial `minisynth/` package scaffold and placeholder project directories.
   Commit: `f7b1e8b Add initial MiniSynth package scaffold`
+- Added `scripts/smoke_render.py` to verify the current `dark_saw` render path before refactoring.
+  Commit: `Add render smoke test`
