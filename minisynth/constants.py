@@ -1,3 +1,3 @@
-"""Shared constants for MiniSynth."""
+"""Shared constants for NeuroWave."""
 
 DEFAULT_SAMPLE_RATE = 44100

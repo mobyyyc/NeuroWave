@@ -1,8 +1,10 @@
-# MiniSynth Roadmap
+# NeuroWave Roadmap
 
 ## Goal
 
-MiniSynth is intended to become a synthesizer that can listen to a short audio example and recreate a similar sound by choosing synthesizer parameters.
+NeuroWave is intended to become a synthesizer that can listen to a short audio example and recreate a similar sound by choosing synthesizer parameters.
+
+Branding note: the project is now called NeuroWave. The current repository folder and Python package remain `MiniSynth` / `minisynth` until an explicit architecture rename is requested.
 
 The core idea is analysis by synthesis:
 
@@ -50,7 +52,7 @@ The next version should make those pieces schema-driven.
 ### Proposed File Structure
 
 ```text
-MiniSynth/
+NeuroWave/
   minisynth/
     __init__.py
     engine.py          # render audio from SynthConfig
@@ -427,7 +429,7 @@ The optimizer loop:
 
 Stage 4 is complete when:
 
-- Given a target made by MiniSynth, the optimizer can recover a similar patch.
+- Given a target made by NeuroWave, the optimizer can recover a similar patch.
 - The recovered patch produces a clearly similar sound.
 - The result is saved as JSON plus WAV.
 - The optimizer can be used as a quality baseline for ML.
@@ -493,7 +495,7 @@ Stage 5 is complete when:
 
 ### Objective
 
-Use short user-provided audio clips, not only synthetic MiniSynth clips.
+Use short user-provided audio clips, not only synthetic NeuroWave clips.
 
 This is harder because real audio may contain:
 
@@ -541,7 +543,7 @@ Stage 6 is complete when:
 
 ### Objective
 
-Make MiniSynth usable as a tool, not just a research script.
+Make NeuroWave usable as a tool, not just a research script.
 
 Possible interfaces:
 
@@ -552,11 +554,11 @@ Possible interfaces:
 Useful commands:
 
 ```bash
-minisynth render presets/dark_saw.json --out dark_saw.wav
-minisynth random --count 100 --out data/generated/v1
-minisynth match target.wav --out runs/match_001
-minisynth train --dataset data/generated/v1
-minisynth predict target.wav --model models/inverse_v1.pt
+neurowave render presets/dark_saw.json --out dark_saw.wav
+neurowave random --count 100 --out data/generated/v1
+neurowave match target.wav --out runs/match_001
+neurowave train --dataset data/generated/v1
+neurowave predict target.wav --model models/inverse_v1.pt
 ```
 
 ### UI Ideas
@@ -593,7 +595,7 @@ The UI should show:
 - Add feature extraction.
 - Add audio similarity loss.
 - Add random search baseline.
-- Match MiniSynth-generated targets.
+- Match NeuroWave-generated targets.
 
 ### Milestone D: First ML Model
 

@@ -1,20 +1,22 @@
-# MiniSynth Daily Workflow
+# NeuroWave Daily Workflow
 
-This file tells future Codex sessions how to work on MiniSynth.
+This file tells future Codex sessions how to work on NeuroWave.
+
+Note: the project brand is NeuroWave. The local folder, GitHub repo, and Python package currently remain `MiniSynth` / `minisynth` to avoid changing file architecture.
 
 ## New Session Startup Prompt
 
 If starting from a fresh Codex session, use this prompt:
 
 ```text
-Go to /Users/moby/Desktop/Coding/MiniSynth and start the MiniSynth daily workflow.
+Go to /Users/moby/Desktop/Coding/MiniSynth and start the NeuroWave daily workflow.
 Read WORKFLOW.md, PLAN.md, and PROGRESS.md first.
 Do not modify anything until I approve today's task.
 ```
 
 ## Required Startup Steps
 
-When the user asks to start the MiniSynth daily workflow:
+When the user asks to start the NeuroWave daily workflow:
 
 1. Change context to `/Users/moby/Desktop/Coding/MiniSynth`.
 2. Read `WORKFLOW.md`.
@@ -80,7 +82,7 @@ Suggested commit message style:
 Add render smoke test
 Move ADSR envelope into package
 Add SynthConfig normalization helpers
-Update MiniSynth progress tracker
+Update NeuroWave progress tracker
 ```
 
 ## Progress Tracker Rules
@@ -115,7 +117,7 @@ Update `PROGRESS.md` after updating `PLAN.md` so daily tasks match the plan.
 
 ## Current Project Goal
 
-MiniSynth is moving toward an ML-controllable synthesizer that can listen to a short audio clip and approximate it by predicting editable synthesizer parameters.
+NeuroWave is moving toward an ML-controllable synthesizer that can listen to a short audio clip and approximate it by predicting editable synthesizer parameters.
 
 The first priority is not ML. The first priority is a deterministic, parameterized synth engine with a stable config schema.
 

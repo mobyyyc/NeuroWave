@@ -1,1 +1,1 @@
-"""Audio effects for future MiniSynth patches."""
+"""Audio effects for future NeuroWave patches."""

@@ -1,4 +1,8 @@
-# MiniSynth Progress Tracker
+# NeuroWave Progress Tracker
+
+Project brand: NeuroWave.
+
+Architecture note: the local folder, GitHub repo, and Python package currently remain `MiniSynth` / `minisynth`. Do not rename files, folders, imports, or package paths unless explicitly requested.
 
 ## How To Use This Tracker
 
@@ -109,7 +113,7 @@ Goal: match target audio by optimizing synth parameters before training neural n
 - [ ] Add random search over parameter vectors.
 - [ ] Save best candidate patch and WAV into `runs/`.
 - [ ] Add progress output for search runs.
-- [ ] Test matching against a MiniSynth-generated target.
+- [ ] Test matching against a NeuroWave-generated target.
 - [ ] Add a simple comparison report file in each run directory.
 - [ ] Commit Milestone D completion.
 
@@ -142,15 +146,15 @@ Goal: approximate clean single-note real audio clips.
 
 ## Milestone G: Interface And Workflow
 
-Goal: make MiniSynth usable as a tool.
+Goal: make NeuroWave usable as a tool.
 
 - [ ] Define CLI command names.
 - [ ] Add CLI entry point.
-- [ ] Add `minisynth render`.
-- [ ] Add `minisynth random`.
-- [ ] Add `minisynth compare`.
-- [ ] Add `minisynth match`.
-- [ ] Add `minisynth predict`.
+- [ ] Add `neurowave render`.
+- [ ] Add `neurowave random`.
+- [ ] Add `neurowave compare`.
+- [ ] Add `neurowave match`.
+- [ ] Add `neurowave predict`.
 - [ ] Consider a simple local web UI after CLI is stable.
 - [ ] Commit Milestone G completion.
 
@@ -194,3 +198,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Add initial SynthConfig model`
 - Added parameter metadata definitions for current `SynthConfig` fields.
   Commit: `Add parameter metadata schema`
+- Renamed project-facing brand references from MiniSynth to NeuroWave while preserving package and repo architecture.
+  Commit: `Rename project branding to NeuroWave`

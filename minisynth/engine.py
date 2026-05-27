@@ -1,4 +1,4 @@
-"""Audio rendering entry points for parameterized MiniSynth patches."""
+"""Audio rendering entry points for parameterized NeuroWave patches."""
 
 import numpy as np
 
