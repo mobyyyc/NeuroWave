@@ -50,7 +50,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Move `oscillator()` into `minisynth/oscillators.py`.
 - [x] Add triangle waveform support.
 - [x] Add wave-mix rendering for sine, triangle, saw, square, and noise.
-- [ ] Add tests for wave-mix normalization.
+- [x] Add tests for wave-mix normalization.
 - [ ] Move `lowpass_filter()` into `minisynth/filters.py`.
 - [ ] Add tests that low-pass filtering preserves array length and finite values.
 - [ ] Move `render_patch()` into `minisynth/engine.py`.
@@ -178,3 +178,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Add triangle oscillator waveform`
 - Added normalized wave-mix rendering for sine, triangle, saw, square, and deterministic noise.
   Commit: `Add oscillator wave-mix rendering`
+- Added focused unit tests for wave-mix normalization and mixed waveform output.
+  Commit: `Add wave-mix normalization tests`
