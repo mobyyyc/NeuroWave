@@ -51,7 +51,7 @@ The next version should make those pieces schema-driven.
 
 ```text
 MiniSynth/
-  synth/
+  minisynth/
     __init__.py
     engine.py          # render audio from SynthConfig
     schema.py          # parameter definitions and normalization
@@ -674,7 +674,7 @@ Models trained on clean synthetic audio may fail on real recordings. Real-clip m
 
 The next implementation task should be Milestone A:
 
-1. Create a `synth/` package.
+1. Create a `minisynth/` package.
 2. Define a `SynthConfig` data structure.
 3. Define a parameter schema with normalization and denormalization.
 4. Move oscillator, filter, envelope, and render logic into modules.
