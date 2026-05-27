@@ -46,7 +46,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Add a tiny smoke test command or script that renders the current `dark_saw` path.
 - [x] Move `SR = 44100` into a central constants location.
 - [x] Move `adsr()` from `synth.py` into `minisynth/envelopes.py`.
-- [ ] Add a focused unit test for `adsr()` length and value range.
+- [x] Add a focused unit test for `adsr()` length and value range.
 - [ ] Move `oscillator()` into `minisynth/oscillators.py`.
 - [ ] Add triangle waveform support.
 - [ ] Add wave-mix rendering for sine, triangle, saw, square, and noise.
@@ -170,3 +170,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Move sample rate into constants`
 - Moved the ADSR envelope generator into `minisynth/envelopes.py`.
   Commit: `Move ADSR into envelopes module`
+- Added a focused standard-library unit test for ADSR envelope length and value range.
+  Commit: `Add ADSR envelope unit test`
