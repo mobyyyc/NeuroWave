@@ -4,6 +4,8 @@
 
 This file is the day-to-day execution layer on top of `PLAN.md`.
 
+For the full new-session operating procedure, read `WORKFLOW.md` first.
+
 Use `PLAN.md` for the long-term architecture and reasoning. Use this file for concrete work items, status, and daily progress.
 
 Rules for future work:
