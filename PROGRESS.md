@@ -52,7 +52,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Add wave-mix rendering for sine, triangle, saw, square, and noise.
 - [x] Add tests for wave-mix normalization.
 - [x] Move `lowpass_filter()` into `minisynth/filters.py`.
-- [ ] Add tests that low-pass filtering preserves array length and finite values.
+- [x] Add tests that low-pass filtering preserves array length and finite values.
 - [ ] Move `render_patch()` into `minisynth/engine.py`.
 - [ ] Make `render_patch()` return audio only and never save files or show plots.
 - [ ] Add tests for deterministic rendering from the same patch.
@@ -182,3 +182,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Add wave-mix normalization tests`
 - Moved the low-pass filter implementation into `minisynth/filters.py`.
   Commit: `Move low-pass filter into filters module`
+- Added focused unit tests for low-pass filter length preservation and finite output.
+  Commit: `Add low-pass filter unit tests`
