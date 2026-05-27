@@ -58,8 +58,9 @@ After the user approves the proposed task:
    - Add a dated entry under "Progress Log".
    - Include the commit hash after committing if possible.
 5. Commit the completed work.
-6. If the progress log needs the final commit hash, amend or add a follow-up tracker commit only when useful.
-7. Report:
+6. Push the commit to the remote branch.
+7. If the progress log needs the final commit hash, amend or add a follow-up tracker commit only when useful, then push that commit too.
+8. Report:
    - What changed.
    - What verification ran.
    - Commit message and hash.
@@ -68,6 +69,7 @@ After the user approves the proposed task:
 ## Commit Rules
 
 - Commit after each completed task or coherent group of tiny tasks.
+- Push immediately after each commit.
 - Keep commit messages short and specific.
 - Do not commit generated outputs unless the user explicitly asks.
 - The repo is configured locally with `commit.gpgsign=false`, so normal commits should not require GPG signing.

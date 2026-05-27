@@ -16,6 +16,7 @@ Rules for future work:
 - After completing a task, change `[ ]` to `[x]`.
 - Add a short note under "Progress Log" with the date, what changed, and the commit hash.
 - Commit after each completed task or coherent group of tiny tasks.
+- Push immediately after each commit.
 - Keep generated files such as `.venv/`, `*.wav`, `data/generated/`, `runs/`, and `models/` out of git unless there is a deliberate reason.
 - If the project direction changes, update `PLAN.md` first, then update this tracker.
 
