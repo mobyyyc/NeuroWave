@@ -23,6 +23,12 @@ class TestRenderPatch(unittest.TestCase):
             self.assertLessEqual(float(np.max(np.abs(audio))), 0.8)
             self.assertFalse(os.path.exists(os.path.join(tmpdir, "dark_saw.wav")))
 
+    def test_render_patch_is_deterministic_for_same_parameters(self):
+        first = render_patch(length=1.5)
+        second = render_patch(length=1.5)
+
+        np.testing.assert_array_equal(first, second)
+
 
 if __name__ == "__main__":
     unittest.main()

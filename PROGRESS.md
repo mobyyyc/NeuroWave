@@ -55,7 +55,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Add tests that low-pass filtering preserves array length and finite values.
 - [x] Move `render_patch()` into `minisynth/engine.py`.
 - [x] Make `render_patch()` return audio only and never save files or show plots.
-- [ ] Add tests for deterministic rendering from the same patch.
+- [x] Add tests for deterministic rendering from the same patch.
 - [ ] Create initial `SynthConfig` data model in `minisynth/schema.py`.
 - [ ] Define parameter metadata type with name, kind, min, max, default, scale, group, and `ml_enabled`.
 - [ ] Add linear normalization and denormalization helpers.
@@ -188,3 +188,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Move render patch into engine module`
 - Added an engine test proving `render_patch()` returns audio without writing a WAV file.
   Commit: `Add render patch purity test`
+- Added an engine test proving identical patch parameters render identical audio.
+  Commit: `Add deterministic render test`
