@@ -48,7 +48,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Move `adsr()` from `synth.py` into `minisynth/envelopes.py`.
 - [x] Add a focused unit test for `adsr()` length and value range.
 - [x] Move `oscillator()` into `minisynth/oscillators.py`.
-- [ ] Add triangle waveform support.
+- [x] Add triangle waveform support.
 - [ ] Add wave-mix rendering for sine, triangle, saw, square, and noise.
 - [ ] Add tests for wave-mix normalization.
 - [ ] Move `lowpass_filter()` into `minisynth/filters.py`.
@@ -174,3 +174,5 @@ Goal: make MiniSynth usable as a tool.
   Commit: `Add ADSR envelope unit test`
 - Moved the existing sine, saw, and square oscillator generator into `minisynth/oscillators.py`.
   Commit: `Move oscillator into oscillators module`
+- Added triangle waveform support to the oscillator generator.
+  Commit: `Add triangle oscillator waveform`

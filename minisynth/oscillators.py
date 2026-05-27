@@ -11,6 +11,8 @@ def oscillator(wave, freq, length, sample_rate=DEFAULT_SAMPLE_RATE):
 
     if wave == "sine":
         return np.sin(2 * np.pi * freq * t)
+    elif wave == "triangle":
+        return sawtooth(2 * np.pi * freq * t, width=0.5)
     elif wave == "saw":
         return sawtooth(2 * np.pi * freq * t)
     elif wave == "square":
