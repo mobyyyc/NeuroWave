@@ -3,29 +3,10 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 from scipy.signal import sawtooth, square
 from minisynth.constants import DEFAULT_SAMPLE_RATE
+from minisynth.envelopes import adsr
 from patches import PATCHES
 
 SR = DEFAULT_SAMPLE_RATE
-
-
-def adsr(length, attack=0.01, decay=0.2, sustain=0.7, release=0.3):
-    n = int(length * SR)
-    env = np.ones(n) * sustain
-
-    a = int(attack * SR)
-    d = int(decay * SR)
-    r = int(release * SR)
-
-    if a > 0:
-        env[:a] = np.linspace(0, 1, a)
-
-    if d > 0:
-        env[a:a + d] = np.linspace(1, sustain, d)
-
-    if r > 0:
-        env[-r:] = np.linspace(sustain, 0, r)
-
-    return env
 
 
 def oscillator(wave, freq, length):
