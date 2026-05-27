@@ -1,7 +1,7 @@
 import unittest
 
 from minisynth.engine import render_patch
-from minisynth.schema import SynthConfig
+from minisynth.schema import PARAMETERS, Parameter, SynthConfig
 
 
 class TestSynthConfig(unittest.TestCase):
@@ -31,6 +31,25 @@ class TestSynthConfig(unittest.TestCase):
 
         audio = render_patch(**kwargs)
         self.assertEqual(len(audio), 66150)
+
+    def test_parameter_metadata_covers_synth_config_fields(self):
+        config_fields = set(SynthConfig().__dataclass_fields__)
+        parameter_names = {parameter.name for parameter in PARAMETERS}
+
+        self.assertEqual(parameter_names, config_fields)
+
+    def test_parameter_metadata_includes_required_fields(self):
+        parameter = PARAMETERS[0]
+
+        self.assertIsInstance(parameter, Parameter)
+        self.assertEqual(parameter.name, "freq")
+        self.assertEqual(parameter.kind, "float")
+        self.assertEqual(parameter.minimum, 20.0)
+        self.assertEqual(parameter.maximum, 20000.0)
+        self.assertEqual(parameter.default, 261.63)
+        self.assertEqual(parameter.scale, "log")
+        self.assertEqual(parameter.group, "global")
+        self.assertTrue(parameter.ml_enabled)
 
 
 if __name__ == "__main__":
