@@ -2,9 +2,10 @@ import numpy as np
 import soundfile as sf
 import matplotlib.pyplot as plt
 from scipy.signal import sawtooth, square
+from minisynth.constants import DEFAULT_SAMPLE_RATE
 from patches import PATCHES
 
-SR = 44100
+SR = DEFAULT_SAMPLE_RATE
 
 
 def adsr(length, attack=0.01, decay=0.2, sustain=0.7, release=0.3):
