@@ -77,7 +77,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 
 Goal: generate labeled synthetic data from known parameters.
 
-- [ ] Create `scripts/random_patch.py` with seeded random patch generation.
+- [x] Create `scripts/random_patch.py` with seeded random patch generation.
 - [ ] Add constraints so random patches are not silent.
 - [ ] Add constraints so generated audio avoids clipping.
 - [ ] Save generated patch JSON files under `data/generated/v1/params/`.
@@ -220,3 +220,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Remove legacy synth.py wrapper`
 - Completed Milestone A and moved the active phase to Milestone B dataset tools.
   Commit: `Complete Milestone A`
+- Added seeded random patch generation for creating schema-valid parameter JSON.
+  Commit: `Add seeded random patch generator`
