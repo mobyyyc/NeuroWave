@@ -1,8 +1,7 @@
 """NeuroWave package.
 
-The current renderer still lives in the top-level `synth.py` script.
-Future refactors should move engine, schema, and audio utilities into this
-package without changing behavior first.
+Core rendering, schema, and audio utilities live in this package. The public
+project brand is NeuroWave while the package name remains `minisynth` for now.
 """
 
 __all__ = []
