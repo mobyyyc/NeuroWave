@@ -6,7 +6,9 @@ from minisynth.schema import (
     Parameter,
     SynthConfig,
     denormalize_linear,
+    denormalize_log,
     normalize_linear,
+    normalize_log,
 )
 
 
@@ -77,6 +79,29 @@ class TestSynthConfig(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             denormalize_linear(0.5, 1.0, 1.0)
+
+    def test_log_normalization_round_trip(self):
+        normalized = normalize_log(200.0, 20.0, 20000.0)
+        value = denormalize_log(normalized, 20.0, 20000.0)
+
+        self.assertAlmostEqual(value, 200.0)
+
+    def test_log_normalization_places_geometric_mean_at_half(self):
+        normalized = normalize_log(2000.0, 20.0, 200000.0)
+        value = denormalize_log(0.5, 20.0, 200000.0)
+
+        self.assertAlmostEqual(normalized, 0.5)
+        self.assertAlmostEqual(value, 2000.0)
+
+    def test_log_normalization_rejects_invalid_ranges(self):
+        with self.assertRaises(ValueError):
+            normalize_log(10.0, 0.0, 100.0)
+
+        with self.assertRaises(ValueError):
+            normalize_log(0.0, 1.0, 100.0)
+
+        with self.assertRaises(ValueError):
+            denormalize_log(0.5, 0.0, 100.0)
 
 
 if __name__ == "__main__":

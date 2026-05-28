@@ -1,6 +1,7 @@
 """Parameter schema and normalization helpers for ML-ready synth configs."""
 
 from dataclasses import asdict, dataclass
+import math
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,26 @@ def denormalize_linear(normalized, minimum, maximum):
         raise ValueError("maximum must be greater than minimum")
 
     return minimum + normalized * (maximum - minimum)
+
+
+def normalize_log(value, minimum, maximum):
+    if minimum <= 0:
+        raise ValueError("minimum must be positive for logarithmic normalization")
+    if maximum <= minimum:
+        raise ValueError("maximum must be greater than minimum")
+    if value <= 0:
+        raise ValueError("value must be positive for logarithmic normalization")
+
+    return (math.log(value) - math.log(minimum)) / (math.log(maximum) - math.log(minimum))
+
+
+def denormalize_log(normalized, minimum, maximum):
+    if minimum <= 0:
+        raise ValueError("minimum must be positive for logarithmic denormalization")
+    if maximum <= minimum:
+        raise ValueError("maximum must be greater than minimum")
+
+    return math.exp(math.log(minimum) + normalized * (math.log(maximum) - math.log(minimum)))
 
 
 PARAMETERS = (
