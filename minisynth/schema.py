@@ -35,6 +35,20 @@ class SynthConfig:
         return asdict(self)
 
 
+def normalize_linear(value, minimum, maximum):
+    if maximum <= minimum:
+        raise ValueError("maximum must be greater than minimum")
+
+    return (value - minimum) / (maximum - minimum)
+
+
+def denormalize_linear(normalized, minimum, maximum):
+    if maximum <= minimum:
+        raise ValueError("maximum must be greater than minimum")
+
+    return minimum + normalized * (maximum - minimum)
+
+
 PARAMETERS = (
     Parameter("freq", "float", 20.0, 20000.0, 261.63, "log", "global"),
     Parameter("length", "float", 0.05, 10.0, 1.5, "linear", "global"),

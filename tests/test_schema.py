@@ -1,7 +1,13 @@
 import unittest
 
 from minisynth.engine import render_patch
-from minisynth.schema import PARAMETERS, Parameter, SynthConfig
+from minisynth.schema import (
+    PARAMETERS,
+    Parameter,
+    SynthConfig,
+    denormalize_linear,
+    normalize_linear,
+)
 
 
 class TestSynthConfig(unittest.TestCase):
@@ -50,6 +56,27 @@ class TestSynthConfig(unittest.TestCase):
         self.assertEqual(parameter.scale, "log")
         self.assertEqual(parameter.group, "global")
         self.assertTrue(parameter.ml_enabled)
+
+    def test_linear_normalization_round_trip(self):
+        normalized = normalize_linear(0.495, 0.0, 0.99)
+        value = denormalize_linear(normalized, 0.0, 0.99)
+
+        self.assertAlmostEqual(normalized, 0.5)
+        self.assertAlmostEqual(value, 0.495)
+
+    def test_linear_normalization_handles_negative_ranges(self):
+        normalized = normalize_linear(0.0, -1200.0, 1200.0)
+        value = denormalize_linear(normalized, -1200.0, 1200.0)
+
+        self.assertAlmostEqual(normalized, 0.5)
+        self.assertAlmostEqual(value, 0.0)
+
+    def test_linear_normalization_rejects_invalid_ranges(self):
+        with self.assertRaises(ValueError):
+            normalize_linear(1.0, 1.0, 1.0)
+
+        with self.assertRaises(ValueError):
+            denormalize_linear(0.5, 1.0, 1.0)
 
 
 if __name__ == "__main__":

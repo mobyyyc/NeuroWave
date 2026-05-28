@@ -62,7 +62,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Add tests for deterministic rendering from the same patch.
 - [x] Create initial `SynthConfig` data model in `minisynth/schema.py`.
 - [x] Define parameter metadata type with name, kind, min, max, default, scale, group, and `ml_enabled`.
-- [ ] Add linear normalization and denormalization helpers.
+- [x] Add linear normalization and denormalization helpers.
 - [ ] Add logarithmic normalization and denormalization helpers.
 - [ ] Add tests for normalization round trips.
 - [ ] Convert `PATCHES["dark_saw"]` into `presets/dark_saw.json`.
@@ -200,3 +200,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add parameter metadata schema`
 - Renamed project-facing brand references from MiniSynth to NeuroWave while preserving package and repo architecture.
   Commit: `Rename project branding to NeuroWave`
+- Added linear normalization and denormalization helpers with focused schema tests.
+  Commit: `Add linear normalization helpers`
