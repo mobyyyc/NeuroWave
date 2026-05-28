@@ -68,7 +68,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Convert `PATCHES["dark_saw"]` into `presets/dark_saw.json`.
 - [x] Add `minisynth/io.py` helpers to load and save JSON patches.
 - [x] Add `scripts/render_patch.py` that renders a preset JSON to a WAV path.
-- [ ] Update `README.md` with setup and render commands.
+- [x] Update `README.md` with setup and render commands.
 - [ ] Keep old `synth.py` as a compatibility wrapper or remove it after scripts replace it.
 - [ ] Run the new render script and verify it recreates `dark_saw.wav`.
 - [ ] Commit Milestone A completion.
@@ -212,3 +212,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add JSON patch IO helpers`
 - Added a preset render script that loads JSON patch files and writes WAV output.
   Commit: `Add JSON preset render script`
+- Updated the README with setup, render, test, and smoke render commands.
+  Commit: `Update README with render workflow`
