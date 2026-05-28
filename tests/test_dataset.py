@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,7 +7,9 @@ import soundfile as sf
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.dataset import (
+    DEFAULT_METADATA_PATH,
     audio_filename,
+    metadata_record,
     patch_filename,
     write_random_dataset_files,
     write_random_patch_files,
@@ -45,11 +48,13 @@ class TestDatasetGeneration(unittest.TestCase):
             records = write_random_dataset_files(
                 param_dir=root / "params",
                 audio_dir=root / "audio",
+                metadata_path=root / "metadata.jsonl",
                 seed=30,
                 count=2,
             )
 
             self.assertEqual(len(records), 2)
+            self.assertEqual(records[0]["index"], 0)
             self.assertEqual(records[0]["seed"], 30)
             self.assertEqual(
                 records[0]["patch_path"],
@@ -64,10 +69,68 @@ class TestDatasetGeneration(unittest.TestCase):
                 self.assertTrue(record["patch_path"].exists())
                 self.assertTrue(record["audio_path"].exists())
                 self.assertIn("osc1_wave", load_patch(record["patch_path"]))
+                self.assertEqual(record["sample_rate"], DEFAULT_SAMPLE_RATE)
 
                 info = sf.info(record["audio_path"])
                 self.assertEqual(info.samplerate, DEFAULT_SAMPLE_RATE)
                 self.assertEqual(info.channels, 1)
+                self.assertEqual(record["frames"], info.frames)
+
+    def test_write_random_dataset_files_saves_metadata_jsonl(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            metadata_path = root / "metadata.jsonl"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=50,
+                count=2,
+            )
+
+            rows = [
+                json.loads(line)
+                for line in metadata_path.read_text(encoding="utf-8").splitlines()
+            ]
+
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(rows[0]["index"], 0)
+            self.assertEqual(rows[0]["seed"], 50)
+            self.assertEqual(
+                rows[0]["patch_path"],
+                str(root / "params" / "patch_000000_seed_50.json"),
+            )
+            self.assertEqual(
+                rows[0]["audio_path"],
+                str(root / "audio" / "patch_000000_seed_50.wav"),
+            )
+            self.assertEqual(rows[0]["sample_rate"], DEFAULT_SAMPLE_RATE)
+            self.assertGreater(rows[0]["frames"], 0)
+
+    def test_metadata_record_converts_paths_to_strings(self):
+        record = {
+            "index": 0,
+            "seed": 1,
+            "patch_path": Path("params/example.json"),
+            "audio_path": Path("audio/example.wav"),
+            "sample_rate": DEFAULT_SAMPLE_RATE,
+            "frames": 100,
+        }
+
+        self.assertEqual(
+            metadata_record(record),
+            {
+                "index": 0,
+                "seed": 1,
+                "patch_path": "params/example.json",
+                "audio_path": "audio/example.wav",
+                "sample_rate": DEFAULT_SAMPLE_RATE,
+                "frames": 100,
+            },
+        )
+
+    def test_default_metadata_path_targets_generated_dataset_root(self):
+        self.assertEqual(DEFAULT_METADATA_PATH, Path("data/generated/v1/metadata.jsonl"))
 
     def test_write_random_dataset_files_rejects_invalid_count(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 from minisynth.dataset import (
     DEFAULT_AUDIO_DIR,
+    DEFAULT_METADATA_PATH,
     DEFAULT_PARAM_DIR,
     write_random_dataset_files,
 )
@@ -32,6 +33,11 @@ def parse_args():
         default=DEFAULT_AUDIO_DIR,
         help="Directory for generated WAV files.",
     )
+    parser.add_argument(
+        "--metadata-output",
+        default=DEFAULT_METADATA_PATH,
+        help="Path for generated metadata JSONL.",
+    )
     parser.add_argument("--output", help="Optional single patch JSON path.")
     return parser.parse_args()
 
@@ -50,6 +56,7 @@ def main() -> int:
         records = write_random_dataset_files(
             param_dir=args.output_dir,
             audio_dir=args.audio_output_dir,
+            metadata_path=args.metadata_output,
             seed=args.seed,
             count=args.count,
         )
@@ -59,7 +66,8 @@ def main() -> int:
         else:
             print(
                 f"Wrote {len(records)} random patches -> {args.output_dir} "
-                f"and WAVs -> {args.audio_output_dir}"
+                f"WAVs -> {args.audio_output_dir} "
+                f"and metadata -> {args.metadata_output}"
             )
 
     return 0

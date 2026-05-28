@@ -1,5 +1,6 @@
 """Dataset file generation helpers."""
 
+import json
 from pathlib import Path
 
 import soundfile as sf
@@ -11,6 +12,7 @@ from minisynth.randomize import audio_avoids_clipping, random_patch
 
 DEFAULT_PARAM_DIR = Path("data/generated/v1/params")
 DEFAULT_AUDIO_DIR = Path("data/generated/v1/audio")
+DEFAULT_METADATA_PATH = Path("data/generated/v1/metadata.jsonl")
 
 
 def patch_filename(index, seed):
@@ -40,6 +42,7 @@ def write_random_patch_files(output_dir=DEFAULT_PARAM_DIR, seed=0, count=1):
 def write_random_dataset_files(
     param_dir=DEFAULT_PARAM_DIR,
     audio_dir=DEFAULT_AUDIO_DIR,
+    metadata_path=DEFAULT_METADATA_PATH,
     seed=0,
     count=1,
 ):
@@ -49,6 +52,8 @@ def write_random_dataset_files(
     param_destination = Path(param_dir)
     audio_destination = Path(audio_dir)
     audio_destination.mkdir(parents=True, exist_ok=True)
+    metadata_destination = Path(metadata_path)
+    metadata_destination.parent.mkdir(parents=True, exist_ok=True)
     records = []
 
     for index in range(count):
@@ -66,10 +71,35 @@ def write_random_dataset_files(
         sf.write(audio_path, audio, DEFAULT_SAMPLE_RATE)
         records.append(
             {
+                "index": index,
                 "seed": patch_seed,
                 "patch_path": patch_path,
                 "audio_path": audio_path,
+                "sample_rate": DEFAULT_SAMPLE_RATE,
+                "frames": len(audio),
             }
         )
 
+    write_metadata(records, metadata_destination)
+
     return records
+
+
+def write_metadata(records, path=DEFAULT_METADATA_PATH):
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    with destination.open("w", encoding="utf-8") as file:
+        for record in records:
+            file.write(json.dumps(metadata_record(record)) + "\n")
+
+
+def metadata_record(record):
+    return {
+        "index": record["index"],
+        "seed": record["seed"],
+        "patch_path": str(record["patch_path"]),
+        "audio_path": str(record["audio_path"]),
+        "sample_rate": record["sample_rate"],
+        "frames": record["frames"],
+    }
