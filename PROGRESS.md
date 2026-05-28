@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone A - Clean Synth Engine.
+Current active phase: Milestone B - Dataset Tools.
 
 ## Completed Baseline
 
@@ -71,7 +71,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Update `README.md` with setup and render commands.
 - [x] Remove old `synth.py` after scripts replaced it.
 - [x] Run the new render script and verify it recreates `dark_saw.wav`.
-- [ ] Commit Milestone A completion.
+- [x] Commit Milestone A completion.
 
 ## Milestone B: Dataset Tools
 
@@ -218,3 +218,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Make synth.py a compatibility wrapper`
 - Removed the historical `synth.py` wrapper after the smoke render moved to the JSON preset path.
   Commit: `Remove legacy synth.py wrapper`
+- Completed Milestone A and moved the active phase to Milestone B dataset tools.
+  Commit: `Complete Milestone A`
