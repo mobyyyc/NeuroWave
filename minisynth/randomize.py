@@ -2,10 +2,13 @@
 
 import random
 
+import numpy as np
+
 from minisynth.oscillators import BASE_WAVES
 from minisynth.schema import PARAMETERS, denormalize_linear, denormalize_log
 
 MIN_OSCILLATOR_LEVEL_SUM = 0.2
+MAX_DATASET_AUDIO_PEAK = 0.95
 
 RANDOM_PARAMETER_RANGES = {
     "freq": (55.0, 1760.0),
@@ -77,3 +80,13 @@ def random_range(parameter):
         parameter.name,
         (parameter.minimum, parameter.maximum),
     )
+
+
+def audio_avoids_clipping(audio, peak_limit=MAX_DATASET_AUDIO_PEAK):
+    if len(audio) == 0:
+        return False
+
+    if not np.all(np.isfinite(audio)):
+        return False
+
+    return np.max(np.abs(audio)) <= peak_limit
