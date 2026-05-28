@@ -80,7 +80,7 @@ Goal: generate labeled synthetic data from known parameters.
 - [x] Create `scripts/random_patch.py` with seeded random patch generation.
 - [x] Add constraints so random patches are not silent.
 - [x] Add constraints so generated audio avoids clipping.
-- [ ] Save generated patch JSON files under `data/generated/v1/params/`.
+- [x] Save generated patch JSON files under `data/generated/v1/params/`.
 - [ ] Save generated WAV files under `data/generated/v1/audio/`.
 - [ ] Write `metadata.jsonl` for generated clips.
 - [ ] Add a small sample generation command to `README.md`.
@@ -226,3 +226,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Prevent silent random patches`
 - Added a reusable audio clipping constraint for generated dataset audio.
   Commit: `Add generated audio clipping constraint`
+- Added dataset helpers and CLI support for saving generated patch JSON files under `data/generated/v1/params/`.
+  Commit: `Save generated patch params`
