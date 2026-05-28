@@ -23,9 +23,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
-    patch = load_patch(args.preset)
+def render_preset(preset, output):
+    patch = load_patch(preset)
     audio = render_patch(**patch)
 
     if audio.ndim != 1:
@@ -37,11 +36,16 @@ def main() -> int:
     if not np.all(np.isfinite(audio)):
         raise ValueError("Rendered audio contains non-finite values")
 
-    output_path = Path(args.output)
+    output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(output_path, audio, DEFAULT_SAMPLE_RATE)
 
-    print(f"Rendered {args.preset} -> {output_path}")
+    print(f"Rendered {preset} -> {output_path}")
+
+
+def main() -> int:
+    args = parse_args()
+    render_preset(args.preset, args.output)
     return 0
 
 

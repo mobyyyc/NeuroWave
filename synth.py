@@ -1,13 +1,14 @@
-import soundfile as sf
-import matplotlib.pyplot as plt
+"""Compatibility wrapper for the historical synth.py entry point."""
+
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
-from patches import PATCHES
+from scripts.render_patch import render_preset
 
 SR = DEFAULT_SAMPLE_RATE
 
 
 def show_spectrogram(audio):
+    import matplotlib.pyplot as plt
     import librosa
     import librosa.display
 
@@ -29,12 +30,4 @@ def show_spectrogram(audio):
 
 
 if __name__ == "__main__":
-    patch = PATCHES["dark_saw"]
-
-    audio = render_patch(**patch)
-
-    sf.write("dark_saw.wav", audio, SR)
-
-    show_spectrogram(audio)
-
-    print("Saved dark_saw.wav")
+    render_preset("presets/dark_saw.json", "dark_saw.wav")
