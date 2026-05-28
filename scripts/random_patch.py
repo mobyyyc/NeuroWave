@@ -9,7 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from minisynth.dataset import DEFAULT_PARAM_DIR, write_random_patch_files
+from minisynth.dataset import (
+    DEFAULT_AUDIO_DIR,
+    DEFAULT_PARAM_DIR,
+    write_random_dataset_files,
+)
 from minisynth.io import load_patch, save_patch
 from minisynth.randomize import random_patch
 
@@ -22,6 +26,11 @@ def parse_args():
         "--output-dir",
         default=DEFAULT_PARAM_DIR,
         help="Directory for generated patch JSON files.",
+    )
+    parser.add_argument(
+        "--audio-output-dir",
+        default=DEFAULT_AUDIO_DIR,
+        help="Directory for generated WAV files.",
     )
     parser.add_argument("--output", help="Optional single patch JSON path.")
     return parser.parse_args()
@@ -38,16 +47,20 @@ def main() -> int:
         save_patch(patch, args.output)
         print(f"Wrote random patch seed {args.seed} -> {args.output}")
     else:
-        paths = write_random_patch_files(
-            output_dir=args.output_dir,
+        records = write_random_dataset_files(
+            param_dir=args.output_dir,
+            audio_dir=args.audio_output_dir,
             seed=args.seed,
             count=args.count,
         )
 
         if args.count == 1:
-            print(json.dumps(load_patch(paths[0]), indent=2))
+            print(json.dumps(load_patch(records[0]["patch_path"]), indent=2))
         else:
-            print(f"Wrote {len(paths)} random patches -> {args.output_dir}")
+            print(
+                f"Wrote {len(records)} random patches -> {args.output_dir} "
+                f"and WAVs -> {args.audio_output_dir}"
+            )
 
     return 0
 
