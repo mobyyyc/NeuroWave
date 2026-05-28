@@ -5,27 +5,75 @@ import random
 from minisynth.oscillators import BASE_WAVES
 from minisynth.schema import PARAMETERS, denormalize_linear, denormalize_log
 
+MIN_OSCILLATOR_LEVEL_SUM = 0.2
+
+RANDOM_PARAMETER_RANGES = {
+    "freq": (55.0, 1760.0),
+    "length": (0.5, 3.0),
+    "cutoff": (80.0, 8000.0),
+    "resonance": (0.0, 0.8),
+    "attack": (0.001, 0.8),
+    "decay": (0.001, 0.8),
+    "sustain": (0.05, 1.0),
+    "release": (0.001, 0.8),
+}
+
 
 def random_patch(seed):
     rng = random.Random(seed)
     patch = {}
 
     for parameter in PARAMETERS:
+        minimum, maximum = random_range(parameter)
+
         if parameter.kind == "enum":
             patch[parameter.name] = rng.choice(BASE_WAVES)
         elif parameter.scale == "log":
             patch[parameter.name] = denormalize_log(
                 rng.random(),
-                parameter.minimum,
-                parameter.maximum,
+                minimum,
+                maximum,
             )
         elif parameter.scale == "linear":
             patch[parameter.name] = denormalize_linear(
                 rng.random(),
-                parameter.minimum,
-                parameter.maximum,
+                minimum,
+                maximum,
             )
         else:
             raise ValueError(f"Unsupported parameter scale: {parameter.scale}")
 
+    constrain_not_silent(patch)
+    constrain_envelope_fits_length(patch)
+
     return patch
+
+
+def constrain_not_silent(patch):
+    level_sum = patch["osc1_level"] + patch["osc2_level"]
+    if level_sum >= MIN_OSCILLATOR_LEVEL_SUM:
+        return patch
+
+    patch["osc1_level"] += MIN_OSCILLATOR_LEVEL_SUM - level_sum
+    return patch
+
+
+def constrain_envelope_fits_length(patch):
+    envelope_total = patch["attack"] + patch["decay"] + patch["release"]
+    max_total = patch["length"] * 0.95
+
+    if envelope_total <= max_total:
+        return patch
+
+    scale = max_total / envelope_total
+    patch["attack"] *= scale
+    patch["decay"] *= scale
+    patch["release"] *= scale
+    return patch
+
+
+def random_range(parameter):
+    return RANDOM_PARAMETER_RANGES.get(
+        parameter.name,
+        (parameter.minimum, parameter.maximum),
+    )
