@@ -64,7 +64,7 @@ Goal: turn the current script into a modular, deterministic, parameterized synth
 - [x] Define parameter metadata type with name, kind, min, max, default, scale, group, and `ml_enabled`.
 - [x] Add linear normalization and denormalization helpers.
 - [x] Add logarithmic normalization and denormalization helpers.
-- [ ] Add tests for normalization round trips.
+- [x] Add tests for normalization round trips.
 - [ ] Convert `PATCHES["dark_saw"]` into `presets/dark_saw.json`.
 - [ ] Add `minisynth/io.py` helpers to load and save JSON patches.
 - [ ] Add `scripts/render_patch.py` that renders a preset JSON to a WAV path.
@@ -204,3 +204,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add linear normalization helpers`
 - Added logarithmic normalization and denormalization helpers with focused schema tests.
   Commit: `Add logarithmic normalization helpers`
+- Added metadata-driven tests for numeric parameter normalization round trips.
+  Commit: `Add normalization round-trip tests`

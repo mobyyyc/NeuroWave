@@ -103,6 +103,40 @@ class TestSynthConfig(unittest.TestCase):
         with self.assertRaises(ValueError):
             denormalize_log(0.5, 0.0, 100.0)
 
+    def test_parameter_defaults_round_trip_through_normalization(self):
+        for parameter in PARAMETERS:
+            if parameter.kind != "float":
+                continue
+
+            if parameter.scale == "linear":
+                normalized = normalize_linear(
+                    parameter.default,
+                    parameter.minimum,
+                    parameter.maximum,
+                )
+                value = denormalize_linear(
+                    normalized,
+                    parameter.minimum,
+                    parameter.maximum,
+                )
+            elif parameter.scale == "log":
+                normalized = normalize_log(
+                    parameter.default,
+                    parameter.minimum,
+                    parameter.maximum,
+                )
+                value = denormalize_log(
+                    normalized,
+                    parameter.minimum,
+                    parameter.maximum,
+                )
+            else:
+                continue
+
+            self.assertGreaterEqual(normalized, 0.0, parameter.name)
+            self.assertLessEqual(normalized, 1.0, parameter.name)
+            self.assertAlmostEqual(value, parameter.default, msg=parameter.name)
+
 
 if __name__ == "__main__":
     unittest.main()
