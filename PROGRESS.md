@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone B - Dataset Tools.
+Current active phase: Milestone C - Audio Features And Similarity.
 
 ## Completed Baseline
 
@@ -86,7 +86,7 @@ Goal: generate labeled synthetic data from known parameters.
 - [x] Add a small sample generation command to `README.md`.
 - [x] Generate a tiny local dataset of 10 patches for manual inspection.
 - [x] Add tests for reproducible random patch generation from a seed.
-- [ ] Commit Milestone B completion.
+- [x] Commit Milestone B completion.
 
 ## Milestone C: Audio Features And Similarity
 
@@ -238,3 +238,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Generate local sample dataset`
 - Added tests proving random patch and dataset generation are reproducible for the same seed.
   Commit: `Add random generation reproducibility tests`
+- Completed Milestone B and moved the active phase to Milestone C audio features and similarity.
+  Commit: `Complete Milestone B`
