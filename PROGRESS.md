@@ -85,7 +85,7 @@ Goal: generate labeled synthetic data from known parameters.
 - [x] Write `metadata.jsonl` for generated clips.
 - [x] Add a small sample generation command to `README.md`.
 - [x] Generate a tiny local dataset of 10 patches for manual inspection.
-- [ ] Add tests for reproducible random patch generation from a seed.
+- [x] Add tests for reproducible random patch generation from a seed.
 - [ ] Commit Milestone B completion.
 
 ## Milestone C: Audio Features And Similarity
@@ -236,3 +236,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Document dataset generation command`
 - Generated the local ignored 10-example dataset under `data/generated/v1/` for manual inspection.
   Commit: `Generate local sample dataset`
+- Added tests proving random patch and dataset generation are reproducible for the same seed.
+  Commit: `Add random generation reproducibility tests`

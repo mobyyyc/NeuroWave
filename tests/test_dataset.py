@@ -107,6 +107,39 @@ class TestDatasetGeneration(unittest.TestCase):
             self.assertEqual(rows[0]["sample_rate"], DEFAULT_SAMPLE_RATE)
             self.assertGreater(rows[0]["frames"], 0)
 
+    def test_write_random_dataset_files_is_reproducible_for_same_seed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            first_root = root / "first"
+            second_root = root / "second"
+
+            first_records = write_random_dataset_files(
+                param_dir=first_root / "params",
+                audio_dir=first_root / "audio",
+                metadata_path=first_root / "metadata.jsonl",
+                seed=70,
+                count=2,
+            )
+            second_records = write_random_dataset_files(
+                param_dir=second_root / "params",
+                audio_dir=second_root / "audio",
+                metadata_path=second_root / "metadata.jsonl",
+                seed=70,
+                count=2,
+            )
+
+            for first_record, second_record in zip(first_records, second_records):
+                self.assertEqual(first_record["seed"], second_record["seed"])
+                self.assertEqual(
+                    load_patch(first_record["patch_path"]),
+                    load_patch(second_record["patch_path"]),
+                )
+
+            self.assertEqual(
+                first_records[0]["frames"],
+                second_records[0]["frames"],
+            )
+
     def test_metadata_record_converts_paths_to_strings(self):
         record = {
             "index": 0,

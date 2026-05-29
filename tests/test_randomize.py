@@ -12,6 +12,12 @@ from minisynth.randomize import (
 
 
 class TestRandomPatch(unittest.TestCase):
+    def test_random_patch_is_reproducible_for_same_seed(self):
+        self.assertEqual(random_patch(1000), random_patch(1000))
+
+    def test_random_patch_changes_for_different_seeds(self):
+        self.assertNotEqual(random_patch(1000), random_patch(1001))
+
     def test_random_patch_enforces_minimum_oscillator_level_sum(self):
         for seed in range(100):
             patch = random_patch(seed)
