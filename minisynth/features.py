@@ -11,6 +11,11 @@ SILENCE_RMS_THRESHOLD = 1e-12
 DEFAULT_N_MELS = 64
 DEFAULT_N_FFT = 2048
 DEFAULT_HOP_LENGTH = 512
+DEFAULT_STFT_RESOLUTIONS = (
+    (512, 128),
+    (1024, 256),
+    (2048, 512),
+)
 
 
 def to_mono(audio):
@@ -130,3 +135,44 @@ def rms_envelope(
         frame_length=frame_length,
         hop_length=hop_length,
     )[0]
+
+
+def stft_magnitude(audio, n_fft=DEFAULT_N_FFT, hop_length=DEFAULT_HOP_LENGTH):
+    if n_fft <= 0:
+        raise ValueError("n_fft must be positive")
+
+    if hop_length <= 0:
+        raise ValueError("hop_length must be positive")
+
+    samples = to_mono(audio)
+    if samples.size == 0:
+        raise ValueError("audio must not be empty")
+
+    return np.abs(
+        librosa.stft(
+            samples.astype(float),
+            n_fft=n_fft,
+            hop_length=hop_length,
+        )
+    )
+
+
+def multi_resolution_stft_magnitude(
+    audio,
+    resolutions=DEFAULT_STFT_RESOLUTIONS,
+):
+    if not resolutions:
+        raise ValueError("resolutions must not be empty")
+
+    magnitudes = []
+
+    for n_fft, hop_length in resolutions:
+        magnitudes.append(
+            stft_magnitude(
+                audio,
+                n_fft=n_fft,
+                hop_length=hop_length,
+            )
+        )
+
+    return magnitudes

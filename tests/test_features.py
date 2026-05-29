@@ -6,12 +6,15 @@ from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.features import (
     DEFAULT_HOP_LENGTH,
     DEFAULT_N_MELS,
+    DEFAULT_STFT_RESOLUTIONS,
     DEFAULT_TARGET_RMS,
     mel_spectrogram,
+    multi_resolution_stft_magnitude,
     normalize_loudness,
     resample_audio,
     rms,
     rms_envelope,
+    stft_magnitude,
     to_mono,
 )
 
@@ -191,6 +194,52 @@ class TestAudioFeatures(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             rms_envelope(np.array([]))
+
+    def test_stft_magnitude_returns_frequency_bins_by_frames(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        magnitude = stft_magnitude(audio, n_fft=1024, hop_length=256)
+
+        self.assertEqual(magnitude.shape[0], 513)
+        self.assertEqual(magnitude.shape[1], 1 + len(audio) // 256)
+        self.assertTrue(np.all(magnitude >= 0.0))
+        self.assertTrue(np.all(np.isfinite(magnitude)))
+
+    def test_stft_magnitude_accepts_stereo_input(self):
+        mono = np.ones(DEFAULT_SAMPLE_RATE)
+        stereo = np.column_stack([mono, mono])
+
+        magnitude = stft_magnitude(stereo, n_fft=512, hop_length=128)
+
+        self.assertEqual(magnitude.shape[0], 257)
+
+    def test_stft_magnitude_rejects_invalid_parameters(self):
+        with self.assertRaises(ValueError):
+            stft_magnitude(np.ones(10), n_fft=0)
+
+        with self.assertRaises(ValueError):
+            stft_magnitude(np.ones(10), hop_length=0)
+
+        with self.assertRaises(ValueError):
+            stft_magnitude(np.array([]))
+
+    def test_multi_resolution_stft_magnitude_returns_one_array_per_resolution(self):
+        audio = np.ones(DEFAULT_SAMPLE_RATE)
+
+        magnitudes = multi_resolution_stft_magnitude(audio)
+
+        self.assertEqual(len(magnitudes), len(DEFAULT_STFT_RESOLUTIONS))
+        for magnitude, resolution in zip(magnitudes, DEFAULT_STFT_RESOLUTIONS):
+            n_fft, hop_length = resolution
+            self.assertEqual(magnitude.shape[0], 1 + n_fft // 2)
+            self.assertEqual(magnitude.shape[1], 1 + len(audio) // hop_length)
+            self.assertTrue(np.all(np.isfinite(magnitude)))
+
+    def test_multi_resolution_stft_magnitude_rejects_empty_resolutions(self):
+        with self.assertRaises(ValueError):
+            multi_resolution_stft_magnitude(np.ones(10), resolutions=())
 
 
 if __name__ == "__main__":
