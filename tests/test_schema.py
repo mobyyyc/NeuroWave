@@ -6,9 +6,11 @@ from minisynth.schema import (
     VECTOR_PARAMETERS,
     Parameter,
     SynthConfig,
+    config_from_vector,
     config_to_vector,
     denormalize_linear,
     denormalize_log,
+    denormalize_parameter_value,
     normalize_linear,
     normalize_log,
     normalize_parameter_value,
@@ -169,6 +171,41 @@ class TestSynthConfig(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             normalize_parameter_value(parameter, "unknown")
+
+    def test_vector_reconstructs_synth_config(self):
+        config = SynthConfig(osc1_wave="sine", osc2_wave="noise", osc1_level=0.25)
+
+        reconstructed = SynthConfig.from_vector(config.to_vector())
+
+        self.assertEqual(reconstructed.osc1_wave, "sine")
+        self.assertEqual(reconstructed.osc2_wave, "noise")
+        self.assertAlmostEqual(reconstructed.osc1_level, 0.25)
+        self.assertAlmostEqual(reconstructed.freq, config.freq)
+
+    def test_config_from_vector_matches_synth_config_classmethod(self):
+        config = SynthConfig(osc1_wave="triangle")
+        vector = config.to_vector()
+
+        self.assertEqual(config_from_vector(vector), SynthConfig.from_vector(vector))
+
+    def test_config_from_vector_rejects_wrong_length(self):
+        with self.assertRaises(ValueError):
+            config_from_vector((0.5,))
+
+    def test_denormalize_parameter_value_rejects_out_of_range_values(self):
+        parameter = PARAMETERS[0]
+
+        with self.assertRaises(ValueError):
+            denormalize_parameter_value(parameter, -0.1)
+
+        with self.assertRaises(ValueError):
+            denormalize_parameter_value(parameter, 1.1)
+
+    def test_denormalize_categorical_parameter_uses_nearest_choice(self):
+        parameter = next(parameter for parameter in PARAMETERS if parameter.name == "osc1_wave")
+
+        self.assertEqual(denormalize_parameter_value(parameter, 0.0), "sine")
+        self.assertEqual(denormalize_parameter_value(parameter, 1.0), "noise")
 
 
 if __name__ == "__main__":

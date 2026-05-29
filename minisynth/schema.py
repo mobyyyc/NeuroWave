@@ -40,6 +40,10 @@ class SynthConfig:
     def to_vector(self):
         return config_to_vector(self)
 
+    @classmethod
+    def from_vector(cls, vector):
+        return config_from_vector(vector)
+
 
 def normalize_linear(value, minimum, maximum):
     if maximum <= minimum:
@@ -83,6 +87,20 @@ def config_to_vector(config, parameters=None):
     return tuple(normalize_parameter_value(parameter, values[parameter.name]) for parameter in parameters)
 
 
+def config_from_vector(vector, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    if len(vector) != len(parameters):
+        raise ValueError(f"Expected vector length {len(parameters)}, got {len(vector)}")
+
+    values = {}
+    for parameter, normalized in zip(parameters, vector):
+        values[parameter.name] = denormalize_parameter_value(parameter, normalized)
+
+    return SynthConfig(**values)
+
+
 def normalize_parameter_value(parameter, value):
     if parameter.kind == "float" and parameter.scale == "linear":
         return normalize_linear(value, parameter.minimum, parameter.maximum)
@@ -101,6 +119,24 @@ def normalize_parameter_value(parameter, value):
         return choices.index(value) / (len(choices) - 1)
 
     raise ValueError(f"Unsupported parameter for vector conversion: {parameter.name}")
+
+
+def denormalize_parameter_value(parameter, normalized):
+    if normalized < 0.0 or normalized > 1.0:
+        raise ValueError(f"normalized value must be in [0, 1] for {parameter.name}")
+
+    if parameter.kind == "float" and parameter.scale == "linear":
+        return denormalize_linear(normalized, parameter.minimum, parameter.maximum)
+
+    if parameter.kind == "float" and parameter.scale == "log":
+        return denormalize_log(normalized, parameter.minimum, parameter.maximum)
+
+    if parameter.kind == "enum" and parameter.scale == "categorical":
+        choices = categorical_values(parameter)
+        index = round(normalized * (len(choices) - 1))
+        return choices[index]
+
+    raise ValueError(f"Unsupported parameter for vector reconstruction: {parameter.name}")
 
 
 def categorical_values(parameter):
