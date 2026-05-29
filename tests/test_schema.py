@@ -3,12 +3,15 @@ import unittest
 from minisynth.engine import render_patch
 from minisynth.schema import (
     PARAMETERS,
+    VECTOR_PARAMETERS,
     Parameter,
     SynthConfig,
+    config_to_vector,
     denormalize_linear,
     denormalize_log,
     normalize_linear,
     normalize_log,
+    normalize_parameter_value,
 )
 
 
@@ -136,6 +139,36 @@ class TestSynthConfig(unittest.TestCase):
             self.assertGreaterEqual(normalized, 0.0, parameter.name)
             self.assertLessEqual(normalized, 1.0, parameter.name)
             self.assertAlmostEqual(value, parameter.default, msg=parameter.name)
+
+    def test_vector_parameters_include_ml_enabled_parameters(self):
+        self.assertEqual(VECTOR_PARAMETERS, PARAMETERS)
+
+    def test_synth_config_converts_to_normalized_vector(self):
+        config = SynthConfig()
+
+        vector = config.to_vector()
+
+        self.assertEqual(len(vector), len(VECTOR_PARAMETERS))
+        for value in vector:
+            self.assertGreaterEqual(value, 0.0)
+            self.assertLessEqual(value, 1.0)
+
+    def test_config_to_vector_matches_synth_config_method(self):
+        config = SynthConfig(osc1_wave="sine", osc2_wave="noise")
+
+        self.assertEqual(config_to_vector(config), config.to_vector())
+
+    def test_categorical_parameter_values_convert_to_vector_positions(self):
+        parameter = next(parameter for parameter in PARAMETERS if parameter.name == "osc1_wave")
+
+        self.assertEqual(normalize_parameter_value(parameter, "sine"), 0.0)
+        self.assertEqual(normalize_parameter_value(parameter, "noise"), 1.0)
+
+    def test_categorical_parameter_rejects_unknown_value(self):
+        parameter = next(parameter for parameter in PARAMETERS if parameter.name == "osc1_wave")
+
+        with self.assertRaises(ValueError):
+            normalize_parameter_value(parameter, "unknown")
 
 
 if __name__ == "__main__":

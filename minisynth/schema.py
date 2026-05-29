@@ -3,6 +3,8 @@
 from dataclasses import asdict, dataclass
 import math
 
+from minisynth.oscillators import BASE_WAVES
+
 
 @dataclass(frozen=True)
 class Parameter:
@@ -34,6 +36,9 @@ class SynthConfig:
 
     def to_render_kwargs(self):
         return asdict(self)
+
+    def to_vector(self):
+        return config_to_vector(self)
 
 
 def normalize_linear(value, minimum, maximum):
@@ -70,6 +75,41 @@ def denormalize_log(normalized, minimum, maximum):
     return math.exp(math.log(minimum) + normalized * (math.log(maximum) - math.log(minimum)))
 
 
+def config_to_vector(config, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    values = asdict(config)
+    return tuple(normalize_parameter_value(parameter, values[parameter.name]) for parameter in parameters)
+
+
+def normalize_parameter_value(parameter, value):
+    if parameter.kind == "float" and parameter.scale == "linear":
+        return normalize_linear(value, parameter.minimum, parameter.maximum)
+
+    if parameter.kind == "float" and parameter.scale == "log":
+        return normalize_log(value, parameter.minimum, parameter.maximum)
+
+    if parameter.kind == "enum" and parameter.scale == "categorical":
+        choices = categorical_values(parameter)
+        if value not in choices:
+            raise ValueError(f"Unknown categorical value for {parameter.name}: {value}")
+
+        if len(choices) == 1:
+            return 0.0
+
+        return choices.index(value) / (len(choices) - 1)
+
+    raise ValueError(f"Unsupported parameter for vector conversion: {parameter.name}")
+
+
+def categorical_values(parameter):
+    if parameter.name in ("osc1_wave", "osc2_wave"):
+        return BASE_WAVES
+
+    raise ValueError(f"No categorical values configured for {parameter.name}")
+
+
 PARAMETERS = (
     Parameter("freq", "float", 20.0, 20000.0, 261.63, "log", "global"),
     Parameter("length", "float", 0.05, 10.0, 1.5, "linear", "global"),
@@ -85,3 +125,5 @@ PARAMETERS = (
     Parameter("sustain", "float", 0.0, 1.0, 0.7, "linear", "envelope"),
     Parameter("release", "float", 0.001, 5.0, 0.3, "log", "envelope"),
 )
+
+VECTOR_PARAMETERS = tuple(parameter for parameter in PARAMETERS if parameter.ml_enabled)

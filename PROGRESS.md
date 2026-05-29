@@ -108,7 +108,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 
 Goal: match target audio by optimizing synth parameters before training neural networks.
 
-- [ ] Add parameter vector to `SynthConfig` conversion.
+- [x] Add parameter vector to `SynthConfig` conversion.
 - [ ] Add vector to `SynthConfig` reconstruction.
 - [ ] Add random search over parameter vectors.
 - [ ] Save best candidate patch and WAV into `runs/`.
@@ -262,3 +262,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Test weighted similarity ranking`
 - Completed Milestone C and moved the active phase to Milestone D search-based matching.
   Commit: `Complete Milestone C`
+- Added normalized vector conversion from `SynthConfig` for search-based parameter optimization.
+  Commit: `Add SynthConfig vector conversion`
