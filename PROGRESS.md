@@ -99,7 +99,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 - [x] Add RMS envelope extraction.
 - [x] Add multi-resolution STFT magnitude extraction.
 - [x] Add spectral centroid extraction.
-- [ ] Add `scripts/compare_audio.py`.
+- [x] Add `scripts/compare_audio.py`.
 - [ ] Define first weighted similarity score.
 - [ ] Test that identical audio scores better than different audio.
 - [ ] Commit Milestone C completion.
@@ -254,3 +254,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add multi-resolution STFT features`
 - Added spectral centroid extraction for frame-by-frame brightness comparison.
   Commit: `Add spectral centroid extraction`
+- Added audio comparison helpers and a CLI script that reports current feature distances.
+  Commit: `Add audio comparison script`
