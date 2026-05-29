@@ -27,6 +27,16 @@ Render the current `dark_saw` JSON preset:
 python scripts/render_patch.py presets/dark_saw.json dark_saw.wav
 ```
 
+## Generate A Small Dataset
+
+Generate 10 paired random patch JSON and WAV files, plus metadata:
+
+```bash
+python scripts/random_patch.py --seed 1000 --count 10
+```
+
+Outputs are written under `data/generated/v1/`, which is ignored by git.
+
 ## Test
 
 Run the unit tests:

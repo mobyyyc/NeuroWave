@@ -83,7 +83,7 @@ Goal: generate labeled synthetic data from known parameters.
 - [x] Save generated patch JSON files under `data/generated/v1/params/`.
 - [x] Save generated WAV files under `data/generated/v1/audio/`.
 - [x] Write `metadata.jsonl` for generated clips.
-- [ ] Add a small sample generation command to `README.md`.
+- [x] Add a small sample generation command to `README.md`.
 - [ ] Generate a tiny local dataset of 10 patches for manual inspection.
 - [ ] Add tests for reproducible random patch generation from a seed.
 - [ ] Commit Milestone B completion.
@@ -232,3 +232,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Save generated dataset audio`
 - Added `metadata.jsonl` generation so each dataset row links seed, patch JSON, and rendered WAV paths.
   Commit: `Write generated dataset metadata`
+- Documented the small dataset generation command in the README.
+  Commit: `Document dataset generation command`
