@@ -10,7 +10,8 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from minisynth.dataset import load_training_dataset
+from minisynth.dataset import audio_feature_vector, load_training_dataset
+from minisynth.schema import SynthConfig
 
 
 DEFAULT_MLP_HIDDEN_LAYERS = (32,)
@@ -124,3 +125,9 @@ def save_model_checkpoint(model, path=DEFAULT_MODEL_PATH, metrics=None):
 
 def load_model_checkpoint(path=DEFAULT_MODEL_PATH):
     return joblib.load(path)
+
+
+def predict_patch_from_audio(model, audio, sample_rate):
+    features = audio_feature_vector(audio, sample_rate).reshape(1, -1)
+    vector = predict_parameter_vectors(model, features)[0]
+    return SynthConfig.from_vector(vector).to_render_kwargs()

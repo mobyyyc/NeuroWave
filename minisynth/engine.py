@@ -35,6 +35,10 @@ def render_patch(
     env = adsr(length, attack, decay, sustain, release)
     audio = audio * env
 
-    audio = audio / np.max(np.abs(audio)) * 0.8
+    peak = np.max(np.abs(audio))
+    if peak == 0.0:
+        return audio
+
+    audio = audio / peak * 0.8
 
     return audio

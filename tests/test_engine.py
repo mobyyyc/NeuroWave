@@ -29,6 +29,12 @@ class TestRenderPatch(unittest.TestCase):
 
         np.testing.assert_array_equal(first, second)
 
+    def test_render_patch_returns_finite_silence_for_zero_oscillator_levels(self):
+        audio = render_patch(length=1.5, osc1_level=0.0, osc2_level=0.0)
+
+        self.assertTrue(np.all(np.isfinite(audio)))
+        self.assertEqual(float(np.max(np.abs(audio))), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

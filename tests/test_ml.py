@@ -8,10 +8,12 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.pipeline import Pipeline
 
 from minisynth.dataset import write_random_dataset_files
+from minisynth.engine import render_patch
 from minisynth.ml import (
     create_mlp_regressor,
     load_model_checkpoint,
     parameter_mae,
+    predict_patch_from_audio,
     predict_parameter_vectors,
     save_model_checkpoint,
     train_mlp_from_metadata,
@@ -153,6 +155,51 @@ class TestMLBaseline(unittest.TestCase):
         self.assertEqual(saved_path, checkpoint_path)
         self.assertEqual(checkpoint["metrics"]["test_mae"], 0.1)
         self.assertEqual(predictions.shape, (1, 2))
+
+    def test_predict_patch_from_audio_returns_renderable_patch(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            metadata_path = root / "metadata.jsonl"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=3000,
+                count=5,
+            )
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ConvergenceWarning)
+                result = train_mlp_from_metadata(
+                    metadata_path,
+                    hidden_layer_sizes=(4,),
+                    max_iter=10,
+                    random_state=1,
+                    test_size=0.4,
+                )
+
+        source_patch = {
+            "freq": 261.63,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.8,
+            "osc2_wave": "saw",
+            "osc2_level": 0.4,
+            "osc2_detune": 7,
+            "cutoff": 1200,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        audio = render_patch(**source_patch)
+        patch = predict_patch_from_audio(result["model"], audio, 44100)
+        rendered = render_patch(**patch)
+
+        self.assertIn("osc1_wave", patch)
+        self.assertIn("cutoff", patch)
+        self.assertGreater(len(rendered), 0)
 
 
 if __name__ == "__main__":
