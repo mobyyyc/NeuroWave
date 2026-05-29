@@ -4,13 +4,18 @@ import unittest
 from pathlib import Path
 
 import soundfile as sf
+import numpy as np
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.dataset import (
     DEFAULT_METADATA_PATH,
     audio_filename,
+    audio_feature_vector,
+    load_metadata,
+    load_training_dataset,
     metadata_record,
     patch_filename,
+    resolve_metadata_path,
     write_random_dataset_files,
     write_random_patch_files,
 )
@@ -169,6 +174,86 @@ class TestDatasetGeneration(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaises(ValueError):
                 write_random_dataset_files(tmpdir, tmpdir, count=0)
+
+    def test_load_metadata_reads_jsonl_rows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metadata_path = Path(tmpdir) / "metadata.jsonl"
+            metadata_path.write_text(
+                '{"index": 0, "seed": 1}\n\n{"index": 1, "seed": 2}\n',
+                encoding="utf-8",
+            )
+
+            rows = load_metadata(metadata_path)
+
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(rows[0]["seed"], 1)
+            self.assertEqual(rows[1]["seed"], 2)
+
+    def test_resolve_metadata_path_uses_metadata_parent_for_relative_paths(self):
+        resolved = resolve_metadata_path(
+            Path("data/generated/v1/metadata.jsonl"),
+            "audio/does-not-exist.wav",
+        )
+
+        self.assertEqual(resolved, Path("data/generated/v1/audio/does-not-exist.wav"))
+
+    def test_resolve_metadata_path_keeps_existing_repo_relative_paths(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            existing = root / "example.wav"
+            existing.touch()
+            current_dir = Path.cwd()
+
+            try:
+                import os
+
+                os.chdir(root)
+                resolved = resolve_metadata_path(
+                    Path("data/generated/v1/metadata.jsonl"),
+                    "example.wav",
+                )
+            finally:
+                os.chdir(current_dir)
+
+            self.assertEqual(resolved, Path("example.wav"))
+
+    def test_audio_feature_vector_returns_compact_numeric_features(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        features = audio_feature_vector(audio, DEFAULT_SAMPLE_RATE)
+
+        self.assertEqual(features.shape, (7,))
+        self.assertTrue(np.all(np.isfinite(features)))
+
+    def test_load_training_dataset_returns_features_and_targets(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            metadata_path = root / "metadata.jsonl"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=90,
+                count=2,
+            )
+
+            features, targets = load_training_dataset(metadata_path)
+
+            self.assertEqual(features.shape, (2, 7))
+            self.assertEqual(targets.shape[0], 2)
+            self.assertTrue(np.all(np.isfinite(features)))
+            self.assertTrue(np.all(targets >= 0.0))
+            self.assertTrue(np.all(targets <= 1.0))
+
+    def test_load_training_dataset_rejects_empty_metadata(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metadata_path = Path(tmpdir) / "metadata.jsonl"
+            metadata_path.write_text("", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                load_training_dataset(metadata_path)
 
 
 if __name__ == "__main__":

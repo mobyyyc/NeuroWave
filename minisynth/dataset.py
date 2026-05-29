@@ -4,11 +4,14 @@ import json
 from pathlib import Path
 
 import soundfile as sf
+import numpy as np
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
-from minisynth.io import save_patch
+from minisynth.features import mel_spectrogram, rms, rms_envelope, spectral_centroid
+from minisynth.io import load_patch, save_patch
 from minisynth.randomize import audio_avoids_clipping, random_patch
+from minisynth.schema import SynthConfig
 
 DEFAULT_PARAM_DIR = Path("data/generated/v1/params")
 DEFAULT_AUDIO_DIR = Path("data/generated/v1/audio")
@@ -103,3 +106,67 @@ def metadata_record(record):
         "sample_rate": record["sample_rate"],
         "frames": record["frames"],
     }
+
+
+def load_metadata(path=DEFAULT_METADATA_PATH):
+    source = Path(path)
+    rows = []
+
+    with source.open("r", encoding="utf-8") as file:
+        for line in file:
+            if not line.strip():
+                continue
+            rows.append(json.loads(line))
+
+    return rows
+
+
+def resolve_metadata_path(metadata_path, item_path):
+    path = Path(item_path)
+    if path.is_absolute():
+        return path
+
+    if path.exists():
+        return path
+
+    return Path(metadata_path).parent / path
+
+
+def audio_feature_vector(audio, sample_rate):
+    mel = mel_spectrogram(audio, sample_rate=sample_rate)
+    envelope = rms_envelope(audio)
+    centroid = spectral_centroid(audio, sample_rate=sample_rate)
+
+    return np.array(
+        [
+            float(np.mean(mel)),
+            float(np.std(mel)),
+            rms(audio),
+            float(np.mean(envelope)),
+            float(np.std(envelope)),
+            float(np.mean(centroid)),
+            float(np.std(centroid)),
+        ],
+        dtype=float,
+    )
+
+
+def load_training_dataset(metadata_path=DEFAULT_METADATA_PATH):
+    rows = load_metadata(metadata_path)
+    features = []
+    targets = []
+
+    for row in rows:
+        audio_path = resolve_metadata_path(metadata_path, row["audio_path"])
+        patch_path = resolve_metadata_path(metadata_path, row["patch_path"])
+
+        audio, sample_rate = sf.read(audio_path)
+        patch = load_patch(patch_path)
+
+        features.append(audio_feature_vector(audio, sample_rate))
+        targets.append(SynthConfig(**patch).to_vector())
+
+    if not features:
+        raise ValueError("metadata did not contain any training rows")
+
+    return np.vstack(features), np.asarray(targets, dtype=float)
