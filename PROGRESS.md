@@ -127,7 +127,7 @@ Goal: predict synth parameters from audio features on synthetic data.
 - [x] Train on a small synthetic dataset.
 - [x] Save model checkpoints under `models/`.
 - [x] Add prediction script for one audio clip.
-- [ ] Render predicted patch and compare to target.
+- [x] Render predicted patch and compare to target.
 - [ ] Add optional optimizer refinement after prediction.
 - [ ] Commit Milestone E completion.
 
@@ -290,3 +290,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Save MLP model checkpoints`
 - Added a one-clip prediction script that loads a checkpoint and writes a predicted patch JSON.
   Commit: `Add audio patch prediction script`
+- Added a prediction evaluation script that renders the predicted patch and writes feature-distance comparison reports.
+  Commit: `Evaluate rendered ML predictions`

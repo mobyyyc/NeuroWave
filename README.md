@@ -55,6 +55,12 @@ Predict a patch JSON from one audio clip using the saved MLP checkpoint:
 python scripts/predict_patch.py data/generated/v1/audio/patch_000000_seed_1000.wav runs/predicted_patch.json
 ```
 
+Evaluate the prediction by rendering it and comparing it to the target:
+
+```bash
+python scripts/evaluate_prediction.py data/generated/v1/audio/patch_000000_seed_1000.wav
+```
+
 ## Test
 
 Run the unit tests:
