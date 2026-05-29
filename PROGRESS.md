@@ -124,7 +124,7 @@ Goal: predict synth parameters from audio features on synthetic data.
 - [x] Choose initial ML framework.
 - [x] Create dataset loader for generated metadata.
 - [x] Create first scikit-learn MLP regression baseline.
-- [ ] Train on a small synthetic dataset.
+- [x] Train on a small synthetic dataset.
 - [ ] Save model checkpoints under `models/`.
 - [ ] Add prediction script for one audio clip.
 - [ ] Render predicted patch and compare to target.
@@ -284,3 +284,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add training dataset loader`
 - Added a scikit-learn MLP regression baseline for predicting normalized synth parameter vectors.
   Commit: `Add MLP regression baseline`
+- Added a repeatable MLP training command and metrics path, then trained it on the local 10-example generated dataset.
+  Commit: `Train MLP on small synthetic dataset`

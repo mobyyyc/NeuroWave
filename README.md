@@ -37,6 +37,16 @@ python scripts/random_patch.py --seed 1000 --count 10
 
 Outputs are written under `data/generated/v1/`, which is ignored by git.
 
+## Train The MLP Baseline
+
+Train the current scikit-learn MLP baseline on generated metadata:
+
+```bash
+python scripts/train_mlp.py --metadata data/generated/v1/metadata.jsonl
+```
+
+The command prints train/test parameter MAE metrics as JSON. Model files are not saved yet.
+
 ## Test
 
 Run the unit tests:
