@@ -1,0 +1,82 @@
+import unittest
+
+import numpy as np
+
+from minisynth.constants import DEFAULT_SAMPLE_RATE
+from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
+from minisynth.search import random_search, random_vector, render_config_audio
+
+
+class TestRandomSearch(unittest.TestCase):
+    def test_random_vector_is_reproducible_from_seeded_rng(self):
+        first = random_vector(np.random.default_rng(123))
+        second = random_vector(np.random.default_rng(123))
+
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), len(VECTOR_PARAMETERS))
+        for value in first:
+            self.assertGreaterEqual(value, 0.0)
+            self.assertLess(value, 1.0)
+
+    def test_render_config_audio_returns_audio_array(self):
+        audio = render_config_audio(SynthConfig(length=1.0))
+
+        self.assertEqual(audio.ndim, 1)
+        self.assertGreater(len(audio), 0)
+        self.assertTrue(np.all(np.isfinite(audio)))
+
+    def test_random_search_returns_lowest_scoring_candidate(self):
+        scores = iter([3.0, 1.0, 2.0])
+
+        def fake_renderer(config):
+            return np.array(config.to_vector())
+
+        def fake_comparer(target_audio, target_sample_rate, candidate_audio, candidate_sample_rate):
+            score = next(scores)
+            return {"weighted_distance": score}
+
+        result = random_search(
+            np.zeros(10),
+            DEFAULT_SAMPLE_RATE,
+            iterations=3,
+            seed=1,
+            renderer=fake_renderer,
+            comparer=fake_comparer,
+        )
+
+        self.assertEqual(result["iteration"], 1)
+        self.assertEqual(result["score"], 1.0)
+        self.assertIsInstance(result["config"], SynthConfig)
+        self.assertEqual(len(result["vector"]), len(VECTOR_PARAMETERS))
+        self.assertEqual(result["evaluations"], 3)
+
+    def test_random_search_skips_invalid_candidates(self):
+        calls = {"count": 0}
+
+        def fake_renderer(config):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise ValueError("invalid candidate")
+            return np.array(config.to_vector())
+
+        def fake_comparer(target_audio, target_sample_rate, candidate_audio, candidate_sample_rate):
+            return {"weighted_distance": 1.0}
+
+        result = random_search(
+            np.zeros(10),
+            iterations=1,
+            seed=1,
+            renderer=fake_renderer,
+            comparer=fake_comparer,
+        )
+
+        self.assertEqual(result["evaluations"], 1)
+        self.assertEqual(result["attempts"], 2)
+
+    def test_random_search_rejects_invalid_iterations(self):
+        with self.assertRaises(ValueError):
+            random_search(np.zeros(10), iterations=0)
+
+
+if __name__ == "__main__":
+    unittest.main()

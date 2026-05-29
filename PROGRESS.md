@@ -110,7 +110,7 @@ Goal: match target audio by optimizing synth parameters before training neural n
 
 - [x] Add parameter vector to `SynthConfig` conversion.
 - [x] Add vector to `SynthConfig` reconstruction.
-- [ ] Add random search over parameter vectors.
+- [x] Add random search over parameter vectors.
 - [ ] Save best candidate patch and WAV into `runs/`.
 - [ ] Add progress output for search runs.
 - [ ] Test matching against a NeuroWave-generated target.
@@ -266,3 +266,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add SynthConfig vector conversion`
 - Added normalized vector reconstruction back into `SynthConfig`.
   Commit: `Add SynthConfig vector reconstruction`
+- Added seeded random search over normalized synth parameter vectors.
+  Commit: `Add random parameter search`
