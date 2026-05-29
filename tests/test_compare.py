@@ -3,10 +3,12 @@ import unittest
 import numpy as np
 
 from minisynth.compare import (
+    DEFAULT_DISTANCE_WEIGHTS,
     align_feature_arrays,
     compare_audio_arrays,
     mean_absolute_distance,
     preprocess_audio,
+    weighted_similarity_distance,
 )
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 
@@ -47,6 +49,7 @@ class TestAudioCompare(unittest.TestCase):
         self.assertIn("rms_envelope_distance", result)
         self.assertIn("spectral_centroid_distance", result)
         self.assertIn("stft_magnitude_distances", result)
+        self.assertIn("weighted_distance", result)
         self.assertEqual(len(result["stft_magnitude_distances"]), 3)
 
         for value in result.values():
@@ -54,6 +57,38 @@ class TestAudioCompare(unittest.TestCase):
                 self.assertTrue(all(distance >= 0.0 for distance in value))
             else:
                 self.assertGreaterEqual(value, 0.0)
+
+    def test_weighted_similarity_distance_combines_feature_distances(self):
+        distances = {
+            "mel_distance": 10.0,
+            "rms_envelope_distance": 1.0,
+            "spectral_centroid_distance": 5.0,
+            "stft_magnitude_distances": [1.0, 2.0, 3.0],
+        }
+
+        score = weighted_similarity_distance(distances)
+
+        expected = (
+            10.0 * DEFAULT_DISTANCE_WEIGHTS["mel_distance"]
+            + 1.0 * DEFAULT_DISTANCE_WEIGHTS["rms_envelope_distance"]
+            + 5.0 * DEFAULT_DISTANCE_WEIGHTS["spectral_centroid_distance"]
+            + 2.0 * DEFAULT_DISTANCE_WEIGHTS["stft_magnitude_distance"]
+        )
+        self.assertAlmostEqual(score, expected)
+
+    def test_compare_audio_arrays_has_zero_weighted_distance_for_identical_audio(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        result = compare_audio_arrays(
+            audio,
+            DEFAULT_SAMPLE_RATE,
+            audio,
+            DEFAULT_SAMPLE_RATE,
+        )
+
+        self.assertAlmostEqual(result["weighted_distance"], 0.0)
 
 
 if __name__ == "__main__":

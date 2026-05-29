@@ -13,6 +13,13 @@ from minisynth.features import (
     to_mono,
 )
 
+DEFAULT_DISTANCE_WEIGHTS = {
+    "mel_distance": 0.4,
+    "rms_envelope_distance": 0.2,
+    "spectral_centroid_distance": 0.2,
+    "stft_magnitude_distance": 0.2,
+}
+
 
 def preprocess_audio(audio, sample_rate, target_sample_rate=DEFAULT_SAMPLE_RATE):
     mono = to_mono(audio)
@@ -52,7 +59,7 @@ def compare_audio_arrays(
         for target_stft, candidate_stft in zip(target_stfts, candidate_stfts)
     ]
 
-    return {
+    distances = {
         "mel_distance": mean_absolute_distance(
             mel_spectrogram(target),
             mel_spectrogram(candidate),
@@ -67,3 +74,17 @@ def compare_audio_arrays(
         ),
         "stft_magnitude_distances": stft_distances,
     }
+
+    distances["weighted_distance"] = weighted_similarity_distance(distances)
+    return distances
+
+
+def weighted_similarity_distance(distances, weights=DEFAULT_DISTANCE_WEIGHTS):
+    stft_distance = float(np.mean(distances["stft_magnitude_distances"]))
+
+    return float(
+        distances["mel_distance"] * weights["mel_distance"]
+        + distances["rms_envelope_distance"] * weights["rms_envelope_distance"]
+        + distances["spectral_centroid_distance"] * weights["spectral_centroid_distance"]
+        + stft_distance * weights["stft_magnitude_distance"]
+    )
