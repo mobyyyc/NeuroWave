@@ -96,7 +96,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 - [x] Add resampling helper.
 - [x] Add loudness normalization helper.
 - [x] Add mel spectrogram extraction in `minisynth/features.py`.
-- [ ] Add RMS envelope extraction.
+- [x] Add RMS envelope extraction.
 - [ ] Add multi-resolution STFT magnitude extraction.
 - [ ] Add spectral centroid extraction.
 - [ ] Add `scripts/compare_audio.py`.
@@ -248,3 +248,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add loudness normalization helper`
 - Added log-mel spectrogram extraction for feature comparison and future ML inputs.
   Commit: `Add mel spectrogram extraction`
+- Added RMS envelope extraction for frame-by-frame loudness comparison.
+  Commit: `Add RMS envelope extraction`

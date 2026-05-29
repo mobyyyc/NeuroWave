@@ -108,3 +108,25 @@ def mel_spectrogram(
     )
 
     return librosa.power_to_db(mel_power, ref=np.max)
+
+
+def rms_envelope(
+    audio,
+    frame_length=DEFAULT_N_FFT,
+    hop_length=DEFAULT_HOP_LENGTH,
+):
+    if frame_length <= 0:
+        raise ValueError("frame_length must be positive")
+
+    if hop_length <= 0:
+        raise ValueError("hop_length must be positive")
+
+    samples = to_mono(audio)
+    if samples.size == 0:
+        raise ValueError("audio must not be empty")
+
+    return librosa.feature.rms(
+        y=samples.astype(float),
+        frame_length=frame_length,
+        hop_length=hop_length,
+    )[0]

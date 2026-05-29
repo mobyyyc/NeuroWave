@@ -11,6 +11,7 @@ from minisynth.features import (
     normalize_loudness,
     resample_audio,
     rms,
+    rms_envelope,
     to_mono,
 )
 
@@ -157,6 +158,39 @@ class TestAudioFeatures(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mel_spectrogram(np.array([]))
+
+    def test_rms_envelope_returns_one_value_per_frame(self):
+        audio = np.ones(DEFAULT_SAMPLE_RATE)
+
+        envelope = rms_envelope(audio)
+
+        self.assertEqual(envelope.shape, (1 + len(audio) // DEFAULT_HOP_LENGTH,))
+        self.assertTrue(np.all(np.isfinite(envelope)))
+
+    def test_rms_envelope_tracks_loudness_change(self):
+        quiet = np.ones(DEFAULT_SAMPLE_RATE // 2) * 0.1
+        loud = np.ones(DEFAULT_SAMPLE_RATE // 2) * 0.5
+        envelope = rms_envelope(np.concatenate([quiet, loud]))
+
+        self.assertLess(np.mean(envelope[:10]), np.mean(envelope[-10:]))
+
+    def test_rms_envelope_accepts_stereo_input(self):
+        mono = np.ones(DEFAULT_SAMPLE_RATE)
+        stereo = np.column_stack([mono, mono])
+
+        envelope = rms_envelope(stereo)
+
+        self.assertEqual(envelope.shape, (1 + len(mono) // DEFAULT_HOP_LENGTH,))
+
+    def test_rms_envelope_rejects_invalid_parameters(self):
+        with self.assertRaises(ValueError):
+            rms_envelope(np.ones(10), frame_length=0)
+
+        with self.assertRaises(ValueError):
+            rms_envelope(np.ones(10), hop_length=0)
+
+        with self.assertRaises(ValueError):
+            rms_envelope(np.array([]))
 
 
 if __name__ == "__main__":
