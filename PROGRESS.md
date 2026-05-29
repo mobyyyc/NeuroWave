@@ -113,7 +113,7 @@ Goal: match target audio by optimizing synth parameters before training neural n
 - [x] Add random search over parameter vectors.
 - [x] Save best candidate patch and WAV into `runs/`.
 - [x] Add progress output for search runs.
-- [ ] Test matching against a NeuroWave-generated target.
+- [x] Test matching against a NeuroWave-generated target.
 - [ ] Add a simple comparison report file in each run directory.
 - [ ] Commit Milestone D completion.
 
@@ -272,3 +272,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Save best search candidate`
 - Added optional progress callbacks and formatted progress output for search runs.
   Commit: `Add search progress output`
+- Added a search regression test against a NeuroWave-generated target audio clip.
+  Commit: `Test search against generated target`

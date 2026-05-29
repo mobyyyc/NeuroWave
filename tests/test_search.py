@@ -193,6 +193,24 @@ class TestRandomSearch(unittest.TestCase):
             self.assertEqual(info.samplerate, DEFAULT_SAMPLE_RATE)
             self.assertEqual(info.channels, 1)
 
+    def test_random_search_matches_neurowave_generated_target(self):
+        target_config = SynthConfig(length=1.0, osc1_wave="saw", osc2_wave="triangle")
+        target_audio = render_config_audio(target_config)
+
+        result = random_search(
+            target_audio,
+            DEFAULT_SAMPLE_RATE,
+            iterations=2,
+            seed=5,
+        )
+
+        self.assertEqual(result["evaluations"], 2)
+        self.assertTrue(np.isfinite(result["score"]))
+        self.assertIsInstance(result["config"], SynthConfig)
+        self.assertEqual(len(result["vector"]), len(VECTOR_PARAMETERS))
+        self.assertEqual(result["audio"].ndim, 1)
+        self.assertGreater(len(result["audio"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
