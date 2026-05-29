@@ -4,7 +4,10 @@ import numpy as np
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.features import (
+    DEFAULT_HOP_LENGTH,
+    DEFAULT_N_MELS,
     DEFAULT_TARGET_RMS,
+    mel_spectrogram,
     normalize_loudness,
     resample_audio,
     rms,
@@ -110,6 +113,50 @@ class TestAudioFeatures(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             normalize_loudness(np.ones(4), silence_threshold=-1.0)
+
+    def test_mel_spectrogram_returns_mel_bins_by_frames(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        spectrogram = mel_spectrogram(audio)
+
+        self.assertEqual(spectrogram.shape[0], DEFAULT_N_MELS)
+        self.assertEqual(spectrogram.shape[1], 1 + len(audio) // DEFAULT_HOP_LENGTH)
+        self.assertTrue(np.all(np.isfinite(spectrogram)))
+
+    def test_mel_spectrogram_accepts_stereo_input(self):
+        mono = np.sin(
+            2 * np.pi * 220.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+        stereo = np.column_stack([mono, mono])
+
+        spectrogram = mel_spectrogram(stereo, n_mels=32)
+
+        self.assertEqual(spectrogram.shape[0], 32)
+        self.assertTrue(np.all(np.isfinite(spectrogram)))
+
+    def test_mel_spectrogram_handles_silence(self):
+        spectrogram = mel_spectrogram(np.zeros(DEFAULT_SAMPLE_RATE // 2))
+
+        self.assertEqual(spectrogram.shape[0], DEFAULT_N_MELS)
+        self.assertTrue(np.all(np.isfinite(spectrogram)))
+
+    def test_mel_spectrogram_rejects_invalid_parameters(self):
+        with self.assertRaises(ValueError):
+            mel_spectrogram(np.ones(10), sample_rate=0)
+
+        with self.assertRaises(ValueError):
+            mel_spectrogram(np.ones(10), n_mels=0)
+
+        with self.assertRaises(ValueError):
+            mel_spectrogram(np.ones(10), n_fft=0)
+
+        with self.assertRaises(ValueError):
+            mel_spectrogram(np.ones(10), hop_length=0)
+
+        with self.assertRaises(ValueError):
+            mel_spectrogram(np.array([]))
 
 
 if __name__ == "__main__":

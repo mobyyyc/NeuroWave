@@ -1,5 +1,6 @@
 """Audio feature extraction for matching, datasets, and ML."""
 
+import librosa
 import numpy as np
 from scipy.signal import resample_poly
 
@@ -7,6 +8,9 @@ from minisynth.constants import DEFAULT_SAMPLE_RATE
 
 DEFAULT_TARGET_RMS = 0.1
 SILENCE_RMS_THRESHOLD = 1e-12
+DEFAULT_N_MELS = 64
+DEFAULT_N_FFT = 2048
+DEFAULT_HOP_LENGTH = 512
 
 
 def to_mono(audio):
@@ -69,3 +73,38 @@ def normalize_loudness(
         return np.zeros_like(samples, dtype=float)
 
     return samples * (target_rms / current_rms)
+
+
+def mel_spectrogram(
+    audio,
+    sample_rate=DEFAULT_SAMPLE_RATE,
+    n_mels=DEFAULT_N_MELS,
+    n_fft=DEFAULT_N_FFT,
+    hop_length=DEFAULT_HOP_LENGTH,
+):
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+
+    if n_mels <= 0:
+        raise ValueError("n_mels must be positive")
+
+    if n_fft <= 0:
+        raise ValueError("n_fft must be positive")
+
+    if hop_length <= 0:
+        raise ValueError("hop_length must be positive")
+
+    samples = to_mono(audio)
+    if samples.size == 0:
+        raise ValueError("audio must not be empty")
+
+    mel_power = librosa.feature.melspectrogram(
+        y=samples.astype(float),
+        sr=sample_rate,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        n_mels=n_mels,
+        power=2.0,
+    )
+
+    return librosa.power_to_db(mel_power, ref=np.max)
