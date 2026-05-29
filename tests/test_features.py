@@ -3,7 +3,13 @@ import unittest
 import numpy as np
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
-from minisynth.features import resample_audio, to_mono
+from minisynth.features import (
+    DEFAULT_TARGET_RMS,
+    normalize_loudness,
+    resample_audio,
+    rms,
+    to_mono,
+)
 
 
 class TestAudioFeatures(unittest.TestCase):
@@ -74,6 +80,36 @@ class TestAudioFeatures(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             resample_audio(np.zeros(10), 44100, 0)
+
+    def test_rms_computes_root_mean_square(self):
+        audio = np.array([1.0, -1.0, 1.0, -1.0])
+
+        self.assertAlmostEqual(rms(audio), 1.0)
+
+    def test_rms_rejects_empty_audio(self):
+        with self.assertRaises(ValueError):
+            rms(np.array([]))
+
+    def test_normalize_loudness_scales_audio_to_target_rms(self):
+        audio = np.array([0.5, -0.5, 0.5, -0.5])
+
+        normalized = normalize_loudness(audio)
+
+        self.assertAlmostEqual(rms(normalized), DEFAULT_TARGET_RMS)
+
+    def test_normalize_loudness_returns_zero_for_silence(self):
+        audio = np.zeros(4)
+
+        normalized = normalize_loudness(audio)
+
+        np.testing.assert_array_equal(normalized, np.zeros(4))
+
+    def test_normalize_loudness_rejects_invalid_parameters(self):
+        with self.assertRaises(ValueError):
+            normalize_loudness(np.ones(4), target_rms=0.0)
+
+        with self.assertRaises(ValueError):
+            normalize_loudness(np.ones(4), silence_threshold=-1.0)
 
 
 if __name__ == "__main__":
