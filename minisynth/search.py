@@ -41,6 +41,25 @@ def save_search_result(result, run_dir):
     }
 
 
+def format_search_progress(progress):
+    best_score = progress["best_score"]
+    if best_score is None:
+        best_score_text = "none"
+    else:
+        best_score_text = f"{best_score:.6f}"
+
+    return (
+        f"evaluation {progress['evaluations']}/{progress['iterations']} "
+        f"attempt {progress['attempts']} "
+        f"score {progress['score']:.6f} "
+        f"best {best_score_text}"
+    )
+
+
+def print_search_progress(progress):
+    print(format_search_progress(progress))
+
+
 def random_search(
     target_audio,
     target_sample_rate=DEFAULT_SAMPLE_RATE,
@@ -48,9 +67,14 @@ def random_search(
     seed=0,
     renderer=render_config_audio,
     comparer=compare_audio_arrays,
+    progress_callback=None,
+    progress_interval=1,
 ):
     if iterations < 1:
         raise ValueError("iterations must be at least 1")
+
+    if progress_interval < 1:
+        raise ValueError("progress_interval must be at least 1")
 
     rng = np.random.default_rng(seed)
     best = None
@@ -77,6 +101,7 @@ def random_search(
         if not np.isfinite(score):
             continue
 
+        improved = best is None or score < best["score"]
         if best is None or score < best["score"]:
             best = {
                 "iteration": evaluated,
@@ -89,6 +114,17 @@ def random_search(
             }
 
         evaluated += 1
+        if progress_callback is not None and evaluated % progress_interval == 0:
+            progress_callback(
+                {
+                    "evaluations": evaluated,
+                    "iterations": iterations,
+                    "attempts": attempts,
+                    "score": score,
+                    "best_score": best["score"] if best is not None else None,
+                    "improved": improved,
+                }
+            )
 
     if best is None:
         raise ValueError("random search did not produce any valid candidates")

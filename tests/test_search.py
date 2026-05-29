@@ -1,5 +1,7 @@
+import io
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +11,8 @@ from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.io import load_patch
 from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
 from minisynth.search import (
+    format_search_progress,
+    print_search_progress,
     random_search,
     random_vector,
     render_config_audio,
@@ -82,9 +86,91 @@ class TestRandomSearch(unittest.TestCase):
         self.assertEqual(result["evaluations"], 1)
         self.assertEqual(result["attempts"], 2)
 
+    def test_random_search_reports_progress(self):
+        progress = []
+
+        def fake_renderer(config):
+            return np.array(config.to_vector())
+
+        def fake_comparer(target_audio, target_sample_rate, candidate_audio, candidate_sample_rate):
+            return {"weighted_distance": 1.0}
+
+        random_search(
+            np.zeros(10),
+            iterations=2,
+            seed=1,
+            renderer=fake_renderer,
+            comparer=fake_comparer,
+            progress_callback=progress.append,
+        )
+
+        self.assertEqual(len(progress), 2)
+        self.assertEqual(progress[0]["evaluations"], 1)
+        self.assertEqual(progress[0]["iterations"], 2)
+        self.assertEqual(progress[0]["best_score"], 1.0)
+
+    def test_random_search_respects_progress_interval(self):
+        progress = []
+
+        def fake_renderer(config):
+            return np.array(config.to_vector())
+
+        def fake_comparer(target_audio, target_sample_rate, candidate_audio, candidate_sample_rate):
+            return {"weighted_distance": 1.0}
+
+        random_search(
+            np.zeros(10),
+            iterations=3,
+            seed=1,
+            renderer=fake_renderer,
+            comparer=fake_comparer,
+            progress_callback=progress.append,
+            progress_interval=2,
+        )
+
+        self.assertEqual(len(progress), 1)
+        self.assertEqual(progress[0]["evaluations"], 2)
+
     def test_random_search_rejects_invalid_iterations(self):
         with self.assertRaises(ValueError):
             random_search(np.zeros(10), iterations=0)
+
+    def test_random_search_rejects_invalid_progress_interval(self):
+        with self.assertRaises(ValueError):
+            random_search(np.zeros(10), progress_interval=0)
+
+    def test_format_search_progress_includes_scores(self):
+        text = format_search_progress(
+            {
+                "evaluations": 2,
+                "iterations": 10,
+                "attempts": 3,
+                "score": 4.0,
+                "best_score": 1.5,
+                "improved": False,
+            }
+        )
+
+        self.assertIn("evaluation 2/10", text)
+        self.assertIn("score 4.000000", text)
+        self.assertIn("best 1.500000", text)
+
+    def test_print_search_progress_prints_formatted_progress(self):
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            print_search_progress(
+                {
+                    "evaluations": 1,
+                    "iterations": 1,
+                    "attempts": 1,
+                    "score": 0.0,
+                    "best_score": 0.0,
+                    "improved": True,
+                }
+            )
+
+        self.assertIn("evaluation 1/1", output.getvalue())
 
     def test_save_search_result_writes_best_patch_and_audio(self):
         with tempfile.TemporaryDirectory() as tmpdir:
