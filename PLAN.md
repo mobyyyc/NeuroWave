@@ -599,9 +599,10 @@ The UI should show:
 
 ### Milestone D: First ML Model
 
-- Train CNN plus MLP inverse model.
-- Predict parameters from spectrograms.
+- Start with a scikit-learn regression baseline using existing local dependencies.
+- Predict normalized synth parameter vectors from extracted audio features.
 - Evaluate on synthetic validation data.
+- Move to PyTorch and CNN-style spectrogram models after the baseline data path is proven.
 - Refine predictions with optimizer.
 
 ### Milestone E: Real Audio Prototype

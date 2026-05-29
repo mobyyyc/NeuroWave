@@ -121,9 +121,9 @@ Goal: match target audio by optimizing synth parameters before training neural n
 
 Goal: predict synth parameters from audio features on synthetic data.
 
-- [ ] Choose initial ML framework.
+- [x] Choose initial ML framework.
 - [ ] Create dataset loader for generated metadata.
-- [ ] Create first CNN plus MLP model.
+- [ ] Create first scikit-learn MLP regression baseline.
 - [ ] Train on a small synthetic dataset.
 - [ ] Save model checkpoints under `models/`.
 - [ ] Add prediction script for one audio clip.
@@ -278,3 +278,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add search result report`
 - Completed Milestone D and moved the active phase to Milestone E first ML model.
   Commit: `Complete Milestone D`
+- Chose scikit-learn as the initial ML framework and documented why PyTorch is deferred.
+  Commit: `Choose initial ML framework`
