@@ -93,7 +93,7 @@ Goal: generate labeled synthetic data from known parameters.
 Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 
 - [x] Add mono conversion helper.
-- [ ] Add resampling helper.
+- [x] Add resampling helper.
 - [ ] Add loudness normalization helper.
 - [ ] Add mel spectrogram extraction in `minisynth/features.py`.
 - [ ] Add RMS envelope extraction.
@@ -242,3 +242,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Complete Milestone B`
 - Added a mono conversion helper for one-dimensional and channel-last audio inputs.
   Commit: `Add mono conversion helper`
+- Added a resampling helper for converting audio to the target sample rate.
+  Commit: `Add audio resampling helper`
