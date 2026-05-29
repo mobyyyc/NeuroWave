@@ -101,7 +101,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 - [x] Add spectral centroid extraction.
 - [x] Add `scripts/compare_audio.py`.
 - [x] Define first weighted similarity score.
-- [ ] Test that identical audio scores better than different audio.
+- [x] Test that identical audio scores better than different audio.
 - [ ] Commit Milestone C completion.
 
 ## Milestone D: Search-Based Matching
@@ -258,3 +258,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add audio comparison script`
 - Added the first weighted similarity distance for ranking candidate audio.
   Commit: `Add weighted similarity score`
+- Added a ranking test proving identical audio scores better than different audio.
+  Commit: `Test weighted similarity ranking`

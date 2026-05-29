@@ -90,6 +90,29 @@ class TestAudioCompare(unittest.TestCase):
 
         self.assertAlmostEqual(result["weighted_distance"], 0.0)
 
+    def test_identical_audio_scores_better_than_different_audio(self):
+        time = np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        target = np.sin(2 * np.pi * 220.0 * time)
+        different = np.sin(2 * np.pi * 2200.0 * time)
+
+        identical_result = compare_audio_arrays(
+            target,
+            DEFAULT_SAMPLE_RATE,
+            target,
+            DEFAULT_SAMPLE_RATE,
+        )
+        different_result = compare_audio_arrays(
+            target,
+            DEFAULT_SAMPLE_RATE,
+            different,
+            DEFAULT_SAMPLE_RATE,
+        )
+
+        self.assertLess(
+            identical_result["weighted_distance"],
+            different_result["weighted_distance"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
