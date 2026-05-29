@@ -1,5 +1,6 @@
 """Search utilities for matching target audio with synth parameters."""
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -31,13 +32,43 @@ def save_search_result(result, run_dir):
 
     patch_path = destination / "best_patch.json"
     audio_path = destination / "best.wav"
+    report_path = destination / "report.json"
 
     save_patch(result["config"].to_render_kwargs(), patch_path)
     sf.write(audio_path, result["audio"], DEFAULT_SAMPLE_RATE)
+    save_search_report(result, report_path, patch_path, audio_path)
 
     return {
         "patch_path": patch_path,
         "audio_path": audio_path,
+        "report_path": report_path,
+    }
+
+
+def save_search_report(result, path, patch_path, audio_path):
+    report = search_report(result, patch_path, audio_path)
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    with destination.open("w", encoding="utf-8") as file:
+        json.dump(report, file, indent=2)
+        file.write("\n")
+
+
+def search_report(result, patch_path, audio_path):
+    return {
+        "score": result["score"],
+        "iteration": result.get("iteration"),
+        "attempt": result.get("attempt"),
+        "evaluations": result.get("evaluations"),
+        "attempts": result.get("attempts"),
+        "distances": result.get("distances", {}),
+        "vector": list(result["vector"]),
+        "config": result["config"].to_render_kwargs(),
+        "patch_path": str(patch_path),
+        "audio_path": str(audio_path),
+        "sample_rate": DEFAULT_SAMPLE_RATE,
+        "frames": len(result["audio"]),
     }
 
 

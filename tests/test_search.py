@@ -1,4 +1,5 @@
 import io
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -17,6 +18,7 @@ from minisynth.search import (
     random_vector,
     render_config_audio,
     save_search_result,
+    search_report,
 )
 
 
@@ -177,7 +179,14 @@ class TestRandomSearch(unittest.TestCase):
             config = SynthConfig(length=1.0, osc1_wave="sine")
             audio = render_config_audio(config)
             result = {
+                "score": 1.25,
+                "iteration": 0,
+                "attempt": 0,
+                "evaluations": 1,
+                "attempts": 1,
+                "distances": {"weighted_distance": 1.25},
                 "config": config,
+                "vector": config.to_vector(),
                 "audio": audio,
             }
 
@@ -185,13 +194,50 @@ class TestRandomSearch(unittest.TestCase):
 
             self.assertEqual(paths["patch_path"], Path(tmpdir) / "match_001" / "best_patch.json")
             self.assertEqual(paths["audio_path"], Path(tmpdir) / "match_001" / "best.wav")
+            self.assertEqual(paths["report_path"], Path(tmpdir) / "match_001" / "report.json")
             self.assertTrue(paths["patch_path"].exists())
             self.assertTrue(paths["audio_path"].exists())
+            self.assertTrue(paths["report_path"].exists())
             self.assertEqual(load_patch(paths["patch_path"])["osc1_wave"], "sine")
 
             info = sf.info(paths["audio_path"])
             self.assertEqual(info.samplerate, DEFAULT_SAMPLE_RATE)
             self.assertEqual(info.channels, 1)
+
+            report = json.loads(paths["report_path"].read_text(encoding="utf-8"))
+            self.assertEqual(report["score"], 1.25)
+            self.assertEqual(report["config"]["osc1_wave"], "sine")
+            self.assertEqual(report["distances"]["weighted_distance"], 1.25)
+
+    def test_search_report_serializes_run_summary(self):
+        config = SynthConfig(length=1.0)
+        audio = render_config_audio(config)
+        result = {
+            "score": 2.5,
+            "iteration": 1,
+            "attempt": 2,
+            "evaluations": 3,
+            "attempts": 4,
+            "distances": {"weighted_distance": 2.5},
+            "config": config,
+            "vector": config.to_vector(),
+            "audio": audio,
+        }
+
+        report = search_report(
+            result,
+            Path("runs/match_001/best_patch.json"),
+            Path("runs/match_001/best.wav"),
+        )
+
+        self.assertEqual(report["score"], 2.5)
+        self.assertEqual(report["iteration"], 1)
+        self.assertEqual(report["evaluations"], 3)
+        self.assertEqual(report["patch_path"], "runs/match_001/best_patch.json")
+        self.assertEqual(report["audio_path"], "runs/match_001/best.wav")
+        self.assertEqual(report["sample_rate"], DEFAULT_SAMPLE_RATE)
+        self.assertEqual(report["frames"], len(audio))
+        self.assertEqual(len(report["vector"]), len(VECTOR_PARAMETERS))
 
     def test_random_search_matches_neurowave_generated_target(self):
         target_config = SynthConfig(length=1.0, osc1_wave="saw", osc2_wave="triangle")

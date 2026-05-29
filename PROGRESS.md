@@ -114,7 +114,7 @@ Goal: match target audio by optimizing synth parameters before training neural n
 - [x] Save best candidate patch and WAV into `runs/`.
 - [x] Add progress output for search runs.
 - [x] Test matching against a NeuroWave-generated target.
-- [ ] Add a simple comparison report file in each run directory.
+- [x] Add a simple comparison report file in each run directory.
 - [ ] Commit Milestone D completion.
 
 ## Milestone E: First ML Model
@@ -274,3 +274,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add search progress output`
 - Added a search regression test against a NeuroWave-generated target audio clip.
   Commit: `Test search against generated target`
+- Added `report.json` export for saved search result directories.
+  Commit: `Add search result report`
