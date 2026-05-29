@@ -1,10 +1,19 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
+import soundfile as sf
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
+from minisynth.io import load_patch
 from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
-from minisynth.search import random_search, random_vector, render_config_audio
+from minisynth.search import (
+    random_search,
+    random_vector,
+    render_config_audio,
+    save_search_result,
+)
 
 
 class TestRandomSearch(unittest.TestCase):
@@ -76,6 +85,27 @@ class TestRandomSearch(unittest.TestCase):
     def test_random_search_rejects_invalid_iterations(self):
         with self.assertRaises(ValueError):
             random_search(np.zeros(10), iterations=0)
+
+    def test_save_search_result_writes_best_patch_and_audio(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = SynthConfig(length=1.0, osc1_wave="sine")
+            audio = render_config_audio(config)
+            result = {
+                "config": config,
+                "audio": audio,
+            }
+
+            paths = save_search_result(result, Path(tmpdir) / "match_001")
+
+            self.assertEqual(paths["patch_path"], Path(tmpdir) / "match_001" / "best_patch.json")
+            self.assertEqual(paths["audio_path"], Path(tmpdir) / "match_001" / "best.wav")
+            self.assertTrue(paths["patch_path"].exists())
+            self.assertTrue(paths["audio_path"].exists())
+            self.assertEqual(load_patch(paths["patch_path"])["osc1_wave"], "sine")
+
+            info = sf.info(paths["audio_path"])
+            self.assertEqual(info.samplerate, DEFAULT_SAMPLE_RATE)
+            self.assertEqual(info.channels, 1)
 
 
 if __name__ == "__main__":

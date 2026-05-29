@@ -1,11 +1,17 @@
 """Search utilities for matching target audio with synth parameters."""
 
+from pathlib import Path
+
 import numpy as np
+import soundfile as sf
 
 from minisynth.compare import compare_audio_arrays
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
+from minisynth.io import save_patch
 from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
+
+DEFAULT_RUNS_DIR = Path("runs")
 
 
 def random_vector(rng, size=None):
@@ -17,6 +23,22 @@ def random_vector(rng, size=None):
 
 def render_config_audio(config):
     return render_patch(**config.to_render_kwargs())
+
+
+def save_search_result(result, run_dir):
+    destination = Path(run_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+
+    patch_path = destination / "best_patch.json"
+    audio_path = destination / "best.wav"
+
+    save_patch(result["config"].to_render_kwargs(), patch_path)
+    sf.write(audio_path, result["audio"], DEFAULT_SAMPLE_RATE)
+
+    return {
+        "patch_path": patch_path,
+        "audio_path": audio_path,
+    }
 
 
 def random_search(
