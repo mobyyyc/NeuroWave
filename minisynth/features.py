@@ -176,3 +176,30 @@ def multi_resolution_stft_magnitude(
         )
 
     return magnitudes
+
+
+def spectral_centroid(
+    audio,
+    sample_rate=DEFAULT_SAMPLE_RATE,
+    n_fft=DEFAULT_N_FFT,
+    hop_length=DEFAULT_HOP_LENGTH,
+):
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+
+    if n_fft <= 0:
+        raise ValueError("n_fft must be positive")
+
+    if hop_length <= 0:
+        raise ValueError("hop_length must be positive")
+
+    samples = to_mono(audio)
+    if samples.size == 0:
+        raise ValueError("audio must not be empty")
+
+    return librosa.feature.spectral_centroid(
+        y=samples.astype(float),
+        sr=sample_rate,
+        n_fft=n_fft,
+        hop_length=hop_length,
+    )[0]

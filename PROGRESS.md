@@ -98,7 +98,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 - [x] Add mel spectrogram extraction in `minisynth/features.py`.
 - [x] Add RMS envelope extraction.
 - [x] Add multi-resolution STFT magnitude extraction.
-- [ ] Add spectral centroid extraction.
+- [x] Add spectral centroid extraction.
 - [ ] Add `scripts/compare_audio.py`.
 - [ ] Define first weighted similarity score.
 - [ ] Test that identical audio scores better than different audio.
@@ -252,3 +252,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add RMS envelope extraction`
 - Added single and multi-resolution STFT magnitude extraction for spectral comparison.
   Commit: `Add multi-resolution STFT features`
+- Added spectral centroid extraction for frame-by-frame brightness comparison.
+  Commit: `Add spectral centroid extraction`

@@ -14,6 +14,7 @@ from minisynth.features import (
     resample_audio,
     rms,
     rms_envelope,
+    spectral_centroid,
     stft_magnitude,
     to_mono,
 )
@@ -240,6 +241,47 @@ class TestAudioFeatures(unittest.TestCase):
     def test_multi_resolution_stft_magnitude_rejects_empty_resolutions(self):
         with self.assertRaises(ValueError):
             multi_resolution_stft_magnitude(np.ones(10), resolutions=())
+
+    def test_spectral_centroid_returns_one_value_per_frame(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        centroid = spectral_centroid(audio)
+
+        self.assertEqual(centroid.shape, (1 + len(audio) // DEFAULT_HOP_LENGTH,))
+        self.assertTrue(np.all(np.isfinite(centroid)))
+
+    def test_spectral_centroid_tracks_brightness(self):
+        time = np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        low = np.sin(2 * np.pi * 220.0 * time)
+        high = np.sin(2 * np.pi * 2200.0 * time)
+
+        low_centroid = spectral_centroid(low)
+        high_centroid = spectral_centroid(high)
+
+        self.assertGreater(np.mean(high_centroid), np.mean(low_centroid))
+
+    def test_spectral_centroid_accepts_stereo_input(self):
+        mono = np.ones(DEFAULT_SAMPLE_RATE)
+        stereo = np.column_stack([mono, mono])
+
+        centroid = spectral_centroid(stereo)
+
+        self.assertEqual(centroid.shape, (1 + len(mono) // DEFAULT_HOP_LENGTH,))
+
+    def test_spectral_centroid_rejects_invalid_parameters(self):
+        with self.assertRaises(ValueError):
+            spectral_centroid(np.ones(10), sample_rate=0)
+
+        with self.assertRaises(ValueError):
+            spectral_centroid(np.ones(10), n_fft=0)
+
+        with self.assertRaises(ValueError):
+            spectral_centroid(np.ones(10), hop_length=0)
+
+        with self.assertRaises(ValueError):
+            spectral_centroid(np.array([]))
 
 
 if __name__ == "__main__":
