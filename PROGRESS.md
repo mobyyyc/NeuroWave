@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone C - Audio Features And Similarity.
+Current active phase: Milestone D - Search-Based Matching.
 
 ## Completed Baseline
 
@@ -102,7 +102,7 @@ Goal: compare target audio and rendered audio in a useful, phase-tolerant way.
 - [x] Add `scripts/compare_audio.py`.
 - [x] Define first weighted similarity score.
 - [x] Test that identical audio scores better than different audio.
-- [ ] Commit Milestone C completion.
+- [x] Commit Milestone C completion.
 
 ## Milestone D: Search-Based Matching
 
@@ -260,3 +260,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add weighted similarity score`
 - Added a ranking test proving identical audio scores better than different audio.
   Commit: `Test weighted similarity ranking`
+- Completed Milestone C and moved the active phase to Milestone D search-based matching.
+  Commit: `Complete Milestone C`
