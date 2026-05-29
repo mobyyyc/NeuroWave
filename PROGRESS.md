@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone D - Search-Based Matching.
+Current active phase: Milestone E - First ML Model.
 
 ## Completed Baseline
 
@@ -115,7 +115,7 @@ Goal: match target audio by optimizing synth parameters before training neural n
 - [x] Add progress output for search runs.
 - [x] Test matching against a NeuroWave-generated target.
 - [x] Add a simple comparison report file in each run directory.
-- [ ] Commit Milestone D completion.
+- [x] Commit Milestone D completion.
 
 ## Milestone E: First ML Model
 
@@ -276,3 +276,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Test search against generated target`
 - Added `report.json` export for saved search result directories.
   Commit: `Add search result report`
+- Completed Milestone D and moved the active phase to Milestone E first ML model.
+  Commit: `Complete Milestone D`
