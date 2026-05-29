@@ -1,5 +1,8 @@
 """Machine-learning baselines for predicting synth parameters."""
 
+from pathlib import Path
+
+import joblib
 import numpy as np
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
@@ -13,6 +16,7 @@ from minisynth.dataset import load_training_dataset
 DEFAULT_MLP_HIDDEN_LAYERS = (32,)
 DEFAULT_MLP_MAX_ITER = 500
 DEFAULT_TEST_SIZE = 0.2
+DEFAULT_MODEL_PATH = Path("models/mlp_baseline.joblib")
 
 
 def create_mlp_regressor(
@@ -105,3 +109,18 @@ def train_mlp_from_metadata(
             "test_mae": parameter_mae(test_targets, test_predictions),
         },
     }
+
+
+def save_model_checkpoint(model, path=DEFAULT_MODEL_PATH, metrics=None):
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint = {
+        "model": model,
+        "metrics": metrics or {},
+    }
+    joblib.dump(checkpoint, destination)
+    return destination
+
+
+def load_model_checkpoint(path=DEFAULT_MODEL_PATH):
+    return joblib.load(path)

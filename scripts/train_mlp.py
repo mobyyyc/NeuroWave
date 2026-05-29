@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.dataset import DEFAULT_METADATA_PATH
-from minisynth.ml import train_mlp_from_metadata
+from minisynth.ml import DEFAULT_MODEL_PATH, save_model_checkpoint, train_mlp_from_metadata
 
 
 def parse_args():
@@ -47,6 +47,11 @@ def parse_args():
         default=0,
         help="Random state for train/test split and MLP initialization.",
     )
+    parser.add_argument(
+        "--model-output",
+        default=DEFAULT_MODEL_PATH,
+        help="Path where the trained checkpoint should be saved.",
+    )
     return parser.parse_args()
 
 
@@ -63,7 +68,16 @@ def main() -> int:
             test_size=args.test_size,
         )
 
-    print(json.dumps(result["metrics"], indent=2))
+    model_path = save_model_checkpoint(
+        result["model"],
+        args.model_output,
+        metrics=result["metrics"],
+    )
+    output = {
+        **result["metrics"],
+        "model_path": str(model_path),
+    }
+    print(json.dumps(output, indent=2))
     return 0
 
 

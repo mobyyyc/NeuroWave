@@ -10,8 +10,10 @@ from sklearn.pipeline import Pipeline
 from minisynth.dataset import write_random_dataset_files
 from minisynth.ml import (
     create_mlp_regressor,
+    load_model_checkpoint,
     parameter_mae,
     predict_parameter_vectors,
+    save_model_checkpoint,
     train_mlp_from_metadata,
     train_mlp_regressor,
 )
@@ -108,6 +110,49 @@ class TestMLBaseline(unittest.TestCase):
         self.assertEqual(metrics["test_samples"], 2)
         self.assertGreaterEqual(metrics["train_mae"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
+
+    def test_save_and_load_model_checkpoint(self):
+        features = np.array(
+            [
+                [0.0, 0.0],
+                [0.0, 1.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+            ]
+        )
+        targets = np.array(
+            [
+                [0.0, 0.0],
+                [0.25, 0.5],
+                [0.5, 0.25],
+                [1.0, 1.0],
+            ]
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            model = train_mlp_regressor(
+                features,
+                targets,
+                hidden_layer_sizes=(4,),
+                max_iter=50,
+                random_state=1,
+            )
+
+        with TemporaryDirectory() as temp_dir:
+            checkpoint_path = Path(temp_dir) / "models" / "mlp.joblib"
+            saved_path = save_model_checkpoint(
+                model,
+                checkpoint_path,
+                metrics={"test_mae": 0.1},
+            )
+            checkpoint = load_model_checkpoint(saved_path)
+
+        predictions = predict_parameter_vectors(checkpoint["model"], features[:1])
+
+        self.assertEqual(saved_path, checkpoint_path)
+        self.assertEqual(checkpoint["metrics"]["test_mae"], 0.1)
+        self.assertEqual(predictions.shape, (1, 2))
 
 
 if __name__ == "__main__":

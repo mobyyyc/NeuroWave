@@ -45,7 +45,7 @@ Train the current scikit-learn MLP baseline on generated metadata:
 python scripts/train_mlp.py --metadata data/generated/v1/metadata.jsonl
 ```
 
-The command prints train/test parameter MAE metrics as JSON. Model files are not saved yet.
+The command saves a checkpoint to `models/mlp_baseline.joblib` and prints train/test parameter MAE metrics as JSON. The `models/` directory is ignored by git.
 
 ## Test
 
