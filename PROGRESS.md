@@ -137,7 +137,7 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 
 - [x] Add versioned dataset output support for `data/generated/v2/`.
 - [x] Fix random patch envelope constraints so generated targets stay inside schema ranges.
-- [ ] Generate a local ignored `v2` dataset with 500 examples.
+- [x] Generate a local ignored `v2` dataset with 500 examples.
 - [ ] Train the MLP baseline on the `v2` dataset.
 - [ ] Save a metrics report for the `v2` training run.
 - [ ] Add evaluation across multiple held-out synthetic clips.
@@ -314,3 +314,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Start scaled synthetic training milestone`
 - Fixed random patch envelope scaling so generated training targets remain valid after normalization.
   Commit: `Keep random envelopes inside schema`
+- Generated a local ignored `v2` dataset with 500 valid examples for scaled synthetic training.
+  Commit: `Generate valid v2 dataset`
