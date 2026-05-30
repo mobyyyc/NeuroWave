@@ -142,7 +142,7 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 - [x] Save a metrics report for the `v2` training run.
 - [x] Add evaluation across multiple synthetic dataset clips.
 - [x] Compare the `v1` tiny model against the `v2` larger model.
-- [ ] Decide whether to keep scikit-learn MLP or move next to PyTorch.
+- [x] Decide whether to keep scikit-learn MLP or move next to PyTorch.
 - [ ] Commit Milestone F completion.
 
 ## Milestone G: Real Audio Prototype
@@ -324,3 +324,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Evaluate v2 model across held-out clips`
 - Compared tiny v1 and larger v2 MLP checkpoints on the same 20 v2 clips; v2 reduced mean and median weighted distance.
   Commit: `Compare v1 and v2 MLP evaluation reports`
+- Decided to keep scikit-learn as the baseline while moving the next serious model track toward PyTorch spectrogram learning.
+  Commit: `Decide next ML framework direction`

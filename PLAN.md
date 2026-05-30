@@ -622,6 +622,8 @@ The UI should show:
 
 ### Milestone G: Real Audio Prototype
 
+- Add a PyTorch/CNN inverse-model milestone before real-audio work if the next goal is
+  better synthetic reconstruction quality.
 - Add audio preprocessing.
 - Match clean one-note real samples.
 - Export comparison reports.
