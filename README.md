@@ -59,6 +59,10 @@ Save a metrics report while training:
 python scripts/train_mlp.py --metadata data/generated/v2/metadata.jsonl --metrics-output runs/training/v2_mlp_metrics.json
 ```
 
+## PyTorch Runtime
+
+PyTorch work is planned in a separate runtime path. See `PYTORCH_DECISION.md` before installing or adding PyTorch dependencies.
+
 ## Predict A Patch
 
 Predict a patch JSON from one audio clip using the saved MLP checkpoint:
