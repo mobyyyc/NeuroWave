@@ -4,11 +4,13 @@ import numpy as np
 
 from minisynth.engine import render_patch
 from minisynth.randomize import (
+    ENVELOPE_TIME_PARAMETERS,
     MAX_DATASET_AUDIO_PEAK,
     MIN_OSCILLATOR_LEVEL_SUM,
     audio_avoids_clipping,
     random_patch,
 )
+from minisynth.schema import PARAMETERS, SynthConfig
 
 
 class TestRandomPatch(unittest.TestCase):
@@ -47,6 +49,29 @@ class TestRandomPatch(unittest.TestCase):
             envelope_total = patch["attack"] + patch["decay"] + patch["release"]
 
             self.assertLessEqual(envelope_total, patch["length"])
+
+    def test_random_patch_envelope_times_stay_inside_schema_after_scaling(self):
+        parameters = {parameter.name: parameter for parameter in PARAMETERS}
+
+        for seed in range(2000, 2500):
+            patch = random_patch(seed)
+            vector = SynthConfig(**patch).to_vector()
+
+            for name in ENVELOPE_TIME_PARAMETERS:
+                self.assertGreaterEqual(patch[name], parameters[name].minimum, seed)
+                self.assertLessEqual(patch[name], parameters[name].maximum, seed)
+
+            for value in vector:
+                self.assertGreaterEqual(value, 0.0, seed)
+                self.assertLessEqual(value, 1.0, seed)
+
+    def test_random_patch_failed_v2_seeds_keep_decay_inside_schema(self):
+        parameters = {parameter.name: parameter for parameter in PARAMETERS}
+
+        for seed in (2054, 2121):
+            patch = random_patch(seed)
+
+            self.assertGreaterEqual(patch["decay"], parameters["decay"].minimum)
 
     def test_audio_avoids_clipping_rejects_bad_audio(self):
         self.assertFalse(audio_avoids_clipping(np.array([1.01])))

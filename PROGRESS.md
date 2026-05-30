@@ -136,6 +136,7 @@ Goal: predict synth parameters from audio features on synthetic data.
 Goal: make the first ML model learn from larger synthetic datasets before moving to real audio.
 
 - [x] Add versioned dataset output support for `data/generated/v2/`.
+- [x] Fix random patch envelope constraints so generated targets stay inside schema ranges.
 - [ ] Generate a local ignored `v2` dataset with 500 examples.
 - [ ] Train the MLP baseline on the `v2` dataset.
 - [ ] Save a metrics report for the `v2` training run.
@@ -311,3 +312,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Complete Milestone E`
 - Revised the roadmap so Milestone F is scaled synthetic training before real-audio work, and added versioned dataset output support for `v2`.
   Commit: `Start scaled synthetic training milestone`
+- Fixed random patch envelope scaling so generated training targets remain valid after normalization.
+  Commit: `Keep random envelopes inside schema`

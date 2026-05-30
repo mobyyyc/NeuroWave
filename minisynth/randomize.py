@@ -9,6 +9,7 @@ from minisynth.schema import PARAMETERS, denormalize_linear, denormalize_log
 
 MIN_OSCILLATOR_LEVEL_SUM = 0.2
 MAX_DATASET_AUDIO_PEAK = 0.95
+ENVELOPE_TIME_PARAMETERS = ("attack", "decay", "release")
 
 RANDOM_PARAMETER_RANGES = {
     "freq": (55.0, 1760.0),
@@ -62,16 +63,35 @@ def constrain_not_silent(patch):
 
 
 def constrain_envelope_fits_length(patch):
-    envelope_total = patch["attack"] + patch["decay"] + patch["release"]
+    minimums = {
+        parameter.name: parameter.minimum
+        for parameter in PARAMETERS
+        if parameter.name in ENVELOPE_TIME_PARAMETERS
+    }
+    minimum_total = sum(minimums[name] for name in ENVELOPE_TIME_PARAMETERS)
     max_total = patch["length"] * 0.95
+
+    if max_total < minimum_total:
+        raise ValueError("length is too short for envelope minimums")
+
+    for name in ENVELOPE_TIME_PARAMETERS:
+        patch[name] = max(patch[name], minimums[name])
+
+    envelope_total = sum(patch[name] for name in ENVELOPE_TIME_PARAMETERS)
 
     if envelope_total <= max_total:
         return patch
 
-    scale = max_total / envelope_total
-    patch["attack"] *= scale
-    patch["decay"] *= scale
-    patch["release"] *= scale
+    adjustable_total = sum(
+        patch[name] - minimums[name]
+        for name in ENVELOPE_TIME_PARAMETERS
+    )
+    target_adjustable_total = max_total - minimum_total
+    scale = target_adjustable_total / adjustable_total
+
+    for name in ENVELOPE_TIME_PARAMETERS:
+        patch[name] = minimums[name] + (patch[name] - minimums[name]) * scale
+
     return patch
 
 
