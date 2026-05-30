@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone E - First ML Model.
+Current active phase: Milestone F - Real Audio Prototype.
 
 ## Completed Baseline
 
@@ -129,7 +129,7 @@ Goal: predict synth parameters from audio features on synthetic data.
 - [x] Add prediction script for one audio clip.
 - [x] Render predicted patch and compare to target.
 - [x] Add optional optimizer refinement after prediction.
-- [ ] Commit Milestone E completion.
+- [x] Commit Milestone E completion.
 
 ## Milestone F: Real Audio Prototype
 
@@ -294,3 +294,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Evaluate rendered ML predictions`
 - Added optional local parameter-search refinement after ML prediction.
   Commit: `Add optional ML prediction refinement`
+- Completed Milestone E and moved the active phase to Milestone F real audio prototype work.
+  Commit: `Complete Milestone E`
