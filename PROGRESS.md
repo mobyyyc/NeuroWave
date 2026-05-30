@@ -150,7 +150,7 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 Goal: move beyond the compact scikit-learn baseline toward a richer inverse model that learns from spectrogram structure.
 
 - [x] Make an explicit PyTorch dependency and runtime decision.
-- [ ] Create mel-spectrogram dataset tensor export from generated metadata.
+- [x] Create mel-spectrogram dataset tensor export from generated metadata.
 - [ ] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
 - [ ] Train on `v2` or a larger synthetic dataset.
 - [ ] Save PyTorch checkpoints and metrics.
@@ -348,3 +348,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Complete Milestone F`
 - Documented the PyTorch runtime decision: keep the current Python 3.14 sklearn environment stable and use a separate compatible runtime for PyTorch work.
   Commit: `Document PyTorch runtime decision`
+- Added mel-spectrogram tensor export from generated metadata and saved local ignored v2 tensors for future PyTorch training.
+  Commit: `Export mel tensors for PyTorch training`

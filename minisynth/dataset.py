@@ -17,6 +17,8 @@ DEFAULT_PARAM_DIR = Path("data/generated/v1/params")
 DEFAULT_AUDIO_DIR = Path("data/generated/v1/audio")
 DEFAULT_METADATA_PATH = Path("data/generated/v1/metadata.jsonl")
 DEFAULT_DATASET_VERSION = "v1"
+DEFAULT_MEL_TENSOR_PATH = Path("data/generated/v1/features/mel_tensors.npz")
+DEFAULT_MEL_TENSOR_FRAMES = 256
 
 
 def generated_dataset_paths(version=DEFAULT_DATASET_VERSION, root=Path("data/generated")):
@@ -162,6 +164,30 @@ def audio_feature_vector(audio, sample_rate):
     )
 
 
+def fixed_frame_array(array, frames=DEFAULT_MEL_TENSOR_FRAMES):
+    if frames < 1:
+        raise ValueError("frames must be at least 1")
+
+    values = np.asarray(array)
+    if values.ndim != 2:
+        raise ValueError("array must be 2D")
+
+    if values.shape[1] == frames:
+        return values
+
+    if values.shape[1] > frames:
+        return values[:, :frames]
+
+    padding = ((0, 0), (0, frames - values.shape[1]))
+    return np.pad(values, padding, mode="constant")
+
+
+def mel_tensor_from_audio(audio, sample_rate, frames=DEFAULT_MEL_TENSOR_FRAMES):
+    mel = mel_spectrogram(audio, sample_rate=sample_rate)
+    fixed = fixed_frame_array(mel, frames=frames)
+    return fixed[np.newaxis, :, :].astype(np.float32)
+
+
 def load_training_dataset(metadata_path=DEFAULT_METADATA_PATH):
     rows = load_metadata(metadata_path)
     features = []
@@ -181,3 +207,53 @@ def load_training_dataset(metadata_path=DEFAULT_METADATA_PATH):
         raise ValueError("metadata did not contain any training rows")
 
     return np.vstack(features), np.asarray(targets, dtype=float)
+
+
+def load_mel_tensor_dataset(metadata_path=DEFAULT_METADATA_PATH, frames=DEFAULT_MEL_TENSOR_FRAMES):
+    rows = load_metadata(metadata_path)
+    features = []
+    targets = []
+    indices = []
+    seeds = []
+
+    for row in rows:
+        audio_path = resolve_metadata_path(metadata_path, row["audio_path"])
+        patch_path = resolve_metadata_path(metadata_path, row["patch_path"])
+
+        audio, sample_rate = sf.read(audio_path)
+        patch = load_patch(patch_path)
+
+        features.append(mel_tensor_from_audio(audio, sample_rate, frames=frames))
+        targets.append(SynthConfig(**patch).to_vector())
+        indices.append(row["index"])
+        seeds.append(row["seed"])
+
+    if not features:
+        raise ValueError("metadata did not contain any training rows")
+
+    return {
+        "features": np.stack(features).astype(np.float32),
+        "targets": np.asarray(targets, dtype=np.float32),
+        "indices": np.asarray(indices, dtype=np.int64),
+        "seeds": np.asarray(seeds, dtype=np.int64),
+    }
+
+
+def save_mel_tensor_dataset(
+    metadata_path=DEFAULT_METADATA_PATH,
+    output_path=DEFAULT_MEL_TENSOR_PATH,
+    frames=DEFAULT_MEL_TENSOR_FRAMES,
+):
+    dataset = load_mel_tensor_dataset(metadata_path, frames=frames)
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        destination,
+        features=dataset["features"],
+        targets=dataset["targets"],
+        indices=dataset["indices"],
+        seeds=dataset["seeds"],
+        metadata_path=str(metadata_path),
+        frames=np.asarray(frames, dtype=np.int64),
+    )
+    return destination

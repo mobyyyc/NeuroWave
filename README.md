@@ -63,6 +63,12 @@ python scripts/train_mlp.py --metadata data/generated/v2/metadata.jsonl --metric
 
 PyTorch work is planned in a separate runtime path. See `PYTORCH_DECISION.md` before installing or adding PyTorch dependencies.
 
+Export generated audio as channel-first mel-spectrogram tensors for future PyTorch training:
+
+```bash
+python scripts/export_mel_tensors.py --dataset-version v2
+```
+
 ## Predict A Patch
 
 Predict a patch JSON from one audio clip using the saved MLP checkpoint:

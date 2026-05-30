@@ -11,12 +11,16 @@ from minisynth.dataset import (
     DEFAULT_METADATA_PATH,
     audio_filename,
     audio_feature_vector,
+    fixed_frame_array,
     generated_dataset_paths,
+    load_mel_tensor_dataset,
     load_metadata,
     load_training_dataset,
+    mel_tensor_from_audio,
     metadata_record,
     patch_filename,
     resolve_metadata_path,
+    save_mel_tensor_dataset,
     write_random_dataset_files,
     write_random_patch_files,
 )
@@ -266,6 +270,81 @@ class TestDatasetGeneration(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 load_training_dataset(metadata_path)
+
+    def test_fixed_frame_array_pads_or_truncates_time_axis(self):
+        short = np.ones((2, 3))
+        long = np.ones((2, 5))
+
+        padded = fixed_frame_array(short, frames=5)
+        truncated = fixed_frame_array(long, frames=3)
+
+        self.assertEqual(padded.shape, (2, 5))
+        self.assertTrue(np.all(padded[:, :3] == 1.0))
+        self.assertTrue(np.all(padded[:, 3:] == 0.0))
+        self.assertEqual(truncated.shape, (2, 3))
+
+    def test_fixed_frame_array_rejects_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            fixed_frame_array(np.ones(3), frames=5)
+
+        with self.assertRaises(ValueError):
+            fixed_frame_array(np.ones((2, 3)), frames=0)
+
+    def test_mel_tensor_from_audio_returns_channel_first_tensor(self):
+        audio = np.sin(
+            2 * np.pi * 440.0 * np.arange(DEFAULT_SAMPLE_RATE) / DEFAULT_SAMPLE_RATE
+        )
+
+        tensor = mel_tensor_from_audio(audio, DEFAULT_SAMPLE_RATE, frames=16)
+
+        self.assertEqual(tensor.shape, (1, 64, 16))
+        self.assertEqual(tensor.dtype, np.float32)
+        self.assertTrue(np.all(np.isfinite(tensor)))
+
+    def test_load_mel_tensor_dataset_returns_pytorch_ready_arrays(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            metadata_path = root / "metadata.jsonl"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=110,
+                count=2,
+            )
+
+            dataset = load_mel_tensor_dataset(metadata_path, frames=8)
+
+            self.assertEqual(dataset["features"].shape, (2, 1, 64, 8))
+            self.assertEqual(dataset["features"].dtype, np.float32)
+            self.assertEqual(dataset["targets"].shape[0], 2)
+            self.assertEqual(dataset["targets"].dtype, np.float32)
+            self.assertEqual(dataset["indices"].tolist(), [0, 1])
+            self.assertEqual(dataset["seeds"].tolist(), [110, 111])
+
+    def test_save_mel_tensor_dataset_writes_npz(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            metadata_path = root / "metadata.jsonl"
+            output_path = root / "features" / "mel_tensors.npz"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=120,
+                count=2,
+            )
+
+            saved_path = save_mel_tensor_dataset(
+                metadata_path=metadata_path,
+                output_path=output_path,
+                frames=8,
+            )
+
+            with np.load(saved_path) as tensors:
+                self.assertEqual(tensors["features"].shape, (2, 1, 64, 8))
+                self.assertEqual(tensors["targets"].shape[0], 2)
+                self.assertEqual(int(tensors["frames"]), 8)
 
 
 if __name__ == "__main__":
