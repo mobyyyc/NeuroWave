@@ -145,7 +145,23 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 - [x] Decide whether to keep scikit-learn MLP or move next to PyTorch.
 - [ ] Commit Milestone F completion.
 
-## Milestone G: Real Audio Prototype
+## Milestone G: PyTorch Spectrogram Model
+
+Goal: move beyond the compact scikit-learn baseline toward a richer inverse model that learns from spectrogram structure.
+
+- [ ] Make an explicit PyTorch dependency and runtime decision.
+- [ ] Create mel-spectrogram dataset tensor export from generated metadata.
+- [ ] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
+- [ ] Train on `v2` or a larger synthetic dataset.
+- [ ] Save PyTorch checkpoints and metrics.
+- [ ] Add prediction script for one clip using the PyTorch model.
+- [ ] Render PyTorch predicted patch and compare to target.
+- [ ] Evaluate PyTorch model across synthetic dataset clips.
+- [ ] Compare PyTorch directly against the scikit-learn baseline.
+- [ ] Decide whether scikit-learn stays as a lightweight baseline or can be removed.
+- [ ] Commit Milestone G completion.
+
+## Milestone H: Real Audio Prototype
 
 Goal: approximate clean single-note real audio clips.
 
@@ -156,9 +172,9 @@ Goal: approximate clean single-note real audio clips.
 - [ ] Export target/result comparison WAVs.
 - [ ] Export comparison feature plots or data.
 - [ ] Document known failure cases.
-- [ ] Commit Milestone G completion.
+- [ ] Commit Milestone H completion.
 
-## Milestone H: Interface And Workflow
+## Milestone I: Interface And Workflow
 
 Goal: make NeuroWave usable as a tool.
 
@@ -170,7 +186,7 @@ Goal: make NeuroWave usable as a tool.
 - [ ] Add `neurowave match`.
 - [ ] Add `neurowave predict`.
 - [ ] Consider a simple local web UI after CLI is stable.
-- [ ] Commit Milestone H completion.
+- [ ] Commit Milestone I completion.
 
 ## Progress Log
 
@@ -326,3 +342,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Compare v1 and v2 MLP evaluation reports`
 - Decided to keep scikit-learn as the baseline while moving the next serious model track toward PyTorch spectrogram learning.
   Commit: `Decide next ML framework direction`
+- Added the missing PyTorch spectrogram model milestone before real-audio work so the roadmap matches the ML decision.
+  Commit: `Add PyTorch model milestone`

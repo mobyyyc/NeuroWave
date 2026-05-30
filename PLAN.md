@@ -620,15 +620,25 @@ The UI should show:
 - Compare larger-dataset models against the tiny 10-example prototype.
 - Decide whether the scikit-learn MLP is still useful or whether the next model should move to PyTorch.
 
-### Milestone G: Real Audio Prototype
+### Milestone G: PyTorch Spectrogram Model
 
-- Add a PyTorch/CNN inverse-model milestone before real-audio work if the next goal is
-  better synthetic reconstruction quality.
+- Make an explicit PyTorch dependency and runtime decision.
+- Create mel-spectrogram dataset tensors from generated metadata.
+- Build the first PyTorch inverse model that predicts normalized `SynthConfig` vectors.
+- Train on v2 or a larger synthetic dataset.
+- Save PyTorch checkpoints and training metrics.
+- Predict a patch from one clip and render it.
+- Evaluate across synthetic dataset clips.
+- Compare PyTorch directly against the scikit-learn baseline.
+- Decide whether scikit-learn remains as a lightweight baseline or can be removed.
+
+### Milestone H: Real Audio Prototype
+
 - Add audio preprocessing.
 - Match clean one-note real samples.
 - Export comparison reports.
 
-### Milestone H: Interface And Workflow
+### Milestone I: Interface And Workflow
 
 - Consolidate scripts into stable CLI commands.
 - Add predictable command names for render, random, compare, match, train, and predict.
