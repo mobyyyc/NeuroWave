@@ -79,6 +79,12 @@ Evaluate a model across multiple dataset clips:
 python scripts/evaluate_dataset.py --metadata data/generated/v2/metadata.jsonl --count 20 --output runs/evaluation/v2_mlp_eval.json
 ```
 
+Compare two evaluation reports:
+
+```bash
+python scripts/compare_evaluation_reports.py runs/evaluation/v1_on_v2_eval.json runs/evaluation/v2_on_v2_eval.json --output runs/evaluation/v1_vs_v2_comparison.json
+```
+
 Optionally refine the ML prediction with a short local parameter search:
 
 ```bash

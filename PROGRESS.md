@@ -140,8 +140,8 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 - [x] Generate a local ignored `v2` dataset with 500 examples.
 - [x] Train the MLP baseline on the `v2` dataset.
 - [x] Save a metrics report for the `v2` training run.
-- [x] Add evaluation across multiple held-out synthetic clips.
-- [ ] Compare the `v1` tiny model against the `v2` larger model.
+- [x] Add evaluation across multiple synthetic dataset clips.
+- [x] Compare the `v1` tiny model against the `v2` larger model.
 - [ ] Decide whether to keep scikit-learn MLP or move next to PyTorch.
 - [ ] Commit Milestone F completion.
 
@@ -322,3 +322,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Save v2 training metrics report`
 - Added dataset-level evaluation and saved a 20-clip ignored v2 weighted-distance report under `runs/evaluation/`.
   Commit: `Evaluate v2 model across held-out clips`
+- Compared tiny v1 and larger v2 MLP checkpoints on the same 20 v2 clips; v2 reduced mean and median weighted distance.
+  Commit: `Compare v1 and v2 MLP evaluation reports`
