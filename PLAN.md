@@ -590,14 +590,21 @@ The UI should show:
 - Add metadata JSONL.
 - Generate first small dataset.
 
-### Milestone C: Similarity Search
+### Milestone C: Audio Features And Similarity
 
 - Add feature extraction.
 - Add audio similarity loss.
-- Add random search baseline.
-- Match NeuroWave-generated targets.
+- Compare target and candidate WAV files.
+- Prove identical audio scores better than different audio.
 
-### Milestone D: First ML Model
+### Milestone D: Search-Based Matching
+
+- Add parameter-vector search over `SynthConfig`.
+- Save best candidate patches and WAV files under `runs/`.
+- Match NeuroWave-generated targets before neural training.
+- Use search as a future refinement path for ML predictions.
+
+### Milestone E: First ML Model
 
 - Start with a scikit-learn regression baseline using existing local dependencies.
 - Predict normalized synth parameter vectors from extracted audio features.
@@ -605,11 +612,25 @@ The UI should show:
 - Move to PyTorch and CNN-style spectrogram models after the baseline data path is proven.
 - Refine predictions with optimizer.
 
-### Milestone E: Real Audio Prototype
+### Milestone F: Scaled Synthetic Training
+
+- Generate larger versioned synthetic datasets, starting around 500 examples and scaling upward.
+- Train the baseline model on larger datasets and save metrics for each run.
+- Evaluate against multiple held-out synthetic clips, not only one target WAV.
+- Compare larger-dataset models against the tiny 10-example prototype.
+- Decide whether the scikit-learn MLP is still useful or whether the next model should move to PyTorch.
+
+### Milestone G: Real Audio Prototype
 
 - Add audio preprocessing.
 - Match clean one-note real samples.
 - Export comparison reports.
+
+### Milestone H: Interface And Workflow
+
+- Consolidate scripts into stable CLI commands.
+- Add predictable command names for render, random, compare, match, train, and predict.
+- Consider a simple local UI after CLI commands stabilize.
 
 ## Important Technical Decisions
 

@@ -16,6 +16,17 @@ from minisynth.schema import SynthConfig
 DEFAULT_PARAM_DIR = Path("data/generated/v1/params")
 DEFAULT_AUDIO_DIR = Path("data/generated/v1/audio")
 DEFAULT_METADATA_PATH = Path("data/generated/v1/metadata.jsonl")
+DEFAULT_DATASET_VERSION = "v1"
+
+
+def generated_dataset_paths(version=DEFAULT_DATASET_VERSION, root=Path("data/generated")):
+    dataset_root = Path(root) / version
+    return {
+        "root": dataset_root,
+        "param_dir": dataset_root / "params",
+        "audio_dir": dataset_root / "audio",
+        "metadata_path": dataset_root / "metadata.jsonl",
+    }
 
 
 def patch_filename(index, seed):

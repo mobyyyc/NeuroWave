@@ -10,9 +10,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.dataset import (
-    DEFAULT_AUDIO_DIR,
-    DEFAULT_METADATA_PATH,
-    DEFAULT_PARAM_DIR,
+    DEFAULT_DATASET_VERSION,
+    generated_dataset_paths,
     write_random_dataset_files,
 )
 from minisynth.io import load_patch, save_patch
@@ -24,18 +23,23 @@ def parse_args():
     parser.add_argument("--seed", type=int, required=True, help="Random seed.")
     parser.add_argument("--count", type=int, default=1, help="Number of patches to write.")
     parser.add_argument(
+        "--dataset-version",
+        default=DEFAULT_DATASET_VERSION,
+        help="Generated dataset version directory under data/generated/.",
+    )
+    parser.add_argument(
         "--output-dir",
-        default=DEFAULT_PARAM_DIR,
+        default=None,
         help="Directory for generated patch JSON files.",
     )
     parser.add_argument(
         "--audio-output-dir",
-        default=DEFAULT_AUDIO_DIR,
+        default=None,
         help="Directory for generated WAV files.",
     )
     parser.add_argument(
         "--metadata-output",
-        default=DEFAULT_METADATA_PATH,
+        default=None,
         help="Path for generated metadata JSONL.",
     )
     parser.add_argument("--output", help="Optional single patch JSON path.")
@@ -53,10 +57,14 @@ def main() -> int:
         save_patch(patch, args.output)
         print(f"Wrote random patch seed {args.seed} -> {args.output}")
     else:
+        dataset_paths = generated_dataset_paths(args.dataset_version)
+        output_dir = args.output_dir or dataset_paths["param_dir"]
+        audio_output_dir = args.audio_output_dir or dataset_paths["audio_dir"]
+        metadata_output = args.metadata_output or dataset_paths["metadata_path"]
         records = write_random_dataset_files(
-            param_dir=args.output_dir,
-            audio_dir=args.audio_output_dir,
-            metadata_path=args.metadata_output,
+            param_dir=output_dir,
+            audio_dir=audio_output_dir,
+            metadata_path=metadata_output,
             seed=args.seed,
             count=args.count,
         )
@@ -65,9 +73,9 @@ def main() -> int:
             print(json.dumps(load_patch(records[0]["patch_path"]), indent=2))
         else:
             print(
-                f"Wrote {len(records)} random patches -> {args.output_dir} "
-                f"WAVs -> {args.audio_output_dir} "
-                f"and metadata -> {args.metadata_output}"
+                f"Wrote {len(records)} random patches -> {output_dir} "
+                f"WAVs -> {audio_output_dir} "
+                f"and metadata -> {metadata_output}"
             )
 
     return 0

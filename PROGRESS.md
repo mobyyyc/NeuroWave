@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone F - Real Audio Prototype.
+Current active phase: Milestone F - Scaled Synthetic Training.
 
 ## Completed Baseline
 
@@ -131,7 +131,20 @@ Goal: predict synth parameters from audio features on synthetic data.
 - [x] Add optional optimizer refinement after prediction.
 - [x] Commit Milestone E completion.
 
-## Milestone F: Real Audio Prototype
+## Milestone F: Scaled Synthetic Training
+
+Goal: make the first ML model learn from larger synthetic datasets before moving to real audio.
+
+- [x] Add versioned dataset output support for `data/generated/v2/`.
+- [ ] Generate a local ignored `v2` dataset with 500 examples.
+- [ ] Train the MLP baseline on the `v2` dataset.
+- [ ] Save a metrics report for the `v2` training run.
+- [ ] Add evaluation across multiple held-out synthetic clips.
+- [ ] Compare the `v1` tiny model against the `v2` larger model.
+- [ ] Decide whether to keep scikit-learn MLP or move next to PyTorch.
+- [ ] Commit Milestone F completion.
+
+## Milestone G: Real Audio Prototype
 
 Goal: approximate clean single-note real audio clips.
 
@@ -142,9 +155,9 @@ Goal: approximate clean single-note real audio clips.
 - [ ] Export target/result comparison WAVs.
 - [ ] Export comparison feature plots or data.
 - [ ] Document known failure cases.
-- [ ] Commit Milestone F completion.
+- [ ] Commit Milestone G completion.
 
-## Milestone G: Interface And Workflow
+## Milestone H: Interface And Workflow
 
 Goal: make NeuroWave usable as a tool.
 
@@ -156,7 +169,7 @@ Goal: make NeuroWave usable as a tool.
 - [ ] Add `neurowave match`.
 - [ ] Add `neurowave predict`.
 - [ ] Consider a simple local web UI after CLI is stable.
-- [ ] Commit Milestone G completion.
+- [ ] Commit Milestone H completion.
 
 ## Progress Log
 
@@ -294,5 +307,7 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Evaluate rendered ML predictions`
 - Added optional local parameter-search refinement after ML prediction.
   Commit: `Add optional ML prediction refinement`
-- Completed Milestone E and moved the active phase to Milestone F real audio prototype work.
+- Completed Milestone E; the next phase was later revised to scaled synthetic training before real-audio work.
   Commit: `Complete Milestone E`
+- Revised the roadmap so Milestone F is scaled synthetic training before real-audio work, and added versioned dataset output support for `v2`.
+  Commit: `Start scaled synthetic training milestone`

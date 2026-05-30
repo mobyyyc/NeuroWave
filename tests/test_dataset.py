@@ -11,6 +11,7 @@ from minisynth.dataset import (
     DEFAULT_METADATA_PATH,
     audio_filename,
     audio_feature_vector,
+    generated_dataset_paths,
     load_metadata,
     load_training_dataset,
     metadata_record,
@@ -169,6 +170,17 @@ class TestDatasetGeneration(unittest.TestCase):
 
     def test_default_metadata_path_targets_generated_dataset_root(self):
         self.assertEqual(DEFAULT_METADATA_PATH, Path("data/generated/v1/metadata.jsonl"))
+
+    def test_generated_dataset_paths_targets_versioned_dataset_root(self):
+        paths = generated_dataset_paths("v2")
+
+        self.assertEqual(paths["root"], Path("data/generated/v2"))
+        self.assertEqual(paths["param_dir"], Path("data/generated/v2/params"))
+        self.assertEqual(paths["audio_dir"], Path("data/generated/v2/audio"))
+        self.assertEqual(
+            paths["metadata_path"],
+            Path("data/generated/v2/metadata.jsonl"),
+        )
 
     def test_write_random_dataset_files_rejects_invalid_count(self):
         with tempfile.TemporaryDirectory() as tmpdir:

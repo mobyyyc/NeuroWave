@@ -37,6 +37,12 @@ python scripts/random_patch.py --seed 1000 --count 10
 
 Outputs are written under `data/generated/v1/`, which is ignored by git.
 
+Generate a larger versioned dataset for scaled training:
+
+```bash
+python scripts/random_patch.py --dataset-version v2 --seed 2000 --count 500
+```
+
 ## Train The MLP Baseline
 
 Train the current scikit-learn MLP baseline on generated metadata:
