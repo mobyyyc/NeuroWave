@@ -9,6 +9,7 @@ from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.dataset import write_random_dataset_files
 from minisynth.engine import render_patch
 from minisynth.evaluation import evaluate_audio_prediction
+from minisynth.evaluation import summarize_weighted_distances
 from minisynth.ml import train_mlp_from_metadata
 
 
@@ -54,6 +55,25 @@ class TestPredictionEvaluation(unittest.TestCase):
             result["refinement"]["best_score"],
             result["refinement"]["initial_score"],
         )
+
+    def test_summarize_weighted_distances_returns_aggregate_scores(self):
+        summary = summarize_weighted_distances(
+            [
+                {"comparison": {"weighted_distance": 3.0}},
+                {"comparison": {"weighted_distance": 1.0}},
+                {"comparison": {"weighted_distance": 2.0}},
+            ]
+        )
+
+        self.assertEqual(summary["count"], 3)
+        self.assertEqual(summary["mean_weighted_distance"], 2.0)
+        self.assertEqual(summary["median_weighted_distance"], 2.0)
+        self.assertEqual(summary["min_weighted_distance"], 1.0)
+        self.assertEqual(summary["max_weighted_distance"], 3.0)
+
+    def test_summarize_weighted_distances_rejects_empty_results(self):
+        with self.assertRaises(ValueError):
+            summarize_weighted_distances([])
 
 
 if __name__ == "__main__":

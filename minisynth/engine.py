@@ -34,6 +34,8 @@ def render_patch(
 
     env = adsr(length, attack, decay, sustain, release)
     audio = audio * env
+    if not np.all(np.isfinite(audio)):
+        raise ValueError("Rendered audio contains non-finite values")
 
     peak = np.max(np.abs(audio))
     if peak == 0.0:

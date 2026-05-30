@@ -12,6 +12,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from minisynth.dataset import audio_feature_vector, load_training_dataset
+from minisynth.randomize import constrain_envelope_fits_length
 from minisynth.schema import SynthConfig
 
 
@@ -142,4 +143,6 @@ def save_metrics_report(metrics, path):
 def predict_patch_from_audio(model, audio, sample_rate):
     features = audio_feature_vector(audio, sample_rate).reshape(1, -1)
     vector = predict_parameter_vectors(model, features)[0]
-    return SynthConfig.from_vector(vector).to_render_kwargs()
+    patch = SynthConfig.from_vector(vector).to_render_kwargs()
+    constrain_envelope_fits_length(patch)
+    return patch

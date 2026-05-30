@@ -73,6 +73,12 @@ Evaluate the prediction by rendering it and comparing it to the target:
 python scripts/evaluate_prediction.py data/generated/v1/audio/patch_000000_seed_1000.wav
 ```
 
+Evaluate a model across multiple dataset clips:
+
+```bash
+python scripts/evaluate_dataset.py --metadata data/generated/v2/metadata.jsonl --count 20 --output runs/evaluation/v2_mlp_eval.json
+```
+
 Optionally refine the ML prediction with a short local parameter search:
 
 ```bash

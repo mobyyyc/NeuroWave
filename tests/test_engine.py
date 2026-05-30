@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import warnings
 
 import numpy as np
 
@@ -34,6 +35,12 @@ class TestRenderPatch(unittest.TestCase):
 
         self.assertTrue(np.all(np.isfinite(audio)))
         self.assertEqual(float(np.max(np.abs(audio))), 0.0)
+
+    def test_render_patch_rejects_non_finite_filter_output(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            with self.assertRaises(ValueError):
+                render_patch(length=0.5, cutoff=19900, resonance=0.2)
 
 
 if __name__ == "__main__":

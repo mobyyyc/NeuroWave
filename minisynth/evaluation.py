@@ -1,5 +1,7 @@
 """Prediction evaluation helpers for NeuroWave models."""
 
+import numpy as np
+
 from minisynth.compare import compare_audio_arrays
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
@@ -58,3 +60,21 @@ def evaluate_audio_prediction(
         )
 
     return result
+
+
+def summarize_weighted_distances(results):
+    if not results:
+        raise ValueError("results must not be empty")
+
+    scores = np.asarray(
+        [result["comparison"]["weighted_distance"] for result in results],
+        dtype=float,
+    )
+
+    return {
+        "count": int(len(scores)),
+        "mean_weighted_distance": float(np.mean(scores)),
+        "median_weighted_distance": float(np.median(scores)),
+        "min_weighted_distance": float(np.min(scores)),
+        "max_weighted_distance": float(np.max(scores)),
+    }

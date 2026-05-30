@@ -20,6 +20,7 @@ from minisynth.ml import (
     train_mlp_from_metadata,
     train_mlp_regressor,
 )
+from minisynth.schema import SynthConfig
 
 
 class TestMLBaseline(unittest.TestCase):
@@ -214,6 +215,35 @@ class TestMLBaseline(unittest.TestCase):
 
         self.assertIn("osc1_wave", patch)
         self.assertIn("cutoff", patch)
+        self.assertGreater(len(rendered), 0)
+
+    def test_predict_patch_from_audio_constrains_envelope_to_predicted_length(self):
+        class StaticModel:
+            def predict(self, features):
+                patch = {
+                    "freq": 261.63,
+                    "length": 0.05,
+                    "osc1_wave": "saw",
+                    "osc1_level": 0.8,
+                    "osc2_wave": "saw",
+                    "osc2_level": 0.4,
+                    "osc2_detune": 7,
+                    "cutoff": 1200,
+                    "resonance": 0.2,
+                    "attack": 5.0,
+                    "decay": 5.0,
+                    "sustain": 0.7,
+                    "release": 5.0,
+                }
+                return np.array([SynthConfig(**patch).to_vector()])
+
+        audio = render_patch(length=1.0)
+        patch = predict_patch_from_audio(StaticModel(), audio, 44100)
+        rendered = render_patch(**patch)
+
+        envelope_total = patch["attack"] + patch["decay"] + patch["release"]
+
+        self.assertLessEqual(envelope_total, patch["length"])
         self.assertGreater(len(rendered), 0)
 
 
