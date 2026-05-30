@@ -33,6 +33,24 @@ def parse_args():
         default=DEFAULT_OUTPUT_DIR,
         help="Directory for predicted patch, rendered WAV, and report JSON.",
     )
+    parser.add_argument(
+        "--refine-iterations",
+        type=int,
+        default=0,
+        help="Optional local search iterations after the ML prediction.",
+    )
+    parser.add_argument(
+        "--refine-seed",
+        type=int,
+        default=0,
+        help="Random seed for optional local refinement.",
+    )
+    parser.add_argument(
+        "--refine-step-size",
+        type=float,
+        default=0.05,
+        help="Normalized parameter perturbation size for optional local refinement.",
+    )
     return parser.parse_args()
 
 
@@ -49,6 +67,9 @@ def main() -> int:
         checkpoint["model"],
         target_audio,
         target_sample_rate,
+        refine_iterations=args.refine_iterations,
+        refine_seed=args.refine_seed,
+        refine_step_size=args.refine_step_size,
     )
 
     save_patch(result["patch"], patch_path)
@@ -62,6 +83,9 @@ def main() -> int:
         "predicted_audio": str(audio_path),
         "comparison": result["comparison"],
     }
+    if "refinement" in result:
+        report["refinement"] = result["refinement"]
+
     with report_path.open("w", encoding="utf-8") as file:
         json.dump(report, file, indent=2)
         file.write("\n")

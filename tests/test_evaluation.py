@@ -40,12 +40,20 @@ class TestPredictionEvaluation(unittest.TestCase):
             training["model"],
             target_audio,
             DEFAULT_SAMPLE_RATE,
+            refine_iterations=2,
+            refine_seed=1,
+            refine_step_size=0.01,
         )
 
         self.assertIn("freq", result["patch"])
         self.assertEqual(result["rendered_audio"].ndim, 1)
         self.assertIn("weighted_distance", result["comparison"])
         self.assertGreaterEqual(result["comparison"]["weighted_distance"], 0.0)
+        self.assertEqual(result["refinement"]["iterations"], 2)
+        self.assertLessEqual(
+            result["refinement"]["best_score"],
+            result["refinement"]["initial_score"],
+        )
 
 
 if __name__ == "__main__":

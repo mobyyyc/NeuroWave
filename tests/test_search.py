@@ -13,6 +13,8 @@ from minisynth.io import load_patch
 from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
 from minisynth.search import (
     format_search_progress,
+    local_refinement_search,
+    perturb_vector,
     print_search_progress,
     random_search,
     random_vector,
@@ -256,6 +258,55 @@ class TestRandomSearch(unittest.TestCase):
         self.assertEqual(len(result["vector"]), len(VECTOR_PARAMETERS))
         self.assertEqual(result["audio"].ndim, 1)
         self.assertGreater(len(result["audio"]), 0)
+
+    def test_perturb_vector_clips_to_normalized_range(self):
+        vector = tuple([0.5] * len(VECTOR_PARAMETERS))
+        perturbed = perturb_vector(vector, np.random.default_rng(1), step_size=10.0)
+
+        self.assertEqual(len(perturbed), len(VECTOR_PARAMETERS))
+        for value in perturbed:
+            self.assertGreaterEqual(value, 0.0)
+            self.assertLessEqual(value, 1.0)
+
+    def test_local_refinement_search_keeps_best_candidate(self):
+        scores = iter([3.0, 1.0, 2.0])
+
+        def fake_renderer(config):
+            return np.array(config.to_vector())
+
+        def fake_comparer(target_audio, target_sample_rate, candidate_audio, candidate_sample_rate):
+            score = next(scores)
+            return {"weighted_distance": score}
+
+        initial = SynthConfig().to_vector()
+        result = local_refinement_search(
+            np.zeros(10),
+            DEFAULT_SAMPLE_RATE,
+            initial,
+            iterations=3,
+            seed=1,
+            renderer=fake_renderer,
+            comparer=fake_comparer,
+        )
+
+        self.assertEqual(result["score"], 1.0)
+        self.assertEqual(result["evaluations"], 3)
+
+    def test_local_refinement_search_rejects_invalid_inputs(self):
+        with self.assertRaises(ValueError):
+            perturb_vector(
+                SynthConfig().to_vector(),
+                np.random.default_rng(1),
+                step_size=0.0,
+            )
+
+        with self.assertRaises(ValueError):
+            local_refinement_search(
+                np.zeros(10),
+                DEFAULT_SAMPLE_RATE,
+                (0.5,),
+                iterations=1,
+            )
 
 
 if __name__ == "__main__":

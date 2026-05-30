@@ -22,6 +22,15 @@ def random_vector(rng, size=None):
     return tuple(float(value) for value in rng.random(size))
 
 
+def perturb_vector(vector, rng, step_size=0.05):
+    if step_size <= 0:
+        raise ValueError("step_size must be positive")
+
+    values = np.asarray(vector, dtype=float)
+    noise = rng.normal(0.0, step_size, size=values.shape)
+    return tuple(float(value) for value in np.clip(values + noise, 0.0, 1.0))
+
+
 def render_config_audio(config):
     return render_patch(**config.to_render_kwargs())
 
@@ -159,6 +168,91 @@ def random_search(
 
     if best is None:
         raise ValueError("random search did not produce any valid candidates")
+
+    best["evaluations"] = evaluated
+    best["attempts"] = attempts
+    return best
+
+
+def local_refinement_search(
+    target_audio,
+    target_sample_rate,
+    initial_vector,
+    iterations=25,
+    seed=0,
+    step_size=0.05,
+    renderer=render_config_audio,
+    comparer=compare_audio_arrays,
+    progress_callback=None,
+    progress_interval=1,
+):
+    if iterations < 1:
+        raise ValueError("iterations must be at least 1")
+
+    if progress_interval < 1:
+        raise ValueError("progress_interval must be at least 1")
+
+    if len(initial_vector) != len(VECTOR_PARAMETERS):
+        raise ValueError(
+            f"Expected vector length {len(VECTOR_PARAMETERS)}, got {len(initial_vector)}"
+        )
+
+    rng = np.random.default_rng(seed)
+    best = None
+    evaluated = 0
+    attempts = 0
+    max_attempts = iterations * 10
+
+    while evaluated < iterations and attempts < max_attempts:
+        attempts += 1
+        if evaluated == 0:
+            vector = tuple(float(value) for value in initial_vector)
+        else:
+            vector = perturb_vector(best["vector"], rng, step_size=step_size)
+
+        config = SynthConfig.from_vector(vector)
+        try:
+            candidate_audio = renderer(config)
+            distances = comparer(
+                target_audio,
+                target_sample_rate,
+                candidate_audio,
+                DEFAULT_SAMPLE_RATE,
+            )
+        except ValueError:
+            continue
+
+        score = distances["weighted_distance"]
+        if not np.isfinite(score):
+            continue
+
+        improved = best is None or score < best["score"]
+        if improved:
+            best = {
+                "iteration": evaluated,
+                "attempt": attempts - 1,
+                "score": score,
+                "distances": distances,
+                "config": config,
+                "vector": vector,
+                "audio": candidate_audio,
+            }
+
+        evaluated += 1
+        if progress_callback is not None and evaluated % progress_interval == 0:
+            progress_callback(
+                {
+                    "evaluations": evaluated,
+                    "iterations": iterations,
+                    "attempts": attempts,
+                    "score": score,
+                    "best_score": best["score"] if best is not None else None,
+                    "improved": improved,
+                }
+            )
+
+    if best is None:
+        raise ValueError("local refinement did not produce any valid candidates")
 
     best["evaluations"] = evaluated
     best["attempts"] = attempts

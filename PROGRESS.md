@@ -128,7 +128,7 @@ Goal: predict synth parameters from audio features on synthetic data.
 - [x] Save model checkpoints under `models/`.
 - [x] Add prediction script for one audio clip.
 - [x] Render predicted patch and compare to target.
-- [ ] Add optional optimizer refinement after prediction.
+- [x] Add optional optimizer refinement after prediction.
 - [ ] Commit Milestone E completion.
 
 ## Milestone F: Real Audio Prototype
@@ -292,3 +292,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add audio patch prediction script`
 - Added a prediction evaluation script that renders the predicted patch and writes feature-distance comparison reports.
   Commit: `Evaluate rendered ML predictions`
+- Added optional local parameter-search refinement after ML prediction.
+  Commit: `Add optional ML prediction refinement`
