@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone F - Scaled Synthetic Training.
+Current active phase: Milestone G - PyTorch Spectrogram Model.
 
 ## Completed Baseline
 
@@ -143,7 +143,7 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 - [x] Add evaluation across multiple synthetic dataset clips.
 - [x] Compare the `v1` tiny model against the `v2` larger model.
 - [x] Decide whether to keep scikit-learn MLP or move next to PyTorch.
-- [ ] Commit Milestone F completion.
+- [x] Commit Milestone F completion.
 
 ## Milestone G: PyTorch Spectrogram Model
 
@@ -344,3 +344,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Decide next ML framework direction`
 - Added the missing PyTorch spectrogram model milestone before real-audio work so the roadmap matches the ML decision.
   Commit: `Add PyTorch model milestone`
+- Completed Milestone F and moved the active phase to Milestone G PyTorch spectrogram model work.
+  Commit: `Complete Milestone F`
