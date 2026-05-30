@@ -53,6 +53,12 @@ python scripts/train_mlp.py --metadata data/generated/v1/metadata.jsonl
 
 The command saves a checkpoint to `models/mlp_baseline.joblib` and prints train/test parameter MAE metrics as JSON. The `models/` directory is ignored by git.
 
+Save a metrics report while training:
+
+```bash
+python scripts/train_mlp.py --metadata data/generated/v2/metadata.jsonl --metrics-output runs/training/v2_mlp_metrics.json
+```
+
 ## Predict A Patch
 
 Predict a patch JSON from one audio clip using the saved MLP checkpoint:

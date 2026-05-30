@@ -13,7 +13,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.dataset import DEFAULT_METADATA_PATH
-from minisynth.ml import DEFAULT_MODEL_PATH, save_model_checkpoint, train_mlp_from_metadata
+from minisynth.ml import (
+    DEFAULT_MODEL_PATH,
+    save_metrics_report,
+    save_model_checkpoint,
+    train_mlp_from_metadata,
+)
 
 
 def parse_args():
@@ -52,6 +57,10 @@ def parse_args():
         default=DEFAULT_MODEL_PATH,
         help="Path where the trained checkpoint should be saved.",
     )
+    parser.add_argument(
+        "--metrics-output",
+        help="Optional path where training metrics JSON should be saved.",
+    )
     return parser.parse_args()
 
 
@@ -77,6 +86,10 @@ def main() -> int:
         **result["metrics"],
         "model_path": str(model_path),
     }
+    if args.metrics_output:
+        metrics_path = save_metrics_report(output, args.metrics_output)
+        output["metrics_path"] = str(metrics_path)
+
     print(json.dumps(output, indent=2))
     return 0
 

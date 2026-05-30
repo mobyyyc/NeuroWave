@@ -15,6 +15,7 @@ from minisynth.ml import (
     parameter_mae,
     predict_patch_from_audio,
     predict_parameter_vectors,
+    save_metrics_report,
     save_model_checkpoint,
     train_mlp_from_metadata,
     train_mlp_regressor,
@@ -155,6 +156,20 @@ class TestMLBaseline(unittest.TestCase):
         self.assertEqual(saved_path, checkpoint_path)
         self.assertEqual(checkpoint["metrics"]["test_mae"], 0.1)
         self.assertEqual(predictions.shape, (1, 2))
+
+    def test_save_metrics_report_writes_json(self):
+        with TemporaryDirectory() as temp_dir:
+            report_path = Path(temp_dir) / "runs" / "metrics.json"
+            saved_path = save_metrics_report(
+                {"num_samples": 500, "test_mae": 0.2},
+                report_path,
+            )
+
+            text = saved_path.read_text(encoding="utf-8")
+
+        self.assertEqual(saved_path, report_path)
+        self.assertIn('"num_samples": 500', text)
+        self.assertIn('"test_mae": 0.2', text)
 
     def test_predict_patch_from_audio_returns_renderable_patch(self):
         with TemporaryDirectory() as temp_dir:

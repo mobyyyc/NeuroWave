@@ -139,7 +139,7 @@ Goal: make the first ML model learn from larger synthetic datasets before moving
 - [x] Fix random patch envelope constraints so generated targets stay inside schema ranges.
 - [x] Generate a local ignored `v2` dataset with 500 examples.
 - [x] Train the MLP baseline on the `v2` dataset.
-- [ ] Save a metrics report for the `v2` training run.
+- [x] Save a metrics report for the `v2` training run.
 - [ ] Add evaluation across multiple held-out synthetic clips.
 - [ ] Compare the `v1` tiny model against the `v2` larger model.
 - [ ] Decide whether to keep scikit-learn MLP or move next to PyTorch.
@@ -318,3 +318,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Generate valid v2 dataset`
 - Trained the MLP baseline on the local ignored `v2` dataset and saved the ignored checkpoint under `models/`.
   Commit: `Train MLP baseline on v2 dataset`
+- Added metrics report output for training runs and saved the ignored v2 MLP metrics report under `runs/training/`.
+  Commit: `Save v2 training metrics report`

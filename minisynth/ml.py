@@ -1,5 +1,6 @@
 """Machine-learning baselines for predicting synth parameters."""
 
+import json
 from pathlib import Path
 
 import joblib
@@ -125,6 +126,17 @@ def save_model_checkpoint(model, path=DEFAULT_MODEL_PATH, metrics=None):
 
 def load_model_checkpoint(path=DEFAULT_MODEL_PATH):
     return joblib.load(path)
+
+
+def save_metrics_report(metrics, path):
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    with destination.open("w", encoding="utf-8") as file:
+        json.dump(metrics, file, indent=2)
+        file.write("\n")
+
+    return destination
 
 
 def predict_patch_from_audio(model, audio, sample_rate):
