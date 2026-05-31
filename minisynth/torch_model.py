@@ -46,6 +46,9 @@ MODEL_SIZE_SMALL = "small"
 MODEL_SIZE_MEDIUM = "medium"
 MODEL_SIZE_LARGE = "large"
 DEFAULT_MODEL_SIZE = MODEL_SIZE_SMALL
+POOLING_GLOBAL = "global"
+POOLING_TIME_FREQUENCY = "time_frequency"
+DEFAULT_POOLING_MODE = POOLING_TIME_FREQUENCY
 MODEL_SIZE_SPECS = {
     MODEL_SIZE_SMALL: {
         "channels": (16, 32, 64),
@@ -182,12 +185,15 @@ class MelSpectrogramInverseModel(nn.Module):
         waveform_mode=DEFAULT_WAVEFORM_MODE,
         parameters=None,
         model_size=DEFAULT_MODEL_SIZE,
+        pooling_mode=DEFAULT_POOLING_MODE,
     ):
         super().__init__()
         if parameters is None:
             parameters = VECTOR_PARAMETERS
         if model_size not in MODEL_SIZE_SPECS:
             raise ValueError(f"Unsupported model size: {model_size}")
+        if pooling_mode not in (POOLING_GLOBAL, POOLING_TIME_FREQUENCY):
+            raise ValueError(f"Unsupported pooling mode: {pooling_mode}")
         if output_dim < 1:
             raise ValueError("output_dim must be at least 1")
         if output_dim != len(parameters):
@@ -201,6 +207,7 @@ class MelSpectrogramInverseModel(nn.Module):
         self.input_channels = input_channels
         self.waveform_mode = waveform_mode
         self.model_size = model_size
+        self.pooling_mode = pooling_mode
         self.parameter_names = tuple(parameter.name for parameter in parameters)
         self.parameters_schema = tuple(parameters)
         self.enum_indices = enum_parameter_indices(parameters)
@@ -208,8 +215,15 @@ class MelSpectrogramInverseModel(nn.Module):
         spec = MODEL_SIZE_SPECS[model_size]
         channels = spec["channels"]
         hidden_dim = spec["hidden_dim"]
-        self.encoder = nn.Sequential(*build_cnn_encoder(input_channels, channels))
-        encoder_dim = channels[-1]
+        pool_shape = pooling_shape(pooling_mode)
+        self.encoder = nn.Sequential(
+            *build_cnn_encoder(
+                input_channels,
+                channels,
+                pool_shape=pool_shape,
+            )
+        )
+        encoder_dim = channels[-1] * pool_shape[0] * pool_shape[1]
         if waveform_mode == WAVEFORM_MODE_SCALAR:
             self.head = nn.Sequential(
                 nn.Flatten(),
@@ -280,6 +294,7 @@ def create_inverse_model(
     input_channels=DEFAULT_INPUT_CHANNELS,
     parameters=None,
     model_size=DEFAULT_MODEL_SIZE,
+    pooling_mode=DEFAULT_POOLING_MODE,
 ):
     return MelSpectrogramInverseModel(
         output_dim=output_dim,
@@ -287,10 +302,20 @@ def create_inverse_model(
         input_channels=input_channels,
         parameters=parameters,
         model_size=model_size,
+        pooling_mode=pooling_mode,
     )
 
 
-def build_cnn_encoder(input_channels, channels):
+def pooling_shape(pooling_mode=DEFAULT_POOLING_MODE):
+    if pooling_mode == POOLING_GLOBAL:
+        return (1, 1)
+    if pooling_mode == POOLING_TIME_FREQUENCY:
+        return (4, 4)
+
+    raise ValueError(f"Unsupported pooling mode: {pooling_mode}")
+
+
+def build_cnn_encoder(input_channels, channels, pool_shape=(1, 1)):
     layers = []
     current_channels = input_channels
     for index, output_channels in enumerate(channels):
@@ -305,7 +330,7 @@ def build_cnn_encoder(input_channels, channels):
             layers.append(nn.MaxPool2d(kernel_size=2))
         current_channels = output_channels
 
-    layers.append(nn.AdaptiveAvgPool2d((1, 1)))
+    layers.append(nn.AdaptiveAvgPool2d(pool_shape))
     return layers
 
 
@@ -837,6 +862,7 @@ def train_inverse_model(
     early_stopping_patience=0,
     checkpoint_selection=DEFAULT_CHECKPOINT_SELECTION,
     model_size=DEFAULT_MODEL_SIZE,
+    pooling_mode=DEFAULT_POOLING_MODE,
     random_state=0,
     device=None,
     progress=False,
@@ -877,6 +903,7 @@ def train_inverse_model(
         input_channels=prepared["features"].shape[1],
         parameters=target_parameters,
         model_size=model_size,
+        pooling_mode=pooling_mode,
     ).to(device)
     optimizer = create_optimizer(
         model,
@@ -997,6 +1024,7 @@ def train_inverse_model(
         "waveform_mode": waveform_mode,
         "target_mode": target_mode,
         "model_size": model_size,
+        "pooling_mode": pooling_mode,
         "loss_preset": loss_preset,
         "loss_weights": {
             parameter.name: float(weight)
@@ -1100,6 +1128,7 @@ def save_torch_checkpoint(model, path=DEFAULT_TORCH_MODEL_PATH, metrics=None):
             "input_channels": getattr(model, "input_channels", DEFAULT_INPUT_CHANNELS),
             "waveform_mode": getattr(model, "waveform_mode", WAVEFORM_MODE_SCALAR),
             "model_size": getattr(model, "model_size", DEFAULT_MODEL_SIZE),
+            "pooling_mode": getattr(model, "pooling_mode", POOLING_GLOBAL),
             "parameter_names": getattr(
                 model,
                 "parameter_names",
@@ -1129,6 +1158,7 @@ def load_torch_checkpoint(path=DEFAULT_TORCH_MODEL_PATH, device=None):
         waveform_mode=checkpoint.get("waveform_mode", WAVEFORM_MODE_SCALAR),
         parameters=parameters,
         model_size=checkpoint.get("model_size", DEFAULT_MODEL_SIZE),
+        pooling_mode=checkpoint.get("pooling_mode", POOLING_GLOBAL),
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)

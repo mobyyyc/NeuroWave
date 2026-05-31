@@ -18,6 +18,7 @@ from minisynth.torch_model import (
     DEFAULT_LOSS_PRESET,
     DEFAULT_MODEL_SIZE,
     DEFAULT_OPTIMIZER,
+    DEFAULT_POOLING_MODE,
     DEFAULT_SCHEDULER,
     DEFAULT_CHECKPOINT_SELECTION,
     DEFAULT_TEST_SIZE,
@@ -34,6 +35,8 @@ from minisynth.torch_model import (
     MODEL_SIZE_SMALL,
     OPTIMIZER_ADAM,
     OPTIMIZER_ADAMW,
+    POOLING_GLOBAL,
+    POOLING_TIME_FREQUENCY,
     SCHEDULER_NONE,
     SCHEDULER_STEP,
     CHECKPOINT_FINAL,
@@ -150,6 +153,12 @@ def parse_args():
         help="Named PyTorch CNN capacity preset.",
     )
     parser.add_argument(
+        "--pooling-mode",
+        choices=(POOLING_GLOBAL, POOLING_TIME_FREQUENCY),
+        default=DEFAULT_POOLING_MODE,
+        help="How much time/frequency structure to preserve before the prediction head.",
+    )
+    parser.add_argument(
         "--loss-preset",
         choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY),
         default=DEFAULT_LOSS_PRESET,
@@ -199,6 +208,7 @@ def main() -> int:
         early_stopping_patience=args.early_stopping_patience,
         checkpoint_selection=args.checkpoint_selection,
         model_size=args.model_size,
+        pooling_mode=args.pooling_mode,
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,

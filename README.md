@@ -198,6 +198,8 @@ python scripts/train_torch.py \
 
 Use `--model-size medium` or `--model-size large` to scale model capacity without changing source code. Keep `small` for direct comparisons against earlier runs.
 
+New models default to `--pooling-mode time_frequency`, which preserves a small time-frequency grid before the prediction head. Use `--pooling-mode global` for legacy global-pooling comparisons.
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

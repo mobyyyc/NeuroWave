@@ -15,6 +15,7 @@ from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
     DEFAULT_MODEL_SIZE,
+    DEFAULT_POOLING_MODE,
     DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
@@ -30,6 +31,7 @@ from minisynth.torch_model import (
     parameter_mae_by_name,
     parameter_loss_weights,
     parameter_mse_torch,
+    pooling_shape,
     prepare_model_arrays,
     predict_patch_from_audio,
     save_torch_checkpoint,
@@ -60,6 +62,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertTrue(torch.all(outputs >= 0.0))
         self.assertTrue(torch.all(outputs <= 1.0))
         self.assertEqual(model.waveform_mode, DEFAULT_WAVEFORM_MODE)
+        self.assertEqual(model.pooling_mode, DEFAULT_POOLING_MODE)
 
     def test_create_inverse_model_supports_legacy_scalar_waveform_mode(self):
         model = create_inverse_model(waveform_mode="scalar_regression")
@@ -86,9 +89,14 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(large.model_size, "large")
 
     def test_build_cnn_encoder_ends_with_pooling_layer(self):
-        layers = build_cnn_encoder(input_channels=1, channels=(8, 16))
+        layers = build_cnn_encoder(input_channels=1, channels=(8, 16), pool_shape=(4, 4))
 
         self.assertEqual(layers[-1].__class__.__name__, "AdaptiveAvgPool2d")
+        self.assertEqual(layers[-1].output_size, (4, 4))
+
+    def test_pooling_shape_preserves_time_frequency_structure(self):
+        self.assertEqual(pooling_shape("global"), (1, 1))
+        self.assertEqual(pooling_shape("time_frequency"), (4, 4))
 
     def test_model_rejects_wrong_input_rank(self):
         model = create_inverse_model()
@@ -113,6 +121,10 @@ class TestTorchInverseModel(unittest.TestCase):
     def test_model_rejects_invalid_model_size(self):
         with self.assertRaises(ValueError):
             MelSpectrogramInverseModel(model_size="huge")
+
+    def test_model_rejects_invalid_pooling_mode(self):
+        with self.assertRaises(ValueError):
+            MelSpectrogramInverseModel(pooling_mode="wide-open")
 
     def test_predict_normalized_vectors_returns_numpy_array(self):
         model = create_inverse_model()
@@ -341,6 +353,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["waveform_mode"], DEFAULT_WAVEFORM_MODE)
         self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
         self.assertEqual(metrics["model_size"], DEFAULT_MODEL_SIZE)
+        self.assertEqual(metrics["pooling_mode"], DEFAULT_POOLING_MODE)
         self.assertEqual(metrics["loss_preset"], "flat")
         self.assertIn("cutoff", metrics["loss_weights"])
         self.assertEqual(metrics["optimizer"], "adam")
@@ -500,6 +513,31 @@ class TestTorchInverseModel(unittest.TestCase):
         metrics = result["metrics"]
 
         self.assertEqual(metrics["model_size"], "medium")
+
+    def test_train_inverse_model_supports_pooling_mode(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                pooling_mode="global",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["pooling_mode"], "global")
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()
