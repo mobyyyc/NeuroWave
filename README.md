@@ -77,6 +77,14 @@ Export generated audio as channel-first mel-spectrogram tensors for future PyTor
 python scripts/export_mel_tensors.py --dataset-version d2
 ```
 
+Train the first PyTorch CNN inverse model on exported `d2` mel tensors:
+
+```bash
+python scripts/train_torch.py
+```
+
+The command saves an ignored checkpoint to `models/v3_pytorch_cnn_500seeds.pt` and an ignored training report to `runs/training/v3_pytorch_cnn_500seeds_metrics.json`.
+
 ## Predict A Patch
 
 Predict a patch JSON from one audio clip using the saved MLP checkpoint:
