@@ -182,7 +182,7 @@ Evidence from local reports:
 - [x] Decide pitch/length handling strategy for the next model-design iteration.
 - [x] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
 - [x] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
-- [ ] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
+- [x] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
 - [ ] Add parameter-weighted loss support.
 - [ ] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
 - [ ] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
@@ -416,3 +416,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add waveform classification heads`
 - Added `pitch_conditioned_timbre` training mode that appends exact synthetic pitch as an input channel and removes `freq` from the output target. Scaling note: replace the broadcast pitch channel with a cleaner metadata/context embedding when the model family grows beyond simple CNN inputs.
   Commit: `Add pitch conditioned target mode`
+- Confirmed `length` remains visible to the model design because duration changes ADSR interpretation and pluck/key/pad behavior. Scaling note: revisit whether `length` should become input context, output target, or both after the first pitch-conditioned capability model reports grouped ADSR and duration metrics.
+  Commit: `Document length modeling decision`
