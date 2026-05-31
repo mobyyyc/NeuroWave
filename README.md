@@ -129,6 +129,12 @@ Compare two evaluation reports:
 python scripts/compare_evaluation_reports.py runs/evaluation/v1_sklearn_mlp_10seeds_on_d2_eval.json runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json --output runs/evaluation/v1_sklearn_mlp_10seeds_vs_v2_sklearn_mlp_500seeds_on_d2.json
 ```
 
+Compare the current sklearn baseline against the PyTorch CNN:
+
+```bash
+python scripts/compare_evaluation_reports.py runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json --output runs/evaluation/v2_sklearn_mlp_500seeds_vs_v3_pytorch_cnn_500seeds_on_d2.json
+```
+
 Optionally refine the ML prediction with a short local parameter search:
 
 ```bash

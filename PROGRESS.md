@@ -157,7 +157,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Add prediction script for one clip using the PyTorch model.
 - [x] Render PyTorch predicted patch and compare to target.
 - [x] Evaluate PyTorch model across synthetic dataset clips.
-- [ ] Compare PyTorch directly against the scikit-learn baseline.
+- [x] Compare PyTorch directly against the scikit-learn baseline.
 - [ ] Decide whether scikit-learn stays as a lightweight baseline or can be removed.
 - [ ] Commit Milestone G completion.
 
@@ -364,3 +364,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Evaluate PyTorch prediction audio`
 - Added PyTorch dataset-level evaluation and saved an ignored 20-clip weighted-distance report for `v3_pytorch_cnn_500seeds` on `d2`.
   Commit: `Evaluate PyTorch model across d2`
+- Compared `v3_pytorch_cnn_500seeds` against `v2_sklearn_mlp_500seeds` on `d2`; PyTorch improved mean weighted distance by `18.07`, median by `14.08`, and had zero failures.
+  Commit: `Compare PyTorch and sklearn baselines`
