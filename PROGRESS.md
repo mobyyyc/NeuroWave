@@ -188,6 +188,7 @@ Evidence from local reports:
 - [x] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
 - [x] Preserve more time-frequency structure before pooling in the model architecture.
 - [x] Add worst-clip diagnostics that compare target and predicted synth parameters for rendered-audio failures.
+- [x] Add hybrid loss preset for the next v2.1 pitch-conditioned model.
 - [ ] Train and evaluate a first capability model against `v9_pytorch_cnn_200kseeds`.
 - [ ] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
 - [ ] Commit Milestone H completion.
@@ -429,3 +430,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Preserve time frequency pooling`
 - Added rendered-audio evaluation diagnostics that save target patches, predicted patches, normalized per-parameter errors, and the worst clips ranked by weighted audio distance. Scaling note: use these diagnostics to design hybrid losses and model heads before increasing dataset size again.
   Commit: `Add worst clip evaluation diagnostics`
+- Added a `hybrid` PyTorch loss preset for v2.1 that moderately emphasizes waveform identity, oscillator levels, detune, resonance, sustain, and release while keeping cutoff closer to flat weighting.
+  Commit: `Add hybrid loss preset`

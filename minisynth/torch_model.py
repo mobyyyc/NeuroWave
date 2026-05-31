@@ -38,6 +38,7 @@ TARGET_MODE_PITCH_CONDITIONED_TIMBRE = "pitch_conditioned_timbre"
 DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
+LOSS_PRESET_HYBRID = "hybrid"
 DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
 OPTIMIZER_ADAM = "adam"
 OPTIMIZER_ADAMW = "adamw"
@@ -125,6 +126,21 @@ AUDIBILITY_PARAMETER_WEIGHTS = {
     "decay": 1.25,
     "sustain": 1.0,
     "release": 1.25,
+}
+HYBRID_PARAMETER_WEIGHTS = {
+    "freq": 0.0,
+    "length": 0.9,
+    "osc1_wave": 1.65,
+    "osc1_level": 1.4,
+    "osc2_wave": 1.65,
+    "osc2_level": 1.4,
+    "osc2_detune": 1.65,
+    "cutoff": 1.2,
+    "resonance": 1.55,
+    "attack": 1.3,
+    "decay": 1.3,
+    "sustain": 1.55,
+    "release": 1.75,
 }
 
 
@@ -523,6 +539,15 @@ def parameter_loss_weights(parameters=None, preset=DEFAULT_LOSS_PRESET):
     if preset == LOSS_PRESET_AUDIBILITY:
         weights = [
             AUDIBILITY_PARAMETER_WEIGHTS.get(parameter.name, 1.0)
+            for parameter in parameters
+        ]
+        values = torch.as_tensor(weights, dtype=torch.float32)
+        if torch.sum(values) <= 0:
+            raise ValueError("loss weights must include at least one positive value")
+        return values * (len(values) / torch.sum(values))
+    if preset == LOSS_PRESET_HYBRID:
+        weights = [
+            HYBRID_PARAMETER_WEIGHTS.get(parameter.name, 1.0)
             for parameter in parameters
         ]
         values = torch.as_tensor(weights, dtype=torch.float32)

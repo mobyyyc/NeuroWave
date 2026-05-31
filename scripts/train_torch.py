@@ -30,6 +30,7 @@ from minisynth.torch_model import (
     DEFAULT_WAVEFORM_MODE,
     LOSS_PRESET_AUDIBILITY,
     LOSS_PRESET_FLAT,
+    LOSS_PRESET_HYBRID,
     MODEL_SIZE_LARGE,
     MODEL_SIZE_MEDIUM,
     MODEL_SIZE_SMALL,
@@ -160,7 +161,7 @@ def parse_args():
     )
     parser.add_argument(
         "--loss-preset",
-        choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY),
+        choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY, LOSS_PRESET_HYBRID),
         default=DEFAULT_LOSS_PRESET,
         help="Parameter weighting preset for the training loss.",
     )

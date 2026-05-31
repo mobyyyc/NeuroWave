@@ -268,6 +268,15 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(float(weights[names.index("freq")]), 0.0)
         self.assertGreater(float(weights[names.index("cutoff")]), 1.0)
 
+    def test_parameter_loss_weights_support_hybrid_preset(self):
+        weights = parameter_loss_weights(preset="hybrid")
+        names = [parameter.name for parameter in VECTOR_PARAMETERS]
+
+        self.assertEqual(len(weights), len(VECTOR_PARAMETERS))
+        self.assertEqual(float(weights[names.index("freq")]), 0.0)
+        self.assertGreater(float(weights[names.index("release")]), float(weights[names.index("cutoff")]))
+        self.assertGreater(float(weights[names.index("osc2_detune")]), float(weights[names.index("length")]))
+
     def test_weighted_mse_loss_applies_per_parameter_weights(self):
         predictions = torch.tensor([[1.0, 0.0]], dtype=torch.float32)
         targets = torch.zeros_like(predictions)
@@ -460,6 +469,33 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["loss_preset"], "audibility")
         self.assertEqual(metrics["loss_weights"]["freq"], 0.0)
         self.assertGreater(metrics["loss_weights"]["cutoff"], 1.0)
+
+    def test_train_inverse_model_supports_hybrid_loss_preset(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                loss_preset="hybrid",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["loss_preset"], "hybrid")
+        self.assertGreater(metrics["loss_weights"]["release"], metrics["loss_weights"]["cutoff"])
+        self.assertGreater(metrics["loss_weights"]["osc2_detune"], metrics["loss_weights"]["length"])
 
     def test_train_inverse_model_supports_optimizer_controls(self):
         with TemporaryDirectory() as temp_dir:

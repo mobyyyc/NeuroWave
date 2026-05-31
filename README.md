@@ -183,6 +183,31 @@ python scripts/train_torch.py \
   --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
 ```
 
+Use `--loss-preset hybrid` for the v2.1-style middle ground between flat and audibility weighting. This preset moderately emphasizes waveform identity, oscillator levels, detune, resonance, sustain, and release based on worst-clip diagnostics, while keeping cutoff closer to flat:
+
+```bash
+python scripts/train_torch.py \
+  --model-id v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds \
+  --tensor-data data/generated/d8/features/mel_tensors.npz \
+  --target-mode pitch_conditioned_timbre \
+  --waveform-mode classification \
+  --model-size medium \
+  --pooling-mode time_frequency \
+  --loss-preset hybrid \
+  --epochs 50 \
+  --batch-size 64 \
+  --optimizer adamw \
+  --weight-decay 0.01 \
+  --scheduler step \
+  --scheduler-step-size 10 \
+  --scheduler-gamma 0.5 \
+  --early-stopping-patience 8 \
+  --checkpoint-selection best_validation \
+  --device cuda \
+  --model-output models/v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds.pt \
+  --metrics-output runs/training/v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds_metrics.json
+```
+
 For longer model-quality runs, prefer explicit optimizer controls and best-validation checkpoint selection:
 
 ```bash
