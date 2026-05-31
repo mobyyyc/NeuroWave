@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES, mel_tensor_from_audio
 from minisynth.randomize import constrain_envelope_fits_length
-from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
+from minisynth.schema import SynthConfig, VECTOR_PARAMETERS, categorical_values
 
 DEFAULT_MEL_BINS = 64
 DEFAULT_INPUT_CHANNELS = 1
@@ -22,6 +22,7 @@ DEFAULT_BATCH_SIZE = 32
 DEFAULT_EPOCHS = 10
 DEFAULT_LEARNING_RATE = 0.001
 DEFAULT_TEST_SIZE = 0.2
+DEFAULT_BENCHMARK_SIZE = 0.0
 
 
 def select_torch_device():
@@ -113,28 +114,55 @@ def load_mel_tensor_npz(path=DEFAULT_TORCH_TENSOR_PATH):
 
 
 def split_tensor_dataset(features, targets, test_size=DEFAULT_TEST_SIZE, random_state=0):
+    return split_tensor_dataset_with_benchmark(
+        features,
+        targets,
+        test_size=test_size,
+        benchmark_size=0.0,
+        random_state=random_state,
+    )
+
+
+def split_tensor_dataset_with_benchmark(
+    features,
+    targets,
+    test_size=DEFAULT_TEST_SIZE,
+    benchmark_size=DEFAULT_BENCHMARK_SIZE,
+    random_state=0,
+):
     if test_size <= 0.0 or test_size >= 1.0:
         raise ValueError("test_size must be between 0 and 1")
+    if benchmark_size < 0.0 or benchmark_size >= 1.0:
+        raise ValueError("benchmark_size must be in [0, 1)")
+    if test_size + benchmark_size >= 1.0:
+        raise ValueError("test_size + benchmark_size must leave training samples")
 
     x = np.asarray(features, dtype=np.float32)
     y = np.asarray(targets, dtype=np.float32)
     sample_count = len(x)
     test_count = max(1, int(round(sample_count * test_size)))
-    train_count = sample_count - test_count
+    benchmark_count = int(round(sample_count * benchmark_size))
+    train_count = sample_count - test_count - benchmark_count
 
     if train_count < 1:
-        raise ValueError("train/test split must leave at least 1 training sample")
+        raise ValueError("split must leave at least 1 training sample")
 
     rng = np.random.default_rng(random_state)
     indices = rng.permutation(sample_count)
     test_indices = indices[:test_count]
-    train_indices = indices[test_count:]
+    benchmark_indices = indices[test_count : test_count + benchmark_count]
+    train_indices = indices[test_count + benchmark_count :]
 
     return {
         "train_features": x[train_indices],
         "train_targets": y[train_indices],
         "test_features": x[test_indices],
         "test_targets": y[test_indices],
+        "benchmark_features": x[benchmark_indices],
+        "benchmark_targets": y[benchmark_indices],
+        "train_indices": train_indices,
+        "test_indices": test_indices,
+        "benchmark_indices": benchmark_indices,
     }
 
 
@@ -170,6 +198,112 @@ def parameter_mae_torch(model, features, targets, device=None, batch_size=DEFAUL
     return float(total_absolute_error / total_values)
 
 
+def predict_dataset_torch(model, features, device=None, batch_size=DEFAULT_BATCH_SIZE):
+    if device is None:
+        device = select_torch_device()
+
+    model = model.to(device)
+    model.eval()
+    loader = tensor_loader(
+        features,
+        np.zeros((len(features), DEFAULT_OUTPUT_DIM), dtype=np.float32),
+        batch_size=batch_size,
+        shuffle=False,
+    )
+    predictions = []
+
+    with torch.no_grad():
+        for batch_features, _ in loader:
+            batch_features = batch_features.to(device)
+            predictions.append(model(batch_features).cpu().numpy())
+
+    return np.vstack(predictions).astype(np.float32)
+
+
+def parameter_mae_by_name(predictions, targets, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    predicted = np.asarray(predictions, dtype=np.float32)
+    expected = np.asarray(targets, dtype=np.float32)
+    if predicted.shape != expected.shape:
+        raise ValueError("predictions and targets must have the same shape")
+    if predicted.ndim != 2:
+        raise ValueError("predictions and targets must be 2D")
+    if predicted.shape[1] != len(parameters):
+        raise ValueError(f"Expected {len(parameters)} parameters, got {predicted.shape[1]}")
+
+    absolute_errors = np.abs(predicted - expected)
+    return {
+        parameter.name: float(absolute_errors[:, index].mean())
+        for index, parameter in enumerate(parameters)
+    }
+
+
+def continuous_parameter_mae(predictions, targets, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    continuous_indices = [
+        index
+        for index, parameter in enumerate(parameters)
+        if parameter.kind != "enum"
+    ]
+    if not continuous_indices:
+        return 0.0
+
+    predicted = np.asarray(predictions, dtype=np.float32)
+    expected = np.asarray(targets, dtype=np.float32)
+    return float(np.abs(predicted[:, continuous_indices] - expected[:, continuous_indices]).mean())
+
+
+def categorical_predictions(values, parameter):
+    choices = categorical_values(parameter)
+    scaled = np.asarray(values, dtype=np.float32) * (len(choices) - 1)
+    return np.clip(np.rint(scaled), 0, len(choices) - 1).astype(np.int64)
+
+
+def waveform_accuracy_by_name(predictions, targets, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    predicted = np.asarray(predictions, dtype=np.float32)
+    expected = np.asarray(targets, dtype=np.float32)
+    accuracies = {}
+
+    for index, parameter in enumerate(parameters):
+        if parameter.kind != "enum":
+            continue
+        predicted_classes = categorical_predictions(predicted[:, index], parameter)
+        expected_classes = categorical_predictions(expected[:, index], parameter)
+        accuracies[parameter.name] = float(np.mean(predicted_classes == expected_classes))
+
+    return accuracies
+
+
+def waveform_accuracy(predictions, targets, parameters=None):
+    accuracies = waveform_accuracy_by_name(predictions, targets, parameters=parameters)
+    if not accuracies:
+        return 0.0
+    return float(np.mean(list(accuracies.values())))
+
+
+def parameter_metrics_torch(model, features, targets, device=None, batch_size=DEFAULT_BATCH_SIZE):
+    predictions = predict_dataset_torch(
+        model,
+        features,
+        device=device,
+        batch_size=batch_size,
+    )
+    return {
+        "mae": float(np.abs(predictions - targets).mean()),
+        "continuous_mae": continuous_parameter_mae(predictions, targets),
+        "per_parameter_mae": parameter_mae_by_name(predictions, targets),
+        "waveform_accuracy": waveform_accuracy(predictions, targets),
+        "waveform_accuracy_by_name": waveform_accuracy_by_name(predictions, targets),
+    }
+
+
 def parameter_mse_torch(model, features, targets, device=None, batch_size=DEFAULT_BATCH_SIZE):
     if device is None:
         device = select_torch_device()
@@ -198,6 +332,7 @@ def train_inverse_model(
     batch_size=DEFAULT_BATCH_SIZE,
     learning_rate=DEFAULT_LEARNING_RATE,
     test_size=DEFAULT_TEST_SIZE,
+    benchmark_size=DEFAULT_BENCHMARK_SIZE,
     random_state=0,
     device=None,
     progress=False,
@@ -213,10 +348,11 @@ def train_inverse_model(
 
     torch.manual_seed(random_state)
     dataset = load_mel_tensor_npz(tensor_path)
-    split = split_tensor_dataset(
+    split = split_tensor_dataset_with_benchmark(
         dataset["features"],
         dataset["targets"],
         test_size=test_size,
+        benchmark_size=benchmark_size,
         random_state=random_state,
     )
     model = create_inverse_model(output_dim=dataset["targets"].shape[1]).to(device)
@@ -259,6 +395,21 @@ def train_inverse_model(
         if progress:
             print(f"\nEpoch {epoch + 1} complete - average loss {epoch_loss:.6f}\n")
 
+    train_parameter_metrics = parameter_metrics_torch(
+        model,
+        split["train_features"],
+        split["train_targets"],
+        device=device,
+        batch_size=batch_size,
+    )
+    test_parameter_metrics = parameter_metrics_torch(
+        model,
+        split["test_features"],
+        split["test_targets"],
+        device=device,
+        batch_size=batch_size,
+    )
+
     metrics = {
         "model_id": model_id,
         "model_type": "pytorch_cnn",
@@ -269,9 +420,12 @@ def train_inverse_model(
         "num_targets": int(dataset["targets"].shape[1]),
         "train_samples": int(len(split["train_features"])),
         "test_samples": int(len(split["test_features"])),
+        "benchmark_samples": int(len(split["benchmark_features"])),
         "epochs": int(epochs),
         "batch_size": int(batch_size),
         "learning_rate": float(learning_rate),
+        "test_size": float(test_size),
+        "benchmark_size": float(benchmark_size),
         "device": device.type,
         "train_loss": epoch_losses[-1],
         "train_losses": epoch_losses,
@@ -282,21 +436,47 @@ def train_inverse_model(
             device=device,
             batch_size=batch_size,
         ),
-        "train_mae": parameter_mae_torch(
-            model,
-            split["train_features"],
-            split["train_targets"],
-            device=device,
-            batch_size=batch_size,
-        ),
-        "test_mae": parameter_mae_torch(
-            model,
-            split["test_features"],
-            split["test_targets"],
-            device=device,
-            batch_size=batch_size,
-        ),
+        "train_mae": train_parameter_metrics["mae"],
+        "test_mae": test_parameter_metrics["mae"],
+        "train_continuous_mae": train_parameter_metrics["continuous_mae"],
+        "test_continuous_mae": test_parameter_metrics["continuous_mae"],
+        "train_per_parameter_mae": train_parameter_metrics["per_parameter_mae"],
+        "test_per_parameter_mae": test_parameter_metrics["per_parameter_mae"],
+        "train_waveform_accuracy": train_parameter_metrics["waveform_accuracy"],
+        "test_waveform_accuracy": test_parameter_metrics["waveform_accuracy"],
+        "train_waveform_accuracy_by_name": train_parameter_metrics["waveform_accuracy_by_name"],
+        "test_waveform_accuracy_by_name": test_parameter_metrics["waveform_accuracy_by_name"],
+        "train_indices": split["train_indices"].astype(int).tolist(),
+        "test_indices": split["test_indices"].astype(int).tolist(),
+        "benchmark_indices": split["benchmark_indices"].astype(int).tolist(),
     }
+
+    if len(split["benchmark_features"]) > 0:
+        benchmark_parameter_metrics = parameter_metrics_torch(
+            model,
+            split["benchmark_features"],
+            split["benchmark_targets"],
+            device=device,
+            batch_size=batch_size,
+        )
+        metrics.update(
+            {
+                "benchmark_loss": parameter_mse_torch(
+                    model,
+                    split["benchmark_features"],
+                    split["benchmark_targets"],
+                    device=device,
+                    batch_size=batch_size,
+                ),
+                "benchmark_mae": benchmark_parameter_metrics["mae"],
+                "benchmark_continuous_mae": benchmark_parameter_metrics["continuous_mae"],
+                "benchmark_per_parameter_mae": benchmark_parameter_metrics["per_parameter_mae"],
+                "benchmark_waveform_accuracy": benchmark_parameter_metrics["waveform_accuracy"],
+                "benchmark_waveform_accuracy_by_name": benchmark_parameter_metrics[
+                    "waveform_accuracy_by_name"
+                ],
+            }
+        )
 
     return {
         "model": model,

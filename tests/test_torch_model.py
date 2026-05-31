@@ -19,13 +19,16 @@ from minisynth.torch_model import (
     expected_mel_tensor_shape,
     load_mel_tensor_npz,
     load_torch_checkpoint,
+    parameter_mae_by_name,
     parameter_mse_torch,
     predict_patch_from_audio,
     save_torch_checkpoint,
     split_tensor_dataset,
+    split_tensor_dataset_with_benchmark,
     train_inverse_model,
     predict_normalized_vectors,
     select_torch_device,
+    waveform_accuracy_by_name,
 )
 
 
@@ -116,6 +119,57 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(len(first["test_features"]), 2)
         np.testing.assert_array_equal(first["test_targets"], second["test_targets"])
 
+    def test_split_tensor_dataset_with_benchmark_reserves_fixed_indices(self):
+        features = np.arange(20 * 2, dtype=np.float32).reshape(20, 1, 1, 2)
+        targets = np.arange(20, dtype=np.float32).reshape(20, 1)
+
+        first = split_tensor_dataset_with_benchmark(
+            features,
+            targets,
+            test_size=0.2,
+            benchmark_size=0.1,
+            random_state=4,
+        )
+        second = split_tensor_dataset_with_benchmark(
+            features,
+            targets,
+            test_size=0.2,
+            benchmark_size=0.1,
+            random_state=4,
+        )
+
+        self.assertEqual(len(first["train_features"]), 14)
+        self.assertEqual(len(first["test_features"]), 4)
+        self.assertEqual(len(first["benchmark_features"]), 2)
+        np.testing.assert_array_equal(first["benchmark_indices"], second["benchmark_indices"])
+
+    def test_parameter_mae_by_name_reports_each_target(self):
+        targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
+        predictions = np.full((2, len(VECTOR_PARAMETERS)), 0.25, dtype=np.float32)
+
+        metrics = parameter_mae_by_name(predictions, targets)
+
+        self.assertEqual(set(metrics), {parameter.name for parameter in VECTOR_PARAMETERS})
+        self.assertAlmostEqual(metrics["freq"], 0.25)
+
+    def test_waveform_accuracy_by_name_decodes_categorical_targets(self):
+        targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
+        predictions = targets.copy()
+        wave_indices = {
+            parameter.name: index
+            for index, parameter in enumerate(VECTOR_PARAMETERS)
+            if parameter.kind == "enum"
+        }
+        targets[:, wave_indices["osc1_wave"]] = [0.0, 1.0]
+        predictions[:, wave_indices["osc1_wave"]] = [0.0, 1.0]
+        targets[:, wave_indices["osc2_wave"]] = [0.0, 1.0]
+        predictions[:, wave_indices["osc2_wave"]] = [1.0, 0.0]
+
+        metrics = waveform_accuracy_by_name(predictions, targets)
+
+        self.assertEqual(metrics["osc1_wave"], 1.0)
+        self.assertEqual(metrics["osc2_wave"], 0.0)
+
     def test_train_inverse_model_returns_metrics(self):
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "mel_tensors.npz"
@@ -150,6 +204,36 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
+        self.assertIn("freq", metrics["test_per_parameter_mae"])
+        self.assertIn("osc1_wave", metrics["test_waveform_accuracy_by_name"])
+        self.assertGreaterEqual(metrics["test_continuous_mae"], 0.0)
+
+    def test_train_inverse_model_can_report_benchmark_metrics(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                benchmark_size=0.2,
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["benchmark_samples"], 2)
+        self.assertIn("benchmark_loss", metrics)
+        self.assertIn("benchmark_per_parameter_mae", metrics)
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()

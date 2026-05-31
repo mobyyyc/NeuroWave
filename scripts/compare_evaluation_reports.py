@@ -24,12 +24,13 @@ def load_report(path):
 def compare_reports(baseline, candidate):
     baseline_summary = baseline["summary"]
     candidate_summary = candidate["summary"]
+    baseline_metrics = baseline.get("model_metrics", {})
+    candidate_metrics = candidate.get("model_metrics", {})
     baseline_mean = baseline_summary["mean_weighted_distance"]
     candidate_mean = candidate_summary["mean_weighted_distance"]
     baseline_median = baseline_summary["median_weighted_distance"]
     candidate_median = candidate_summary["median_weighted_distance"]
-
-    return {
+    comparison = {
         "baseline_model": baseline["model_path"],
         "candidate_model": candidate["model_path"],
         "baseline_count": baseline_summary["count"],
@@ -44,6 +45,62 @@ def compare_reports(baseline, candidate):
         "candidate_median_weighted_distance": candidate_median,
         "median_weighted_distance_delta": candidate_median - baseline_median,
         "median_weighted_distance_improvement": baseline_median - candidate_median,
+    }
+
+    comparison.update(compare_metric_value(baseline_metrics, candidate_metrics, "test_loss"))
+    comparison.update(compare_metric_value(baseline_metrics, candidate_metrics, "test_mae"))
+    comparison.update(compare_metric_value(baseline_metrics, candidate_metrics, "test_continuous_mae"))
+    comparison.update(compare_metric_value(baseline_metrics, candidate_metrics, "test_waveform_accuracy"))
+    comparison.update(
+        compare_named_metrics(
+            baseline_metrics,
+            candidate_metrics,
+            "test_per_parameter_mae",
+        )
+    )
+    comparison.update(
+        compare_named_metrics(
+            baseline_metrics,
+            candidate_metrics,
+            "test_waveform_accuracy_by_name",
+        )
+    )
+    return comparison
+
+
+def compare_metric_value(baseline_metrics, candidate_metrics, key):
+    if key not in baseline_metrics or key not in candidate_metrics:
+        return {}
+
+    baseline_value = baseline_metrics[key]
+    candidate_value = candidate_metrics[key]
+    return {
+        f"baseline_{key}": baseline_value,
+        f"candidate_{key}": candidate_value,
+        f"{key}_delta": candidate_value - baseline_value,
+    }
+
+
+def compare_named_metrics(baseline_metrics, candidate_metrics, key):
+    if key not in baseline_metrics or key not in candidate_metrics:
+        return {}
+
+    baseline_values = baseline_metrics[key]
+    candidate_values = candidate_metrics[key]
+    names = sorted(set(baseline_values) & set(candidate_values))
+    return {
+        f"{key}_delta_by_name": {
+            name: candidate_values[name] - baseline_values[name]
+            for name in names
+        },
+        f"{key}_baseline_by_name": {
+            name: baseline_values[name]
+            for name in names
+        },
+        f"{key}_candidate_by_name": {
+            name: candidate_values[name]
+            for name in names
+        },
     }
 
 

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from minisynth.ml import save_metrics_report
 from minisynth.torch_model import (
     DEFAULT_BATCH_SIZE,
+    DEFAULT_BENCHMARK_SIZE,
     DEFAULT_EPOCHS,
     DEFAULT_LEARNING_RATE,
     DEFAULT_TEST_SIZE,
@@ -61,6 +62,12 @@ def parse_args():
         help="Fraction of examples reserved for validation metrics.",
     )
     parser.add_argument(
+        "--benchmark-size",
+        type=float,
+        default=DEFAULT_BENCHMARK_SIZE,
+        help="Fraction of examples reserved for fixed benchmark metrics.",
+    )
+    parser.add_argument(
         "--random-state",
         type=int,
         default=0,
@@ -97,6 +104,7 @@ def main() -> int:
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
         test_size=args.test_size,
+        benchmark_size=args.benchmark_size,
         random_state=args.random_state,
         device=args.device,
         progress=not args.quiet,

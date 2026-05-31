@@ -134,11 +134,23 @@ python scripts/train_torch.py \
   --metrics-output runs/training/vN_pytorch_cnn_<training_size>_metrics.json
 ```
 
+Reserve a fixed benchmark subset when you want metrics beyond the validation split:
+
+```bash
+python scripts/train_torch.py \
+  --model-id vN_pytorch_cnn_<training_size> \
+  --tensor-data data/generated/dN/features/mel_tensors.npz \
+  --benchmark-size 0.1 \
+  --model-output models/vN_pytorch_cnn_<training_size>.pt \
+  --metrics-output runs/training/vN_pytorch_cnn_<training_size>_metrics.json
+```
+
 Training output:
 
 - Checkpoint: `models/<model_id>.pt`
 - Metrics report: `runs/training/<model_id>_metrics.json`
 - Console progress: device selection, epochs, batches, and final metrics unless `--quiet` is used.
+- Metrics include train/test loss, train/test MAE, continuous-parameter MAE, per-parameter MAE, waveform accuracy, and optional benchmark metrics.
 
 ## Evaluate PyTorch Models
 

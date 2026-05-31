@@ -174,10 +174,10 @@ Evidence from local reports:
 - Train/test metrics remain close, which suggests undercapacity, target representation limits, or loss design limits more than overfitting.
 - The next target is to push toward `test_mae <= 0.05` on a fixed synthetic holdout, while also improving rendered-audio distance.
 
-- [ ] Add per-parameter MAE reporting to PyTorch training metrics.
-- [ ] Add waveform prediction metrics separate from continuous-parameter MAE.
-- [ ] Add a fixed benchmark split or benchmark dataset that is not used for training or tuning.
-- [ ] Add model comparison reporting across parameter metrics and rendered-audio metrics.
+- [x] Add per-parameter MAE reporting to PyTorch training metrics.
+- [x] Add waveform prediction metrics separate from continuous-parameter MAE.
+- [x] Add a fixed benchmark split or benchmark dataset that is not used for training or tuning.
+- [x] Add model comparison reporting across parameter metrics and rendered-audio metrics.
 - [ ] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
 - [ ] Decide whether `freq` and `length` stay in the timbre model or move to separate pitch/duration handling.
 - [ ] Add parameter-weighted loss support.
@@ -401,3 +401,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add safe multicore and GPU workflow`
 - Reorganized `README.md` into a clear setup, dataset generation, PyTorch training, evaluation, and comparison workflow. Added CUDA-specific PyTorch requirements for future NVIDIA training machines.
   Commit: `Reorganize training README`
+- Added PyTorch per-parameter metrics, waveform accuracy metrics, optional fixed benchmark splits, and comparison reporting that combines parameter metrics with rendered-audio evaluation.
+  Commit: `Add PyTorch model diagnostics`
