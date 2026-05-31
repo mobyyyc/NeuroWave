@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone G - PyTorch Spectrogram Model.
+Current active phase: Milestone H - Model Capability And Target Quality.
 
 ## Completed Baseline
 
@@ -160,7 +160,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Compare PyTorch directly against the scikit-learn baseline.
 - [x] Decide whether scikit-learn stays as a lightweight baseline or can be removed.
 - [x] Generate `d3` with 10,000 seeds and train `v4_pytorch_cnn_10kseeds`.
-- [ ] Commit Milestone G completion.
+- [x] Commit Milestone G completion.
 
 ## Milestone H: Model Capability And Target Quality
 
@@ -408,3 +408,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add PyTorch model diagnostics`
 - Decided the next inverse-model design should not predict `freq`; synthetic patch `freq` should condition the model, real-audio pitch should later come from classical pitch estimation or manual input, and `length` should remain visible because it affects ADSR interpretation.
   Commit: `Document pitch conditioning strategy`
+- Completed Milestone G tracker closeout and moved the active phase to Milestone H model capability work.
+  Commit: `Complete Milestone G`
