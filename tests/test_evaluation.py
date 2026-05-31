@@ -1,16 +1,21 @@
 import unittest
 import warnings
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import soundfile as sf
 from sklearn.exceptions import ConvergenceWarning
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.dataset import write_random_dataset_files
 from minisynth.engine import render_patch
 from minisynth.evaluation import evaluate_audio_prediction
+from minisynth.evaluation import evaluate_patch_prediction
 from minisynth.evaluation import summarize_weighted_distances
 from minisynth.ml import train_mlp_from_metadata
+from minisynth.torch_model import create_inverse_model, save_torch_checkpoint
 
 
 class TestPredictionEvaluation(unittest.TestCase):
@@ -74,6 +79,69 @@ class TestPredictionEvaluation(unittest.TestCase):
     def test_summarize_weighted_distances_rejects_empty_results(self):
         with self.assertRaises(ValueError):
             summarize_weighted_distances([])
+
+    def test_evaluate_patch_prediction_returns_weighted_distance(self):
+        patch = {
+            "freq": 261.63,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.8,
+            "osc2_wave": "saw",
+            "osc2_level": 0.4,
+            "osc2_detune": 7,
+            "cutoff": 1200,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        target_audio = render_patch(**patch)
+
+        result = evaluate_patch_prediction(patch, target_audio, DEFAULT_SAMPLE_RATE)
+
+        self.assertIn("weighted_distance", result["comparison"])
+        self.assertGreaterEqual(result["comparison"]["weighted_distance"], 0.0)
+        self.assertEqual(result["rendered_audio"].ndim, 1)
+
+    def test_evaluate_prediction_torch_cli_writes_report(self):
+        from scripts.evaluate_prediction_torch import main
+
+        model = create_inverse_model()
+        audio = render_patch(length=1.0)
+
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            audio_path = root / "target.wav"
+            model_path = root / "model.pt"
+            output_dir = root / "run"
+            sf.write(audio_path, audio, DEFAULT_SAMPLE_RATE)
+            save_torch_checkpoint(model, model_path, metrics={"test_mae": 0.2})
+
+            import sys
+
+            original_argv = sys.argv
+            try:
+                sys.argv = [
+                    "evaluate_prediction_torch.py",
+                    str(audio_path),
+                    "--model",
+                    str(model_path),
+                    "--output-dir",
+                    str(output_dir),
+                    "--device",
+                    "cpu",
+                ]
+                with redirect_stdout(StringIO()):
+                    exit_code = main()
+            finally:
+                sys.argv = original_argv
+
+            report_text = (output_dir / "report.json").read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn('"weighted_distance"', report_text)
+        self.assertIn('"predicted_patch"', report_text)
 
 
 if __name__ == "__main__":
