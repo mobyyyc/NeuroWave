@@ -20,14 +20,14 @@ data/generated/d3/
 data/generated/d8/
 ```
 
-Do not use `v1` or `v2` for datasets. Reserve `vN` for model versions.
+Do not use `v1`, `v2`, or `v2.0` style names for datasets. Reserve `v...` for model versions.
 
 Dataset IDs should not encode model architecture, target mode, loss, or training settings.
 A dataset is only the generated source data. The model ID records how that data was used.
 
 ## Model IDs
 
-Basic models use:
+Historical models used integer versions:
 
 ```text
 vN_<model_type>_<training_size>
@@ -40,10 +40,26 @@ Examples:
 - `v3_pytorch_cnn_500seeds`
 - `v4_pytorch_cnn_10kseeds`
 
+Keep existing integer model IDs unchanged in reports, checkpoints, and progress notes.
+
+Starting with the next model after `v10`, new comparison models use major/minor
+experiment versions:
+
+```text
+v<major>.<minor>_<model_type>_<target>_<loss>_<size>_<pooling>_<training_size>
+```
+
+Use this versioning rule:
+
+- `v2.0`: first model in the next capability series.
+- `v2.1`, `v2.2`, ...: ablations or incremental improvements within the same capability series.
+- `v3.0`: next major upgrade, such as a materially different architecture, target representation,
+  synth parameterization, training objective, evaluation standard, or data-generation regime.
+
 For newer PyTorch capability experiments, use:
 
 ```text
-vN_pytorch_cnn_<target>_<loss>_<size>_<pooling>_<training_size>
+v<major>.<minor>_pytorch_cnn_<target>_<loss>_<size>_<pooling>_<training_size>
 ```
 
 Recommended tokens:
@@ -62,11 +78,15 @@ Recommended tokens:
   - `global`: legacy global pooling.
   - `tfpool`: time-frequency pooling, currently `--pooling-mode time_frequency`.
 
-Example current capability model IDs:
+Example historical capability model IDs:
 
 - `v10_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds`
-- `v11_pytorch_cnn_pitchctx_weighted_large_tfpool_50kseeds`
-- `v12_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`
+
+Example next capability model IDs:
+
+- `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`
+- `v2.1_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds`
+- `v2.2_pytorch_cnn_pitchctx_flat_large_tfpool_50kseeds`
 
 Shorter IDs are acceptable while iterating, but serious comparison runs should include
 target, loss, size, pooling, and training size so reports are self-explanatory.
@@ -106,11 +126,11 @@ This keeps dataset identity, model identity, and experiment purpose separate.
 
 ## Recommended Current Commands
 
-For the first 50,000-seed capability run:
+For the next 50,000-seed capability run:
 
 ```text
 Dataset: d8
-Model: v10_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds
+Model: v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds
 ```
 
 This means:
@@ -118,7 +138,7 @@ This means:
 - Dataset `d8`.
 - PyTorch CNN model.
 - Pitch-conditioned timbre target mode.
-- Audibility-weighted loss.
+- Flat/default loss.
 - Medium model capacity.
 - Time-frequency pooling.
 - 50,000 generated training examples.

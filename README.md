@@ -70,7 +70,13 @@ python scripts/smoke_render.py
 
 ## Generate Datasets
 
-Datasets are named `dN`. Models are named `vN_<model_type>_<training_size>`. Keep those separate.
+Datasets are named `dN`. Historical models used `vN_<model_type>_<training_size>`.
+Starting with the next capability series, models use `v<major>.<minor>_...`,
+for example `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`.
+Increment the minor version for ablations within the same capability series, and
+reserve the next major version, such as `v3.0`, for a material architecture,
+target, objective, evaluation, or data-generation upgrade. Keep dataset IDs and
+model IDs separate.
 
 Generate the first tiny local dataset:
 
@@ -128,21 +134,21 @@ Template for future models:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vN_pytorch_cnn_<training_size> \
+  --model-id vX.Y_pytorch_cnn_<training_size> \
   --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --model-output models/vN_pytorch_cnn_<training_size>.pt \
-  --metrics-output runs/training/vN_pytorch_cnn_<training_size>_metrics.json
+  --model-output models/vX.Y_pytorch_cnn_<training_size>.pt \
+  --metrics-output runs/training/vX.Y_pytorch_cnn_<training_size>_metrics.json
 ```
 
 Reserve a fixed benchmark subset when you want metrics beyond the validation split:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vN_pytorch_cnn_<training_size> \
+  --model-id vX.Y_pytorch_cnn_<training_size> \
   --tensor-data data/generated/dN/features/mel_tensors.npz \
   --benchmark-size 0.1 \
-  --model-output models/vN_pytorch_cnn_<training_size>.pt \
-  --metrics-output runs/training/vN_pytorch_cnn_<training_size>_metrics.json
+  --model-output models/vX.Y_pytorch_cnn_<training_size>.pt \
+  --metrics-output runs/training/vX.Y_pytorch_cnn_<training_size>_metrics.json
 ```
 
 Training output:
@@ -158,30 +164,30 @@ For pitch-conditioned timbre training, remove `freq` from the output target and 
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vN_pytorch_cnn_pitchctx_<training_size> \
+  --model-id vX.Y_pytorch_cnn_pitchctx_<training_size> \
   --tensor-data data/generated/dN/features/mel_tensors.npz \
   --target-mode pitch_conditioned_timbre \
-  --model-output models/vN_pytorch_cnn_pitchctx_<training_size>.pt \
-  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_<training_size>_metrics.json
+  --model-output models/vX.Y_pytorch_cnn_pitchctx_<training_size>.pt \
+  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_<training_size>_metrics.json
 ```
 
 Use `--loss-preset audibility` to weight waveform, detune, filter, and envelope parameters more strongly than low-impact normalized parameters:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vN_pytorch_cnn_pitchctx_weighted_<training_size> \
+  --model-id vX.Y_pytorch_cnn_pitchctx_weighted_<training_size> \
   --tensor-data data/generated/dN/features/mel_tensors.npz \
   --target-mode pitch_conditioned_timbre \
   --loss-preset audibility \
-  --model-output models/vN_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
-  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
+  --model-output models/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
+  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
 ```
 
 For longer model-quality runs, prefer explicit optimizer controls and best-validation checkpoint selection:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vN_pytorch_cnn_pitchctx_weighted_<training_size> \
+  --model-id vX.Y_pytorch_cnn_pitchctx_weighted_<training_size> \
   --tensor-data data/generated/dN/features/mel_tensors.npz \
   --target-mode pitch_conditioned_timbre \
   --loss-preset audibility \
@@ -192,8 +198,8 @@ python scripts/train_torch.py \
   --scheduler-gamma 0.5 \
   --early-stopping-patience 8 \
   --checkpoint-selection best_validation \
-  --model-output models/vN_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
-  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
+  --model-output models/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
+  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
 ```
 
 Use `--model-size medium` or `--model-size large` to scale model capacity without changing source code. Keep `small` for direct comparisons against earlier runs.
