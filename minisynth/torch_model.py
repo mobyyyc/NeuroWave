@@ -257,7 +257,7 @@ def train_inverse_model(
         epoch_loss = float(running_loss / sample_count)
         epoch_losses.append(epoch_loss)
         if progress:
-            print(f"\nEpoch {epoch + 1} complete - average loss {epoch_loss:.6f}")
+            print(f"\nEpoch {epoch + 1} complete - average loss {epoch_loss:.6f}\n")
 
     metrics = {
         "model_id": model_id,
