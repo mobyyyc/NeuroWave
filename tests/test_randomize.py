@@ -65,7 +65,7 @@ class TestRandomPatch(unittest.TestCase):
                 self.assertGreaterEqual(value, 0.0, seed)
                 self.assertLessEqual(value, 1.0, seed)
 
-    def test_random_patch_failed_v2_seeds_keep_decay_inside_schema(self):
+    def test_random_patch_failed_d2_seeds_keep_decay_inside_schema(self):
         parameters = {parameter.name: parameter for parameter in PARAMETERS}
 
         for seed in (2054, 2121):

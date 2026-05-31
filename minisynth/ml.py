@@ -19,7 +19,7 @@ from minisynth.schema import SynthConfig
 DEFAULT_MLP_HIDDEN_LAYERS = (32,)
 DEFAULT_MLP_MAX_ITER = 500
 DEFAULT_TEST_SIZE = 0.2
-DEFAULT_MODEL_PATH = Path("models/mlp_baseline.joblib")
+DEFAULT_MODEL_PATH = Path("models/v1_sklearn_mlp_10seeds.joblib")
 
 
 def create_mlp_regressor(

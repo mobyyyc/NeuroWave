@@ -6,7 +6,7 @@ from scripts.compare_evaluation_reports import compare_reports
 class TestCompareEvaluationReports(unittest.TestCase):
     def test_compare_reports_calculates_weighted_distance_improvement(self):
         baseline = {
-            "model_path": "models/v1.joblib",
+            "model_path": "models/v1_sklearn_mlp_10seeds.joblib",
             "summary": {
                 "count": 20,
                 "failed_count": 2,
@@ -15,7 +15,7 @@ class TestCompareEvaluationReports(unittest.TestCase):
             },
         }
         candidate = {
-            "model_path": "models/v2.joblib",
+            "model_path": "models/v2_sklearn_mlp_500seeds.joblib",
             "summary": {
                 "count": 20,
                 "failed_count": 1,

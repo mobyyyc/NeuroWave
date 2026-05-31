@@ -80,8 +80,8 @@ Goal: generate labeled synthetic data from known parameters.
 - [x] Create `scripts/random_patch.py` with seeded random patch generation.
 - [x] Add constraints so random patches are not silent.
 - [x] Add constraints so generated audio avoids clipping.
-- [x] Save generated patch JSON files under `data/generated/v1/params/`.
-- [x] Save generated WAV files under `data/generated/v1/audio/`.
+- [x] Save generated patch JSON files under `data/generated/d1/params/`.
+- [x] Save generated WAV files under `data/generated/d1/audio/`.
 - [x] Write `metadata.jsonl` for generated clips.
 - [x] Add a small sample generation command to `README.md`.
 - [x] Generate a tiny local dataset of 10 patches for manual inspection.
@@ -135,13 +135,13 @@ Goal: predict synth parameters from audio features on synthetic data.
 
 Goal: make the first ML model learn from larger synthetic datasets before moving to real audio.
 
-- [x] Add versioned dataset output support for `data/generated/v2/`.
+- [x] Add versioned dataset output support for `data/generated/d2/`.
 - [x] Fix random patch envelope constraints so generated targets stay inside schema ranges.
-- [x] Generate a local ignored `v2` dataset with 500 examples.
-- [x] Train the MLP baseline on the `v2` dataset.
-- [x] Save a metrics report for the `v2` training run.
+- [x] Generate a local ignored `d2` dataset with 500 examples.
+- [x] Train the MLP baseline on the `d2` dataset.
+- [x] Save a metrics report for the `d2` training run.
 - [x] Add evaluation across multiple synthetic dataset clips.
-- [x] Compare the `v1` tiny model against the `v2` larger model.
+- [x] Compare the `v1_sklearn_mlp_10seeds` model against the `v2_sklearn_mlp_500seeds` model.
 - [x] Decide whether to keep scikit-learn MLP or move next to PyTorch.
 - [x] Commit Milestone F completion.
 
@@ -152,7 +152,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Make an explicit PyTorch dependency and runtime decision.
 - [x] Create mel-spectrogram dataset tensor export from generated metadata.
 - [ ] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
-- [ ] Train on `v2` or a larger synthetic dataset.
+- [ ] Train on `d2` or a larger synthetic dataset.
 - [ ] Save PyTorch checkpoints and metrics.
 - [ ] Add prediction script for one clip using the PyTorch model.
 - [ ] Render PyTorch predicted patch and compare to target.
@@ -256,15 +256,15 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Prevent silent random patches`
 - Added a reusable audio clipping constraint for generated dataset audio.
   Commit: `Add generated audio clipping constraint`
-- Added dataset helpers and CLI support for saving generated patch JSON files under `data/generated/v1/params/`.
+- Added dataset helpers and CLI support for saving generated patch JSON files under `data/generated/d1/params/`.
   Commit: `Save generated patch params`
-- Added dataset helpers and CLI support for saving generated WAV files under `data/generated/v1/audio/`.
+- Added dataset helpers and CLI support for saving generated WAV files under `data/generated/d1/audio/`.
   Commit: `Save generated dataset audio`
 - Added `metadata.jsonl` generation so each dataset row links seed, patch JSON, and rendered WAV paths.
   Commit: `Write generated dataset metadata`
 - Documented the small dataset generation command in the README.
   Commit: `Document dataset generation command`
-- Generated the local ignored 10-example dataset under `data/generated/v1/` for manual inspection.
+- Generated the local ignored 10-example dataset under `data/generated/d1/` for manual inspection.
   Commit: `Generate local sample dataset`
 - Added tests proving random patch and dataset generation are reproducible for the same seed.
   Commit: `Add random generation reproducibility tests`
@@ -326,19 +326,19 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add optional ML prediction refinement`
 - Completed Milestone E; the next phase was later revised to scaled synthetic training before real-audio work.
   Commit: `Complete Milestone E`
-- Revised the roadmap so Milestone F is scaled synthetic training before real-audio work, and added versioned dataset output support for `v2`.
+- Revised the roadmap so Milestone F is scaled synthetic training before real-audio work, and added versioned dataset output support for `d2`.
   Commit: `Start scaled synthetic training milestone`
 - Fixed random patch envelope scaling so generated training targets remain valid after normalization.
   Commit: `Keep random envelopes inside schema`
-- Generated a local ignored `v2` dataset with 500 valid examples for scaled synthetic training.
-  Commit: `Generate valid v2 dataset`
-- Trained the MLP baseline on the local ignored `v2` dataset and saved the ignored checkpoint under `models/`.
-  Commit: `Train MLP baseline on v2 dataset`
-- Added metrics report output for training runs and saved the ignored v2 MLP metrics report under `runs/training/`.
+- Generated a local ignored `d2` dataset with 500 valid examples for scaled synthetic training.
+  Commit: `Generate valid d2 dataset`
+- Trained the MLP baseline on the local ignored `d2` dataset and saved the ignored checkpoint under `models/`.
+  Commit: `Train MLP baseline on d2 dataset`
+- Added metrics report output for training runs and saved the ignored `v2_sklearn_mlp_500seeds` metrics report under `runs/training/`.
   Commit: `Save v2 training metrics report`
-- Added dataset-level evaluation and saved a 20-clip ignored v2 weighted-distance report under `runs/evaluation/`.
+- Added dataset-level evaluation and saved a 20-clip ignored `v2_sklearn_mlp_500seeds` on `d2` weighted-distance report under `runs/evaluation/`.
   Commit: `Evaluate v2 model across held-out clips`
-- Compared tiny v1 and larger v2 MLP checkpoints on the same 20 v2 clips; v2 reduced mean and median weighted distance.
+- Compared `v1_sklearn_mlp_10seeds` and `v2_sklearn_mlp_500seeds` checkpoints on the same 20 `d2` clips; the larger model reduced mean and median weighted distance.
   Commit: `Compare v1 and v2 MLP evaluation reports`
 - Decided to keep scikit-learn as the baseline while moving the next serious model track toward PyTorch spectrogram learning.
   Commit: `Decide next ML framework direction`
@@ -348,5 +348,7 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Complete Milestone F`
 - Documented the PyTorch runtime decision: keep the current Python 3.14 sklearn environment stable and use a separate compatible runtime for PyTorch work.
   Commit: `Document PyTorch runtime decision`
-- Added mel-spectrogram tensor export from generated metadata and saved local ignored v2 tensors for future PyTorch training.
+- Added mel-spectrogram tensor export from generated metadata and saved local ignored `d2` tensors for future PyTorch training.
   Commit: `Export mel tensors for PyTorch training`
+- Added explicit dataset/model/run naming rules and separated dataset IDs (`d1`, `d2`) from model IDs (`vN_modeltype_size`).
+  Commit: `Clarify dataset and model naming`

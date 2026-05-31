@@ -173,17 +173,17 @@ class TestDatasetGeneration(unittest.TestCase):
         )
 
     def test_default_metadata_path_targets_generated_dataset_root(self):
-        self.assertEqual(DEFAULT_METADATA_PATH, Path("data/generated/v1/metadata.jsonl"))
+        self.assertEqual(DEFAULT_METADATA_PATH, Path("data/generated/d1/metadata.jsonl"))
 
     def test_generated_dataset_paths_targets_versioned_dataset_root(self):
-        paths = generated_dataset_paths("v2")
+        paths = generated_dataset_paths("d2")
 
-        self.assertEqual(paths["root"], Path("data/generated/v2"))
-        self.assertEqual(paths["param_dir"], Path("data/generated/v2/params"))
-        self.assertEqual(paths["audio_dir"], Path("data/generated/v2/audio"))
+        self.assertEqual(paths["root"], Path("data/generated/d2"))
+        self.assertEqual(paths["param_dir"], Path("data/generated/d2/params"))
+        self.assertEqual(paths["audio_dir"], Path("data/generated/d2/audio"))
         self.assertEqual(
             paths["metadata_path"],
-            Path("data/generated/v2/metadata.jsonl"),
+            Path("data/generated/d2/metadata.jsonl"),
         )
 
     def test_write_random_dataset_files_rejects_invalid_count(self):
@@ -207,11 +207,11 @@ class TestDatasetGeneration(unittest.TestCase):
 
     def test_resolve_metadata_path_uses_metadata_parent_for_relative_paths(self):
         resolved = resolve_metadata_path(
-            Path("data/generated/v1/metadata.jsonl"),
+            Path("data/generated/d1/metadata.jsonl"),
             "audio/does-not-exist.wav",
         )
 
-        self.assertEqual(resolved, Path("data/generated/v1/audio/does-not-exist.wav"))
+        self.assertEqual(resolved, Path("data/generated/d1/audio/does-not-exist.wav"))
 
     def test_resolve_metadata_path_keeps_existing_repo_relative_paths(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -225,7 +225,7 @@ class TestDatasetGeneration(unittest.TestCase):
 
                 os.chdir(root)
                 resolved = resolve_metadata_path(
-                    Path("data/generated/v1/metadata.jsonl"),
+                    Path("data/generated/d1/metadata.jsonl"),
                     "example.wav",
                 )
             finally:

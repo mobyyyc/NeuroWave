@@ -13,11 +13,11 @@ from minisynth.io import load_patch, save_patch
 from minisynth.randomize import audio_avoids_clipping, random_patch
 from minisynth.schema import SynthConfig
 
-DEFAULT_PARAM_DIR = Path("data/generated/v1/params")
-DEFAULT_AUDIO_DIR = Path("data/generated/v1/audio")
-DEFAULT_METADATA_PATH = Path("data/generated/v1/metadata.jsonl")
-DEFAULT_DATASET_VERSION = "v1"
-DEFAULT_MEL_TENSOR_PATH = Path("data/generated/v1/features/mel_tensors.npz")
+DEFAULT_PARAM_DIR = Path("data/generated/d1/params")
+DEFAULT_AUDIO_DIR = Path("data/generated/d1/audio")
+DEFAULT_METADATA_PATH = Path("data/generated/d1/metadata.jsonl")
+DEFAULT_DATASET_VERSION = "d1"
+DEFAULT_MEL_TENSOR_PATH = Path("data/generated/d1/features/mel_tensors.npz")
 DEFAULT_MEL_TENSOR_FRAMES = 256
 
 

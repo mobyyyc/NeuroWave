@@ -42,10 +42,10 @@ track toward PyTorch and spectrogram-based learning.
 
 Evidence from scaled synthetic training:
 
-- The v2 dataset has 500 examples.
-- The v2 MLP checkpoint reached `train_mae = 0.2052` and `test_mae = 0.2089`.
-- On the same 20 v2 clips, the v2 model improved mean weighted audio distance from
-  `328.03` to `150.61` compared with the 10-example v1 tiny model.
+- The `d2` dataset has 500 examples.
+- The `v2_sklearn_mlp_500seeds` checkpoint reached `train_mae = 0.2052` and `test_mae = 0.2089`.
+- On the same 20 `d2` clips, `v2_sklearn_mlp_500seeds` improved mean weighted audio distance from
+  `328.03` to `150.61` compared with `v1_sklearn_mlp_10seeds`.
 - Median weighted audio distance improved from `157.55` to `71.80`.
 - Both models still had one failed predicted render in the 20-clip comparison.
 
