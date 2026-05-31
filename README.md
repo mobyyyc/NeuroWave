@@ -93,6 +93,12 @@ Predict a patch JSON from one audio clip using the saved MLP checkpoint:
 python scripts/predict_patch.py data/generated/d1/audio/patch_000000_seed_1000.wav runs/predicted_patch.json
 ```
 
+Predict a patch JSON from one audio clip using the saved PyTorch checkpoint:
+
+```bash
+python scripts/predict_patch_torch.py data/generated/d2/audio/patch_000000_seed_2000.wav runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000.json
+```
+
 Evaluate the prediction by rendering it and comparing it to the target:
 
 ```bash

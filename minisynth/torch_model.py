@@ -7,8 +7,9 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES
-from minisynth.schema import VECTOR_PARAMETERS
+from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES, mel_tensor_from_audio
+from minisynth.randomize import constrain_envelope_fits_length
+from minisynth.schema import SynthConfig, VECTOR_PARAMETERS
 
 DEFAULT_MEL_BINS = 64
 DEFAULT_INPUT_CHANNELS = 1
@@ -332,6 +333,21 @@ def predict_normalized_vectors(model, mel_tensors, device=None):
         predictions = model(inputs)
 
     return predictions.cpu().numpy()
+
+
+def predict_patch_from_audio(model, audio, sample_rate, device=None, frames=DEFAULT_MEL_TENSOR_FRAMES):
+    mel_tensor = mel_tensor_from_audio(audio, sample_rate, frames=frames)
+    vector = tuple(
+        float(value)
+        for value in predict_normalized_vectors(
+            model,
+            mel_tensor[np.newaxis, :, :, :],
+            device=device,
+        )[0]
+    )
+    patch = SynthConfig.from_vector(vector).to_render_kwargs()
+    constrain_envelope_fits_length(patch)
+    return patch
 
 
 def expected_mel_tensor_shape(

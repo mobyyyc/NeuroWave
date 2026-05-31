@@ -154,7 +154,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
 - [x] Train on `d2` or a larger synthetic dataset.
 - [x] Save PyTorch checkpoints and metrics.
-- [ ] Add prediction script for one clip using the PyTorch model.
+- [x] Add prediction script for one clip using the PyTorch model.
 - [ ] Render PyTorch predicted patch and compare to target.
 - [ ] Evaluate PyTorch model across synthetic dataset clips.
 - [ ] Compare PyTorch directly against the scikit-learn baseline.
@@ -358,3 +358,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add PyTorch inverse model`
 - Added a PyTorch training script, trained `v3_pytorch_cnn_500seeds` on local ignored `d2` mel tensors, and saved ignored checkpoint plus training metrics report.
   Commit: `Train PyTorch inverse model on d2`
+- Added one-clip PyTorch patch prediction from WAV input and verified it writes a renderable ignored JSON patch from the `v3_pytorch_cnn_500seeds` checkpoint.
+  Commit: `Add PyTorch patch prediction`

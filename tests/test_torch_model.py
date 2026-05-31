@@ -1,11 +1,16 @@
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
+import soundfile as sf
 import torch
 
 from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES
+from minisynth.engine import render_patch
+from minisynth.io import load_patch
 from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
@@ -15,6 +20,7 @@ from minisynth.torch_model import (
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mse_torch,
+    predict_patch_from_audio,
     save_torch_checkpoint,
     split_tensor_dataset,
     train_inverse_model,
@@ -179,3 +185,72 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(saved_path, path)
         self.assertEqual(checkpoint["metrics"]["test_mae"], 0.25)
         self.assertEqual(predictions.shape, (1, len(VECTOR_PARAMETERS)))
+
+    def test_predict_patch_from_audio_returns_renderable_patch(self):
+        model = create_inverse_model()
+        source_patch = {
+            "freq": 261.63,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.8,
+            "osc2_wave": "saw",
+            "osc2_level": 0.4,
+            "osc2_detune": 7,
+            "cutoff": 1200,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        audio = render_patch(**source_patch)
+
+        patch = predict_patch_from_audio(
+            model,
+            audio,
+            44100,
+            device=torch.device("cpu"),
+        )
+        rendered = render_patch(**patch)
+
+        self.assertIn("osc1_wave", patch)
+        self.assertIn("cutoff", patch)
+        self.assertGreater(len(rendered), 0)
+
+    def test_predict_patch_torch_cli_writes_patch_json(self):
+        from scripts.predict_patch_torch import main
+
+        model = create_inverse_model()
+        audio = render_patch(length=1.0)
+
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            audio_path = root / "target.wav"
+            model_path = root / "model.pt"
+            output_path = root / "predicted.json"
+            sf.write(audio_path, audio, 44100)
+            save_torch_checkpoint(model, model_path, metrics={"test_mae": 0.2})
+
+            import sys
+
+            original_argv = sys.argv
+            try:
+                sys.argv = [
+                    "predict_patch_torch.py",
+                    str(audio_path),
+                    str(output_path),
+                    "--model",
+                    str(model_path),
+                    "--device",
+                    "cpu",
+                ]
+                with redirect_stdout(StringIO()):
+                    exit_code = main()
+            finally:
+                sys.argv = original_argv
+
+            patch = load_patch(output_path)
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("osc1_wave", patch)
+        self.assertIn("release", patch)
