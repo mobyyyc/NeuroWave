@@ -1,0 +1,9 @@
+# NVIDIA CUDA PyTorch install path.
+# Install base dependencies first:
+#   python -m pip install -r requirements.txt
+#
+# This follows the official PyTorch CUDA wheel-index pattern. Use this on
+# Linux or Windows machines with an NVIDIA CUDA-capable GPU.
+--index-url https://download.pytorch.org/whl/cu128
+
+torch

@@ -2,169 +2,220 @@
 
 NeuroWave is a Python synthesizer project being built toward machine-learning-driven sound recreation.
 
-The current focus is a deterministic, parameterized synth engine that can render editable patch settings into audio. The repository and Python package still use the historical `MiniSynth` / `minisynth` names internally.
+The current system renders known synth parameters into audio, generates synthetic datasets, trains inverse models from audio features, and evaluates predicted synth patches by rendering them back to audio.
 
-## Setup
+Architecture note: the repository and Python package still use the historical `MiniSynth` / `minisynth` names internally. Do not rename folders, imports, or package paths unless that migration is planned separately.
 
-Create and activate a local virtual environment:
+## Project Map
+
+- `minisynth/`: synth engine, schema, audio features, dataset helpers, and ML model code.
+- `presets/`: human-readable synth presets.
+- `scripts/`: commands for rendering, dataset generation, training, prediction, and evaluation.
+- `data/generated/`: local generated datasets. Ignored by git.
+- `models/`: local trained checkpoints. Ignored by git.
+- `runs/`: local training, prediction, and evaluation reports. Ignored by git.
+- `PLAN.md`: long-term roadmap.
+- `PROGRESS.md`: daily task tracker.
+- `NAMING.md`: dataset, model, and report naming rules.
+
+## Environment Setup
+
+Create and activate the project virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 ```
 
-Install dependencies:
+Install the normal project dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-See `NAMING.md` for dataset, model, and run report naming rules.
+For local macOS or CPU-only development, install PyTorch normally:
+
+```bash
+python -m pip install torch
+```
+
+For NVIDIA CUDA training, install CUDA-enabled PyTorch after the base requirements:
+
+```bash
+python -m pip install -r requirements-cuda.txt
+```
+
+Verify which training device PyTorch can use:
+
+```bash
+python -c "import torch; print('cuda:', torch.cuda.is_available()); print('mps:', torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"
+```
+
+The training scripts automatically prefer CUDA, then Apple MPS, then CPU. You can override that with `--device cuda`, `--device mps`, or `--device cpu`.
 
 ## Render A Preset
 
-Render the current `dark_saw` JSON preset:
+Render the current `dark_saw` preset:
 
 ```bash
 python scripts/render_patch.py presets/dark_saw.json dark_saw.wav
 ```
 
-## Generate A Small Dataset
-
-Generate 10 paired random patch JSON and WAV files, plus metadata:
+Run the smoke render:
 
 ```bash
-python scripts/random_patch.py --seed 1000 --count 10
+python scripts/smoke_render.py
 ```
 
-Outputs are written under `data/generated/d1/`, which is ignored by git.
+## Generate Datasets
 
-Generate a larger versioned dataset for scaled training:
+Datasets are named `dN`. Models are named `vN_<model_type>_<training_size>`. Keep those separate.
+
+Generate the first tiny local dataset:
+
+```bash
+python scripts/random_patch.py --dataset-version d1 --seed 1000 --count 10 --workers 1
+```
+
+Generate `d2`, the 500-seed dataset used for baseline PyTorch training:
 
 ```bash
 python scripts/random_patch.py --dataset-version d2 --seed 2000 --count 500 --workers 0
+python scripts/export_mel_tensors.py --dataset-version d2 --workers 0
 ```
 
-Generate the 10k-seed PyTorch scale-up dataset:
+Generate a larger future dataset, such as `d3` with 10,000 seeds:
 
 ```bash
 python scripts/random_patch.py --dataset-version d3 --seed 3000 --count 10000 --workers 0
 python scripts/export_mel_tensors.py --dataset-version d3 --workers 0
 ```
 
-Use `--workers 1` for serial mode. Use `--workers 0` for a conservative automatic worker count that limits NumPy/SciPy worker threads to avoid CPU overload.
+Worker rules:
 
-## Train The MLP Baseline
+- `--workers 1`: serial mode.
+- `--workers 0`: conservative automatic multicore mode.
+- `--workers N`: manually use `N` worker processes.
 
-Train the current scikit-learn MLP baseline on generated metadata:
+The dataset code limits NumPy/SciPy worker threads so multicore generation does not overload the CPU with nested thread pools.
+
+## Train PyTorch Models
+
+Use PyTorch for future model-quality work. The scikit-learn model remains only as a lightweight baseline.
+
+Train the explicit `d2` PyTorch model:
 
 ```bash
-python scripts/train_mlp.py --metadata data/generated/d1/metadata.jsonl --model-output models/v1_sklearn_mlp_10seeds.joblib
+python scripts/train_torch.py \
+  --model-id v3_pytorch_cnn_500seeds \
+  --tensor-data data/generated/d2/features/mel_tensors.npz \
+  --model-output models/v3_pytorch_cnn_500seeds.pt \
+  --metrics-output runs/training/v3_pytorch_cnn_500seeds_metrics.json
 ```
 
-The command saves a checkpoint to `models/v1_sklearn_mlp_10seeds.joblib` and prints train/test parameter MAE metrics as JSON. The `models/` directory is ignored by git.
-
-Save a metrics report while training:
+Train the current 10,000-seed PyTorch model on `d3`:
 
 ```bash
-python scripts/train_mlp.py --metadata data/generated/d2/metadata.jsonl --model-output models/v2_sklearn_mlp_500seeds.joblib --metrics-output runs/training/v2_sklearn_mlp_500seeds_metrics.json
+python scripts/train_torch.py \
+  --model-id v4_pytorch_cnn_10kseeds \
+  --tensor-data data/generated/d3/features/mel_tensors.npz \
+  --model-output models/v4_pytorch_cnn_10kseeds.pt \
+  --metrics-output runs/training/v4_pytorch_cnn_10kseeds_metrics.json
 ```
 
-## PyTorch Runtime
-
-PyTorch work uses the current Python 3.14 project environment. See `PYTORCH_DECISION.md` for the runtime decision.
-
-Install PyTorch for Milestone G work:
+Template for future models:
 
 ```bash
-python -m pip install torch
+python scripts/train_torch.py \
+  --model-id vN_pytorch_cnn_<training_size> \
+  --tensor-data data/generated/dN/features/mel_tensors.npz \
+  --model-output models/vN_pytorch_cnn_<training_size>.pt \
+  --metrics-output runs/training/vN_pytorch_cnn_<training_size>_metrics.json
 ```
 
-Export generated audio as channel-first mel-spectrogram tensors for future PyTorch training:
+Training output:
+
+- Checkpoint: `models/<model_id>.pt`
+- Metrics report: `runs/training/<model_id>_metrics.json`
+- Console progress: device selection, epochs, batches, and final metrics unless `--quiet` is used.
+
+## Evaluate PyTorch Models
+
+Evaluate `v3_pytorch_cnn_500seeds` on `d2`:
 
 ```bash
-python scripts/export_mel_tensors.py --dataset-version d2 --workers 0
+python scripts/evaluate_dataset_torch.py \
+  --metadata data/generated/d2/metadata.jsonl \
+  --model models/v3_pytorch_cnn_500seeds.pt \
+  --count 20 \
+  --output runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json
 ```
 
-Train the first PyTorch CNN inverse model on exported `d2` mel tensors:
+Evaluate `v4_pytorch_cnn_10kseeds` on `d3`:
 
 ```bash
-python scripts/train_torch.py
+python scripts/evaluate_dataset_torch.py \
+  --metadata data/generated/d3/metadata.jsonl \
+  --model models/v4_pytorch_cnn_10kseeds.pt \
+  --count 200 \
+  --start-index 8000 \
+  --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json
 ```
 
-The command saves an ignored checkpoint to `models/v3_pytorch_cnn_500seeds.pt` and an ignored training report to `runs/training/v3_pytorch_cnn_500seeds_metrics.json`.
+Evaluation reports include weighted audio distance plus the component distances used to score predicted renders against target audio.
 
-Training automatically uses CUDA if available, then Apple MPS if available, then CPU. Override it with `--device cpu`, `--device mps`, or `--device cuda`. Add `--quiet` to hide epoch and batch progress.
+## Predict One Patch
 
-Train the next 10k-seed PyTorch CNN model after generating/exporting `d3`:
-
-```bash
-python scripts/train_torch.py --model-id v4_pytorch_cnn_10kseeds --tensor-data data/generated/d3/features/mel_tensors.npz --model-output models/v4_pytorch_cnn_10kseeds.pt --metrics-output runs/training/v4_pytorch_cnn_10kseeds_metrics.json
-```
-
-Evaluate the 10k-seed model:
+Predict a patch JSON from one audio clip using a PyTorch checkpoint:
 
 ```bash
-python scripts/evaluate_dataset_torch.py --metadata data/generated/d3/metadata.jsonl --model models/v4_pytorch_cnn_10kseeds.pt --count 200 --start-index 8000 --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json --device cpu
-```
-
-## Predict A Patch
-
-Predict a patch JSON from one audio clip using the saved MLP checkpoint:
-
-```bash
-python scripts/predict_patch.py data/generated/d1/audio/patch_000000_seed_1000.wav runs/predicted_patch.json
-```
-
-Predict a patch JSON from one audio clip using the saved PyTorch checkpoint:
-
-```bash
-python scripts/predict_patch_torch.py data/generated/d2/audio/patch_000000_seed_2000.wav runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000.json
+python scripts/predict_patch_torch.py \
+  data/generated/d2/audio/patch_000000_seed_2000.wav \
+  runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000.json
 ```
 
 Render and compare a PyTorch prediction against the target audio:
 
 ```bash
-python scripts/evaluate_prediction_torch.py data/generated/d2/audio/patch_000000_seed_2000.wav --output-dir runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000_eval --device cpu
+python scripts/evaluate_prediction_torch.py \
+  data/generated/d2/audio/patch_000000_seed_2000.wav \
+  --output-dir runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000_eval
 ```
 
-Evaluate the prediction by rendering it and comparing it to the target:
-
-```bash
-python scripts/evaluate_prediction.py data/generated/d1/audio/patch_000000_seed_1000.wav
-```
-
-Evaluate a model across multiple dataset clips:
-
-```bash
-python scripts/evaluate_dataset.py --metadata data/generated/d2/metadata.jsonl --model models/v2_sklearn_mlp_500seeds.joblib --count 20 --output runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json
-```
-
-Evaluate the PyTorch model across multiple dataset clips:
-
-```bash
-python scripts/evaluate_dataset_torch.py --metadata data/generated/d2/metadata.jsonl --model models/v3_pytorch_cnn_500seeds.pt --count 20 --output runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json --device cpu
-```
+## Compare Reports
 
 Compare two evaluation reports:
 
 ```bash
-python scripts/compare_evaluation_reports.py runs/evaluation/v1_sklearn_mlp_10seeds_on_d2_eval.json runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json --output runs/evaluation/v1_sklearn_mlp_10seeds_vs_v2_sklearn_mlp_500seeds_on_d2.json
+python scripts/compare_evaluation_reports.py \
+  runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json \
+  runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json \
+  --output runs/evaluation/v2_sklearn_mlp_500seeds_vs_v3_pytorch_cnn_500seeds_on_d2.json
 ```
 
-Compare the current sklearn baseline against the PyTorch CNN:
+## Legacy Scikit-Learn Baseline
+
+Train the old MLP baseline only when you need a quick pipeline sanity check:
 
 ```bash
-python scripts/compare_evaluation_reports.py runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json --output runs/evaluation/v2_sklearn_mlp_500seeds_vs_v3_pytorch_cnn_500seeds_on_d2.json
+python scripts/train_mlp.py \
+  --metadata data/generated/d2/metadata.jsonl \
+  --model-output models/v2_sklearn_mlp_500seeds.joblib \
+  --metrics-output runs/training/v2_sklearn_mlp_500seeds_metrics.json
 ```
 
-Optionally refine the ML prediction with a short local parameter search:
+Evaluate it:
 
 ```bash
-python scripts/evaluate_prediction.py data/generated/d1/audio/patch_000000_seed_1000.wav --refine-iterations 10
+python scripts/evaluate_dataset.py \
+  --metadata data/generated/d2/metadata.jsonl \
+  --model models/v2_sklearn_mlp_500seeds.joblib \
+  --count 20 \
+  --output runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json
 ```
 
-## Test
+## Tests
 
 Run the unit tests:
 

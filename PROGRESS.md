@@ -373,3 +373,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Train PyTorch model on 10k seeds`
 - Replaced unsafe cloud multiprocessing changes with configurable worker counts, serial fallbacks, CPU thread limits, GPU-priority training device selection, and progress output for generation/export/training/evaluation.
   Commit: `Add safe multicore and GPU workflow`
+- Reorganized `README.md` into a clear setup, dataset generation, PyTorch training, evaluation, and comparison workflow. Added CUDA-specific PyTorch requirements for future NVIDIA training machines.
+  Commit: `Reorganize training README`
