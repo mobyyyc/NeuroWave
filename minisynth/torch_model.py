@@ -26,6 +26,9 @@ DEFAULT_BENCHMARK_SIZE = 0.0
 WAVEFORM_MODE_SCALAR = "scalar_regression"
 WAVEFORM_MODE_CLASSIFICATION = "classification"
 DEFAULT_WAVEFORM_MODE = WAVEFORM_MODE_CLASSIFICATION
+TARGET_MODE_FULL = "full"
+TARGET_MODE_PITCH_CONDITIONED_TIMBRE = "pitch_conditioned_timbre"
+DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 PARAMETER_METRIC_GROUPS = {
     "global": ("freq", "length"),
     "pitch": ("freq",),
@@ -70,6 +73,29 @@ PARAMETER_METRIC_GROUPS = {
 }
 
 
+def parameters_from_names(names):
+    by_name = {parameter.name: parameter for parameter in VECTOR_PARAMETERS}
+    return tuple(by_name[name] for name in names)
+
+
+def target_parameters_for_mode(target_mode=DEFAULT_TARGET_MODE):
+    if target_mode == TARGET_MODE_FULL:
+        return VECTOR_PARAMETERS
+    if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
+        return tuple(parameter for parameter in VECTOR_PARAMETERS if parameter.name != "freq")
+
+    raise ValueError(f"Unsupported target mode: {target_mode}")
+
+
+def parameter_index(name, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    for index, parameter in enumerate(parameters):
+        if parameter.name == name:
+            return index
+    raise ValueError(f"Unknown parameter: {name}")
+
+
 def enum_parameter_indices(parameters=None):
     if parameters is None:
         parameters = VECTOR_PARAMETERS
@@ -108,10 +134,15 @@ class MelSpectrogramInverseModel(nn.Module):
         output_dim=DEFAULT_OUTPUT_DIM,
         input_channels=DEFAULT_INPUT_CHANNELS,
         waveform_mode=DEFAULT_WAVEFORM_MODE,
+        parameters=None,
     ):
         super().__init__()
+        if parameters is None:
+            parameters = VECTOR_PARAMETERS
         if output_dim < 1:
             raise ValueError("output_dim must be at least 1")
+        if output_dim != len(parameters):
+            raise ValueError("output_dim must match parameter count")
         if input_channels < 1:
             raise ValueError("input_channels must be at least 1")
         if waveform_mode not in (WAVEFORM_MODE_SCALAR, WAVEFORM_MODE_CLASSIFICATION):
@@ -120,8 +151,10 @@ class MelSpectrogramInverseModel(nn.Module):
         self.output_dim = output_dim
         self.input_channels = input_channels
         self.waveform_mode = waveform_mode
-        self.enum_indices = enum_parameter_indices()
-        self.continuous_indices = continuous_parameter_indices()
+        self.parameter_names = tuple(parameter.name for parameter in parameters)
+        self.parameters_schema = tuple(parameters)
+        self.enum_indices = enum_parameter_indices(parameters)
+        self.continuous_indices = continuous_parameter_indices(parameters)
         self.encoder = nn.Sequential(
             nn.Conv2d(input_channels, 16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
@@ -156,9 +189,9 @@ class MelSpectrogramInverseModel(nn.Module):
             )
             self.waveform_heads = nn.ModuleDict(
                 {
-                    VECTOR_PARAMETERS[index].name: nn.Linear(
+                    parameters[index].name: nn.Linear(
                         64,
-                        len(categorical_values(VECTOR_PARAMETERS[index])),
+                        len(categorical_values(parameters[index])),
                     )
                     for index in self.enum_indices
                 }
@@ -176,7 +209,7 @@ class MelSpectrogramInverseModel(nn.Module):
         if self.waveform_mode == WAVEFORM_MODE_SCALAR:
             return raw["vector"]
 
-        return waveform_classification_outputs_to_vector(raw)
+        return waveform_classification_outputs_to_vector(raw, parameters=self.parameters_schema)
 
     def raw_outputs(self, mel_tensors):
         if mel_tensors.ndim != 4:
@@ -200,8 +233,18 @@ class MelSpectrogramInverseModel(nn.Module):
         }
 
 
-def create_inverse_model(output_dim=DEFAULT_OUTPUT_DIM, waveform_mode=DEFAULT_WAVEFORM_MODE):
-    return MelSpectrogramInverseModel(output_dim=output_dim, waveform_mode=waveform_mode)
+def create_inverse_model(
+    output_dim=DEFAULT_OUTPUT_DIM,
+    waveform_mode=DEFAULT_WAVEFORM_MODE,
+    input_channels=DEFAULT_INPUT_CHANNELS,
+    parameters=None,
+):
+    return MelSpectrogramInverseModel(
+        output_dim=output_dim,
+        waveform_mode=waveform_mode,
+        input_channels=input_channels,
+        parameters=parameters,
+    )
 
 
 def waveform_classification_outputs_to_vector(raw_outputs, parameters=None):
@@ -315,6 +358,37 @@ def split_tensor_dataset_with_benchmark(
     }
 
 
+def add_pitch_context_channel(features, full_targets):
+    x = np.asarray(features, dtype=np.float32)
+    targets = np.asarray(full_targets, dtype=np.float32)
+    freq_index = parameter_index("freq")
+    pitch_context = targets[:, freq_index].reshape(len(targets), 1, 1, 1)
+    pitch_context = np.broadcast_to(
+        pitch_context,
+        (len(targets), 1, x.shape[2], x.shape[3]),
+    ).astype(np.float32)
+    return np.concatenate([x, pitch_context], axis=1)
+
+
+def targets_for_parameters(full_targets, parameters):
+    source = np.asarray(full_targets, dtype=np.float32)
+    indices = [parameter_index(parameter.name) for parameter in parameters]
+    return source[:, indices]
+
+
+def prepare_model_arrays(features, targets, target_mode=DEFAULT_TARGET_MODE):
+    parameters = target_parameters_for_mode(target_mode)
+    x = np.asarray(features, dtype=np.float32)
+    if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
+        x = add_pitch_context_channel(x, targets)
+
+    return {
+        "features": x,
+        "targets": targets_for_parameters(targets, parameters),
+        "parameters": parameters,
+    }
+
+
 def tensor_loader(features, targets, batch_size=DEFAULT_BATCH_SIZE, shuffle=True):
     if batch_size < 1:
         raise ValueError("batch_size must be at least 1")
@@ -334,7 +408,7 @@ def waveform_classification_loss(model, batch_features, batch_targets):
     )
     waveform_losses = []
     for index in model.enum_indices:
-        parameter = VECTOR_PARAMETERS[index]
+        parameter = model.parameters_schema[index]
         target_classes = categorical_target_classes(batch_targets[:, index], parameter)
         waveform_losses.append(
             nn.functional.cross_entropy(
@@ -395,7 +469,7 @@ def predict_dataset_torch(model, features, device=None, batch_size=DEFAULT_BATCH
     model.eval()
     loader = tensor_loader(
         features,
-        np.zeros((len(features), DEFAULT_OUTPUT_DIM), dtype=np.float32),
+        np.zeros((len(features), getattr(model, "output_dim", DEFAULT_OUTPUT_DIM)), dtype=np.float32),
         batch_size=batch_size,
         shuffle=False,
     )
@@ -507,7 +581,16 @@ def waveform_accuracy(predictions, targets, parameters=None):
     return float(np.mean(list(accuracies.values())))
 
 
-def parameter_metrics_torch(model, features, targets, device=None, batch_size=DEFAULT_BATCH_SIZE):
+def parameter_metrics_torch(
+    model,
+    features,
+    targets,
+    device=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    parameters=None,
+):
+    if parameters is None:
+        parameters = getattr(model, "parameters_schema", VECTOR_PARAMETERS)
     predictions = predict_dataset_torch(
         model,
         features,
@@ -516,11 +599,15 @@ def parameter_metrics_torch(model, features, targets, device=None, batch_size=DE
     )
     return {
         "mae": float(np.abs(predictions - targets).mean()),
-        "continuous_mae": continuous_parameter_mae(predictions, targets),
-        "grouped_mae": grouped_parameter_mae(predictions, targets),
-        "per_parameter_mae": parameter_mae_by_name(predictions, targets),
-        "waveform_accuracy": waveform_accuracy(predictions, targets),
-        "waveform_accuracy_by_name": waveform_accuracy_by_name(predictions, targets),
+        "continuous_mae": continuous_parameter_mae(predictions, targets, parameters=parameters),
+        "grouped_mae": grouped_parameter_mae(predictions, targets, parameters=parameters),
+        "per_parameter_mae": parameter_mae_by_name(predictions, targets, parameters=parameters),
+        "waveform_accuracy": waveform_accuracy(predictions, targets, parameters=parameters),
+        "waveform_accuracy_by_name": waveform_accuracy_by_name(
+            predictions,
+            targets,
+            parameters=parameters,
+        ),
     }
 
 
@@ -554,6 +641,7 @@ def train_inverse_model(
     test_size=DEFAULT_TEST_SIZE,
     benchmark_size=DEFAULT_BENCHMARK_SIZE,
     waveform_mode=DEFAULT_WAVEFORM_MODE,
+    target_mode=DEFAULT_TARGET_MODE,
     random_state=0,
     device=None,
     progress=False,
@@ -569,16 +657,24 @@ def train_inverse_model(
 
     torch.manual_seed(random_state)
     dataset = load_mel_tensor_npz(tensor_path)
-    split = split_tensor_dataset_with_benchmark(
+    prepared = prepare_model_arrays(
         dataset["features"],
         dataset["targets"],
+        target_mode=target_mode,
+    )
+    target_parameters = prepared["parameters"]
+    split = split_tensor_dataset_with_benchmark(
+        prepared["features"],
+        prepared["targets"],
         test_size=test_size,
         benchmark_size=benchmark_size,
         random_state=random_state,
     )
     model = create_inverse_model(
-        output_dim=dataset["targets"].shape[1],
+        output_dim=prepared["targets"].shape[1],
         waveform_mode=waveform_mode,
+        input_channels=prepared["features"].shape[1],
+        parameters=target_parameters,
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = nn.MSELoss()
@@ -644,11 +740,13 @@ def train_inverse_model(
         "model_id": model_id,
         "model_type": "pytorch_cnn",
         "waveform_mode": waveform_mode,
+        "target_mode": target_mode,
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],
         "num_samples": int(len(dataset["features"])),
-        "num_features": list(dataset["features"].shape[1:]),
-        "num_targets": int(dataset["targets"].shape[1]),
+        "num_features": list(prepared["features"].shape[1:]),
+        "num_targets": int(prepared["targets"].shape[1]),
+        "target_parameters": [parameter.name for parameter in target_parameters],
         "train_samples": int(len(split["train_features"])),
         "test_samples": int(len(split["test_features"])),
         "benchmark_samples": int(len(split["benchmark_features"])),
@@ -728,6 +826,11 @@ def save_torch_checkpoint(model, path=DEFAULT_TORCH_MODEL_PATH, metrics=None):
             "output_dim": getattr(model, "output_dim", DEFAULT_OUTPUT_DIM),
             "input_channels": getattr(model, "input_channels", DEFAULT_INPUT_CHANNELS),
             "waveform_mode": getattr(model, "waveform_mode", WAVEFORM_MODE_SCALAR),
+            "parameter_names": getattr(
+                model,
+                "parameter_names",
+                tuple(parameter.name for parameter in VECTOR_PARAMETERS),
+            ),
         },
         destination,
     )
@@ -741,10 +844,16 @@ def load_torch_checkpoint(path=DEFAULT_TORCH_MODEL_PATH, device=None):
         device = torch.device(device)
 
     checkpoint = torch.load(Path(path), map_location=device)
+    parameter_names = checkpoint.get(
+        "parameter_names",
+        tuple(parameter.name for parameter in VECTOR_PARAMETERS),
+    )
+    parameters = parameters_from_names(parameter_names)
     model = MelSpectrogramInverseModel(
-        output_dim=checkpoint.get("output_dim", DEFAULT_OUTPUT_DIM),
+        output_dim=checkpoint.get("output_dim", len(parameters)),
         input_channels=checkpoint.get("input_channels", DEFAULT_INPUT_CHANNELS),
         waveform_mode=checkpoint.get("waveform_mode", WAVEFORM_MODE_SCALAR),
+        parameters=parameters,
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)

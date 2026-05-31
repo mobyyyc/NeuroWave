@@ -154,6 +154,17 @@ Training output:
 
 New PyTorch models train waveform parameters with classification heads by default. Use `--waveform-mode scalar_regression` only for legacy comparison runs.
 
+For pitch-conditioned timbre training, remove `freq` from the output target and feed exact synthetic pitch as an input channel:
+
+```bash
+python scripts/train_torch.py \
+  --model-id vN_pytorch_cnn_pitchctx_<training_size> \
+  --tensor-data data/generated/dN/features/mel_tensors.npz \
+  --target-mode pitch_conditioned_timbre \
+  --model-output models/vN_pytorch_cnn_pitchctx_<training_size>.pt \
+  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_<training_size>_metrics.json
+```
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

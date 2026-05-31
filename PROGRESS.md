@@ -181,7 +181,7 @@ Evidence from local reports:
 - [x] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
 - [x] Decide pitch/length handling strategy for the next model-design iteration.
 - [x] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
-- [ ] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
+- [x] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
 - [ ] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
 - [ ] Add parameter-weighted loss support.
 - [ ] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
@@ -414,3 +414,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add grouped model metrics`
 - Replaced the default PyTorch waveform target path with classification heads while keeping scalar waveform regression available for legacy checkpoint comparison. Scaling note: move from waveform classification to continuous wave-mix targets when the synth schema exposes wave mixtures as first-class parameters.
   Commit: `Add waveform classification heads`
+- Added `pitch_conditioned_timbre` training mode that appends exact synthetic pitch as an input channel and removes `freq` from the output target. Scaling note: replace the broadcast pitch channel with a cleaner metadata/context embedding when the model family grows beyond simple CNN inputs.
+  Commit: `Add pitch conditioned target mode`

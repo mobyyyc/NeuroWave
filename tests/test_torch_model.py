@@ -14,6 +14,7 @@ from minisynth.io import load_patch
 from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
+    DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
     create_inverse_model,
@@ -23,6 +24,7 @@ from minisynth.torch_model import (
     load_torch_checkpoint,
     parameter_mae_by_name,
     parameter_mse_torch,
+    prepare_model_arrays,
     predict_patch_from_audio,
     save_torch_checkpoint,
     split_tensor_dataset,
@@ -165,6 +167,22 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(len(first["benchmark_features"]), 2)
         np.testing.assert_array_equal(first["benchmark_indices"], second["benchmark_indices"])
 
+    def test_prepare_model_arrays_can_condition_on_pitch(self):
+        features = np.zeros((3, 1, DEFAULT_MEL_BINS, 8), dtype=np.float32)
+        targets = np.full((3, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32)
+        targets[:, 0] = [0.1, 0.2, 0.3]
+
+        prepared = prepare_model_arrays(
+            features,
+            targets,
+            target_mode="pitch_conditioned_timbre",
+        )
+
+        self.assertEqual(prepared["features"].shape, (3, 2, DEFAULT_MEL_BINS, 8))
+        self.assertEqual(prepared["targets"].shape[1], len(VECTOR_PARAMETERS) - 1)
+        self.assertNotIn("freq", [parameter.name for parameter in prepared["parameters"]])
+        self.assertTrue(np.all(prepared["features"][:, 1, :, :] >= 0.1))
+
     def test_parameter_mae_by_name_reports_each_target(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
         predictions = np.full((2, len(VECTOR_PARAMETERS)), 0.25, dtype=np.float32)
@@ -236,6 +254,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["epochs"], 1)
         self.assertEqual(metrics["device"], "cpu")
         self.assertEqual(metrics["waveform_mode"], DEFAULT_WAVEFORM_MODE)
+        self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
@@ -272,6 +291,34 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertIn("benchmark_loss", metrics)
         self.assertIn("benchmark_per_parameter_mae", metrics)
         self.assertIn("benchmark_grouped_mae", metrics)
+
+    def test_train_inverse_model_supports_pitch_conditioned_timbre_mode(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                target_mode="pitch_conditioned_timbre",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["target_mode"], "pitch_conditioned_timbre")
+        self.assertEqual(metrics["num_features"][0], 2)
+        self.assertNotIn("freq", metrics["target_parameters"])
+        self.assertNotIn("freq", metrics["test_per_parameter_mae"])
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()

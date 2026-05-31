@@ -20,7 +20,10 @@ from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_ID,
     DEFAULT_TORCH_MODEL_PATH,
     DEFAULT_TORCH_TENSOR_PATH,
+    DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
+    TARGET_MODE_FULL,
+    TARGET_MODE_PITCH_CONDITIONED_TIMBRE,
     WAVEFORM_MODE_CLASSIFICATION,
     WAVEFORM_MODE_SCALAR,
     save_torch_checkpoint,
@@ -77,6 +80,12 @@ def parse_args():
         help="How waveform parameters are trained.",
     )
     parser.add_argument(
+        "--target-mode",
+        choices=(TARGET_MODE_FULL, TARGET_MODE_PITCH_CONDITIONED_TIMBRE),
+        default=DEFAULT_TARGET_MODE,
+        help="Which synth parameters are used as model outputs.",
+    )
+    parser.add_argument(
         "--random-state",
         type=int,
         default=0,
@@ -115,6 +124,7 @@ def main() -> int:
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,
+        target_mode=args.target_mode,
         random_state=args.random_state,
         device=args.device,
         progress=not args.quiet,
