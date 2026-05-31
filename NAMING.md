@@ -8,12 +8,14 @@ Examples:
 
 - `d1`: first small generated dataset, 10 seeds.
 - `d2`: scaled generated dataset, 500 seeds.
+- `d3`: next PyTorch scale-up dataset, 10,000 seeds.
 
 Dataset files live under:
 
 ```text
 data/generated/d1/
 data/generated/d2/
+data/generated/d3/
 ```
 
 Do not use `v1` or `v2` for datasets. Reserve `vN` for model versions.
@@ -30,7 +32,8 @@ Examples:
 
 - `v1_sklearn_mlp_10seeds`
 - `v2_sklearn_mlp_500seeds`
-- `v3_pytorch_cnn_10kseeds`
+- `v3_pytorch_cnn_500seeds`
+- `v4_pytorch_cnn_10kseeds`
 
 Model checkpoints live under:
 

@@ -159,6 +159,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Evaluate PyTorch model across synthetic dataset clips.
 - [x] Compare PyTorch directly against the scikit-learn baseline.
 - [x] Decide whether scikit-learn stays as a lightweight baseline or can be removed.
+- [x] Generate `d3` with 10,000 seeds and train `v4_pytorch_cnn_10kseeds`.
 - [ ] Commit Milestone G completion.
 
 ## Milestone H: Real Audio Prototype
@@ -368,3 +369,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Compare PyTorch and sklearn baselines`
 - Decided to keep scikit-learn as a lightweight sanity baseline while making PyTorch the primary future model-development path.
   Commit: `Decide sklearn baseline status`
+- Generated ignored `d3` with 10,000 seeds, exported mel tensors, trained `v4_pytorch_cnn_10kseeds`, and saved ignored training/evaluation reports. Parameter MAE improved, but weighted audio distance did not improve versus `v3`, so the next quality step should not be dataset size alone.
+  Commit: `Train PyTorch model on 10k seeds`

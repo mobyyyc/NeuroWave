@@ -45,6 +45,13 @@ Generate a larger versioned dataset for scaled training:
 python scripts/random_patch.py --dataset-version d2 --seed 2000 --count 500
 ```
 
+Generate the 10k-seed PyTorch scale-up dataset:
+
+```bash
+python scripts/random_patch.py --dataset-version d3 --seed 3000 --count 10000
+python scripts/export_mel_tensors.py --dataset-version d3
+```
+
 ## Train The MLP Baseline
 
 Train the current scikit-learn MLP baseline on generated metadata:
@@ -84,6 +91,18 @@ python scripts/train_torch.py
 ```
 
 The command saves an ignored checkpoint to `models/v3_pytorch_cnn_500seeds.pt` and an ignored training report to `runs/training/v3_pytorch_cnn_500seeds_metrics.json`.
+
+Train the next 10k-seed PyTorch CNN model after generating/exporting `d3`:
+
+```bash
+python scripts/train_torch.py --model-id v4_pytorch_cnn_10kseeds --tensor-data data/generated/d3/features/mel_tensors.npz --model-output models/v4_pytorch_cnn_10kseeds.pt --metrics-output runs/training/v4_pytorch_cnn_10kseeds_metrics.json
+```
+
+Evaluate the 10k-seed model:
+
+```bash
+python scripts/evaluate_dataset_torch.py --metadata data/generated/d3/metadata.jsonl --model models/v4_pytorch_cnn_10kseeds.pt --count 200 --start-index 8000 --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json --device cpu
+```
 
 ## Predict A Patch
 

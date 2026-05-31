@@ -129,6 +129,7 @@ class TestTorchInverseModel(unittest.TestCase):
 
             result = train_inverse_model(
                 tensor_path=path,
+                model_id="v_test_pytorch_cnn",
                 epochs=1,
                 batch_size=2,
                 random_state=1,
@@ -138,6 +139,7 @@ class TestTorchInverseModel(unittest.TestCase):
         metrics = result["metrics"]
 
         self.assertIn("model", result)
+        self.assertEqual(metrics["model_id"], "v_test_pytorch_cnn")
         self.assertEqual(metrics["num_samples"], 6)
         self.assertEqual(metrics["train_samples"], 5)
         self.assertEqual(metrics["test_samples"], 1)

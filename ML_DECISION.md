@@ -94,3 +94,26 @@ Current rule:
 - Do not tune sklearn unless it is needed to debug data or evaluation behavior.
 - Use PyTorch for future model quality work, larger datasets, spectrogram learning,
   checkpointing, and eventual real-audio approximation.
+
+## 10k Seed Scale-Up Review
+
+Decision: do not assume more seeds alone will solve accuracy.
+
+Evidence from `v4_pytorch_cnn_10kseeds`:
+
+- Trained on `d3`, a 10,000-seed generated dataset.
+- Parameter prediction improved versus `v3`: `test_mae` moved from about `0.1924`
+  to `0.1652`.
+- Weighted audio distance did not improve on the comparable `d2` 20-clip report:
+  `v3` mean was `132.54`, while `v4` mean was `202.85`.
+- `v4` on a 200-clip `d3` report produced mean weighted distance `150.01` and
+  median `64.62` with zero failures.
+
+Interpretation:
+
+- The model is learning parameter averages better, but that does not yet translate into
+  better rendered audio.
+- The current plain parameter MSE training objective is probably too weak for perceptual
+  synth matching.
+- The next quality improvement should focus on evaluation-informed training, parameter
+  weighting, better splits, or architecture changes before scaling to 50k+ seeds.

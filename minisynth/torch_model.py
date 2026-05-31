@@ -190,6 +190,7 @@ def parameter_mse_torch(model, features, targets, device=None, batch_size=DEFAUL
 
 def train_inverse_model(
     tensor_path=DEFAULT_TORCH_TENSOR_PATH,
+    model_id=DEFAULT_TORCH_MODEL_ID,
     epochs=DEFAULT_EPOCHS,
     batch_size=DEFAULT_BATCH_SIZE,
     learning_rate=DEFAULT_LEARNING_RATE,
@@ -242,7 +243,7 @@ def train_inverse_model(
         epoch_losses.append(float(running_loss / sample_count))
 
     metrics = {
-        "model_id": DEFAULT_TORCH_MODEL_ID,
+        "model_id": model_id,
         "model_type": "pytorch_cnn",
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],

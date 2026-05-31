@@ -16,6 +16,7 @@ from minisynth.torch_model import (
     DEFAULT_LEARNING_RATE,
     DEFAULT_TEST_SIZE,
     DEFAULT_TORCH_METRICS_PATH,
+    DEFAULT_TORCH_MODEL_ID,
     DEFAULT_TORCH_MODEL_PATH,
     DEFAULT_TORCH_TENSOR_PATH,
     save_torch_checkpoint,
@@ -25,6 +26,11 @@ from minisynth.torch_model import (
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--model-id",
+        default=DEFAULT_TORCH_MODEL_ID,
+        help="Model identifier to store in the training metrics.",
+    )
     parser.add_argument(
         "--tensor-data",
         default=DEFAULT_TORCH_TENSOR_PATH,
@@ -81,6 +87,7 @@ def main() -> int:
     args = parse_args()
     result = train_inverse_model(
         tensor_path=args.tensor_data,
+        model_id=args.model_id,
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
