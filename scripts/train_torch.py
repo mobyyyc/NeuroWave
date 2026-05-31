@@ -20,6 +20,9 @@ from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_ID,
     DEFAULT_TORCH_MODEL_PATH,
     DEFAULT_TORCH_TENSOR_PATH,
+    DEFAULT_WAVEFORM_MODE,
+    WAVEFORM_MODE_CLASSIFICATION,
+    WAVEFORM_MODE_SCALAR,
     save_torch_checkpoint,
     train_inverse_model,
 )
@@ -68,6 +71,12 @@ def parse_args():
         help="Fraction of examples reserved for fixed benchmark metrics.",
     )
     parser.add_argument(
+        "--waveform-mode",
+        choices=(WAVEFORM_MODE_CLASSIFICATION, WAVEFORM_MODE_SCALAR),
+        default=DEFAULT_WAVEFORM_MODE,
+        help="How waveform parameters are trained.",
+    )
+    parser.add_argument(
         "--random-state",
         type=int,
         default=0,
@@ -105,6 +114,7 @@ def main() -> int:
         learning_rate=args.learning_rate,
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
+        waveform_mode=args.waveform_mode,
         random_state=args.random_state,
         device=args.device,
         progress=not args.quiet,

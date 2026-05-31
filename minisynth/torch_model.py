@@ -23,6 +23,9 @@ DEFAULT_EPOCHS = 10
 DEFAULT_LEARNING_RATE = 0.001
 DEFAULT_TEST_SIZE = 0.2
 DEFAULT_BENCHMARK_SIZE = 0.0
+WAVEFORM_MODE_SCALAR = "scalar_regression"
+WAVEFORM_MODE_CLASSIFICATION = "classification"
+DEFAULT_WAVEFORM_MODE = WAVEFORM_MODE_CLASSIFICATION
 PARAMETER_METRIC_GROUPS = {
     "global": ("freq", "length"),
     "pitch": ("freq",),
@@ -67,6 +70,26 @@ PARAMETER_METRIC_GROUPS = {
 }
 
 
+def enum_parameter_indices(parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    return [
+        index
+        for index, parameter in enumerate(parameters)
+        if parameter.kind == "enum"
+    ]
+
+
+def continuous_parameter_indices(parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    return [
+        index
+        for index, parameter in enumerate(parameters)
+        if parameter.kind != "enum"
+    ]
+
+
 def select_torch_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
@@ -84,15 +107,21 @@ class MelSpectrogramInverseModel(nn.Module):
         self,
         output_dim=DEFAULT_OUTPUT_DIM,
         input_channels=DEFAULT_INPUT_CHANNELS,
+        waveform_mode=DEFAULT_WAVEFORM_MODE,
     ):
         super().__init__()
         if output_dim < 1:
             raise ValueError("output_dim must be at least 1")
         if input_channels < 1:
             raise ValueError("input_channels must be at least 1")
+        if waveform_mode not in (WAVEFORM_MODE_SCALAR, WAVEFORM_MODE_CLASSIFICATION):
+            raise ValueError(f"Unsupported waveform mode: {waveform_mode}")
 
         self.output_dim = output_dim
         self.input_channels = input_channels
+        self.waveform_mode = waveform_mode
+        self.enum_indices = enum_parameter_indices()
+        self.continuous_indices = continuous_parameter_indices()
         self.encoder = nn.Sequential(
             nn.Conv2d(input_channels, 16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
@@ -107,13 +136,33 @@ class MelSpectrogramInverseModel(nn.Module):
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
         )
-        self.head = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, output_dim),
-            nn.Sigmoid(),
-        )
+        if waveform_mode == WAVEFORM_MODE_SCALAR:
+            self.head = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(64, 64),
+                nn.ReLU(),
+                nn.Linear(64, output_dim),
+                nn.Sigmoid(),
+            )
+        else:
+            self.shared_head = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(64, 64),
+                nn.ReLU(),
+            )
+            self.continuous_head = nn.Sequential(
+                nn.Linear(64, len(self.continuous_indices)),
+                nn.Sigmoid(),
+            )
+            self.waveform_heads = nn.ModuleDict(
+                {
+                    VECTOR_PARAMETERS[index].name: nn.Linear(
+                        64,
+                        len(categorical_values(VECTOR_PARAMETERS[index])),
+                    )
+                    for index in self.enum_indices
+                }
+            )
 
     def forward(self, mel_tensors):
         if mel_tensors.ndim != 4:
@@ -123,11 +172,69 @@ class MelSpectrogramInverseModel(nn.Module):
                 f"Expected {self.input_channels} input channels, got {mel_tensors.shape[1]}"
             )
 
-        return self.head(self.encoder(mel_tensors))
+        raw = self.raw_outputs(mel_tensors)
+        if self.waveform_mode == WAVEFORM_MODE_SCALAR:
+            return raw["vector"]
+
+        return waveform_classification_outputs_to_vector(raw)
+
+    def raw_outputs(self, mel_tensors):
+        if mel_tensors.ndim != 4:
+            raise ValueError("mel_tensors must have shape (batch, channels, mel_bins, frames)")
+        if mel_tensors.shape[1] != self.input_channels:
+            raise ValueError(
+                f"Expected {self.input_channels} input channels, got {mel_tensors.shape[1]}"
+            )
+
+        encoded = self.encoder(mel_tensors)
+        if self.waveform_mode == WAVEFORM_MODE_SCALAR:
+            return {"vector": self.head(encoded)}
+
+        shared = self.shared_head(encoded)
+        return {
+            "continuous": self.continuous_head(shared),
+            "waveforms": {
+                name: head(shared)
+                for name, head in self.waveform_heads.items()
+            },
+        }
 
 
-def create_inverse_model(output_dim=DEFAULT_OUTPUT_DIM):
-    return MelSpectrogramInverseModel(output_dim=output_dim)
+def create_inverse_model(output_dim=DEFAULT_OUTPUT_DIM, waveform_mode=DEFAULT_WAVEFORM_MODE):
+    return MelSpectrogramInverseModel(output_dim=output_dim, waveform_mode=waveform_mode)
+
+
+def waveform_classification_outputs_to_vector(raw_outputs, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    continuous = raw_outputs["continuous"]
+    batch_size = continuous.shape[0]
+    vector = torch.zeros(
+        batch_size,
+        len(parameters),
+        dtype=continuous.dtype,
+        device=continuous.device,
+    )
+    continuous_position = 0
+
+    for index, parameter in enumerate(parameters):
+        if parameter.kind == "enum":
+            logits = raw_outputs["waveforms"][parameter.name]
+            probabilities = torch.softmax(logits, dim=1)
+            class_values = torch.linspace(
+                0.0,
+                1.0,
+                logits.shape[1],
+                dtype=logits.dtype,
+                device=logits.device,
+            )
+            vector[:, index] = torch.sum(probabilities * class_values, dim=1)
+        else:
+            vector[:, index] = continuous[:, continuous_position]
+            continuous_position += 1
+
+    return vector
 
 
 def load_mel_tensor_npz(path=DEFAULT_TORCH_TENSOR_PATH):
@@ -217,6 +324,46 @@ def tensor_loader(features, targets, batch_size=DEFAULT_BATCH_SIZE, shuffle=True
         torch.as_tensor(targets, dtype=torch.float32),
     )
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def waveform_classification_loss(model, batch_features, batch_targets):
+    raw = model.raw_outputs(batch_features)
+    continuous_loss = nn.functional.mse_loss(
+        raw["continuous"],
+        batch_targets[:, model.continuous_indices],
+    )
+    waveform_losses = []
+    for index in model.enum_indices:
+        parameter = VECTOR_PARAMETERS[index]
+        target_classes = categorical_target_classes(batch_targets[:, index], parameter)
+        waveform_losses.append(
+            nn.functional.cross_entropy(
+                raw["waveforms"][parameter.name],
+                target_classes,
+            )
+        )
+
+    if not waveform_losses:
+        return continuous_loss
+
+    return continuous_loss + torch.stack(waveform_losses).mean()
+
+
+def categorical_target_classes(values, parameter):
+    choices = categorical_values(parameter)
+    scaled = values * (len(choices) - 1)
+    return torch.clamp(torch.round(scaled), 0, len(choices) - 1).long()
+
+
+def inverse_model_loss(model, predictions, targets, features=None, loss_function=None):
+    if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
+        if features is None:
+            raise ValueError("features are required for waveform classification loss")
+        return waveform_classification_loss(model, features, targets)
+
+    if loss_function is None:
+        loss_function = nn.MSELoss()
+    return loss_function(predictions, targets)
 
 
 def parameter_mae_torch(model, features, targets, device=None, batch_size=DEFAULT_BATCH_SIZE):
@@ -406,6 +553,7 @@ def train_inverse_model(
     learning_rate=DEFAULT_LEARNING_RATE,
     test_size=DEFAULT_TEST_SIZE,
     benchmark_size=DEFAULT_BENCHMARK_SIZE,
+    waveform_mode=DEFAULT_WAVEFORM_MODE,
     random_state=0,
     device=None,
     progress=False,
@@ -428,7 +576,10 @@ def train_inverse_model(
         benchmark_size=benchmark_size,
         random_state=random_state,
     )
-    model = create_inverse_model(output_dim=dataset["targets"].shape[1]).to(device)
+    model = create_inverse_model(
+        output_dim=dataset["targets"].shape[1],
+        waveform_mode=waveform_mode,
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = nn.MSELoss()
 
@@ -451,7 +602,13 @@ def train_inverse_model(
             batch_targets = batch_targets.to(device)
             optimizer.zero_grad()
             predictions = model(batch_features)
-            loss = loss_function(predictions, batch_targets)
+            loss = inverse_model_loss(
+                model,
+                predictions,
+                batch_targets,
+                features=batch_features,
+                loss_function=loss_function,
+            )
             loss.backward()
             optimizer.step()
             running_loss += loss.item() * len(batch_features)
@@ -486,6 +643,7 @@ def train_inverse_model(
     metrics = {
         "model_id": model_id,
         "model_type": "pytorch_cnn",
+        "waveform_mode": waveform_mode,
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],
         "num_samples": int(len(dataset["features"])),
@@ -569,6 +727,7 @@ def save_torch_checkpoint(model, path=DEFAULT_TORCH_MODEL_PATH, metrics=None):
             "metrics": metrics or {},
             "output_dim": getattr(model, "output_dim", DEFAULT_OUTPUT_DIM),
             "input_channels": getattr(model, "input_channels", DEFAULT_INPUT_CHANNELS),
+            "waveform_mode": getattr(model, "waveform_mode", WAVEFORM_MODE_SCALAR),
         },
         destination,
     )
@@ -585,6 +744,7 @@ def load_torch_checkpoint(path=DEFAULT_TORCH_MODEL_PATH, device=None):
     model = MelSpectrogramInverseModel(
         output_dim=checkpoint.get("output_dim", DEFAULT_OUTPUT_DIM),
         input_channels=checkpoint.get("input_channels", DEFAULT_INPUT_CHANNELS),
+        waveform_mode=checkpoint.get("waveform_mode", WAVEFORM_MODE_SCALAR),
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)

@@ -152,6 +152,8 @@ Training output:
 - Console progress: device selection, epochs, batches, and final metrics unless `--quiet` is used.
 - Metrics include train/test loss, train/test MAE, continuous-parameter MAE, per-parameter MAE, waveform accuracy, and optional benchmark metrics.
 
+New PyTorch models train waveform parameters with classification heads by default. Use `--waveform-mode scalar_regression` only for legacy comparison runs.
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

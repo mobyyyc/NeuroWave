@@ -14,6 +14,7 @@ from minisynth.io import load_patch
 from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
+    DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
     create_inverse_model,
     expected_mel_tensor_shape,
@@ -49,6 +50,22 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(outputs.shape, (2, len(VECTOR_PARAMETERS)))
         self.assertTrue(torch.all(outputs >= 0.0))
         self.assertTrue(torch.all(outputs <= 1.0))
+        self.assertEqual(model.waveform_mode, DEFAULT_WAVEFORM_MODE)
+
+    def test_create_inverse_model_supports_legacy_scalar_waveform_mode(self):
+        model = create_inverse_model(waveform_mode="scalar_regression")
+        inputs = torch.zeros(
+            2,
+            1,
+            DEFAULT_MEL_BINS,
+            DEFAULT_MEL_TENSOR_FRAMES,
+            dtype=torch.float32,
+        )
+
+        outputs = model(inputs)
+
+        self.assertEqual(outputs.shape, (2, len(VECTOR_PARAMETERS)))
+        self.assertEqual(model.waveform_mode, "scalar_regression")
 
     def test_model_rejects_wrong_input_rank(self):
         model = create_inverse_model()
@@ -65,6 +82,10 @@ class TestTorchInverseModel(unittest.TestCase):
     def test_model_rejects_invalid_output_dim(self):
         with self.assertRaises(ValueError):
             MelSpectrogramInverseModel(output_dim=0)
+
+    def test_model_rejects_invalid_waveform_mode(self):
+        with self.assertRaises(ValueError):
+            MelSpectrogramInverseModel(waveform_mode="bad-mode")
 
     def test_predict_normalized_vectors_returns_numpy_array(self):
         model = create_inverse_model()
@@ -214,6 +235,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["test_samples"], 1)
         self.assertEqual(metrics["epochs"], 1)
         self.assertEqual(metrics["device"], "cpu")
+        self.assertEqual(metrics["waveform_mode"], DEFAULT_WAVEFORM_MODE)
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
@@ -288,6 +310,7 @@ class TestTorchInverseModel(unittest.TestCase):
 
         self.assertEqual(saved_path, path)
         self.assertEqual(checkpoint["metrics"]["test_mae"], 0.25)
+        self.assertEqual(checkpoint["model"].waveform_mode, DEFAULT_WAVEFORM_MODE)
         self.assertEqual(predictions.shape, (1, len(VECTOR_PARAMETERS)))
 
     def test_predict_patch_from_audio_returns_renderable_patch(self):

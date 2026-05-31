@@ -178,7 +178,7 @@ Evidence from local reports:
 - [x] Add waveform prediction metrics separate from continuous-parameter MAE.
 - [x] Add a fixed benchmark split or benchmark dataset that is not used for training or tuning.
 - [x] Add model comparison reporting across parameter metrics and rendered-audio metrics.
-- [ ] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
+- [x] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
 - [x] Decide pitch/length handling strategy for the next model-design iteration.
 - [x] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
 - [ ] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
@@ -412,3 +412,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Complete Milestone G`
 - Added grouped PyTorch target metrics for pitch, duration, pitch-conditioned timbre, oscillator, filter, and ADSR error reporting.
   Commit: `Add grouped model metrics`
+- Replaced the default PyTorch waveform target path with classification heads while keeping scalar waveform regression available for legacy checkpoint comparison. Scaling note: move from waveform classification to continuous wave-mix targets when the synth schema exposes wave mixtures as first-class parameters.
+  Commit: `Add waveform classification heads`
