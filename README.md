@@ -117,6 +117,12 @@ Evaluate a model across multiple dataset clips:
 python scripts/evaluate_dataset.py --metadata data/generated/d2/metadata.jsonl --model models/v2_sklearn_mlp_500seeds.joblib --count 20 --output runs/evaluation/v2_sklearn_mlp_500seeds_on_d2_eval.json
 ```
 
+Evaluate the PyTorch model across multiple dataset clips:
+
+```bash
+python scripts/evaluate_dataset_torch.py --metadata data/generated/d2/metadata.jsonl --model models/v3_pytorch_cnn_500seeds.pt --count 20 --output runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json --device cpu
+```
+
 Compare two evaluation reports:
 
 ```bash
