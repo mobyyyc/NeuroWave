@@ -14,6 +14,7 @@ from minisynth.engine import render_patch
 from minisynth.evaluation import evaluate_audio_prediction
 from minisynth.evaluation import evaluate_patch_prediction
 from minisynth.evaluation import parameter_error_report
+from minisynth.evaluation import patch_prediction_distribution
 from minisynth.evaluation import summarize_weighted_distances
 from minisynth.evaluation import worst_clip_diagnostics
 from minisynth.ml import train_mlp_from_metadata
@@ -127,9 +128,43 @@ class TestPredictionEvaluation(unittest.TestCase):
         errors = parameter_error_report(target, predicted)
 
         self.assertFalse(errors["osc1_wave"]["match"])
+        self.assertEqual(errors["osc1_wave"]["target_normalized"], 0.5)
+        self.assertEqual(errors["osc1_wave"]["predicted_normalized"], 1.0)
         self.assertGreater(errors["osc1_wave"]["normalized_error"], 0.0)
         self.assertAlmostEqual(errors["sustain"]["normalized_error"], 0.2)
         self.assertEqual(errors["osc2_wave"]["normalized_error"], 0.0)
+
+    def test_patch_prediction_distribution_reports_mean_collapse(self):
+        target = {
+            "freq": 440.0,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.0,
+            "osc2_wave": "sine",
+            "osc2_level": 0.4,
+            "osc2_detune": 0.0,
+            "cutoff": 1200.0,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        high_target = {**target, "osc1_level": 1.0}
+        predicted = {**target, "osc1_level": 0.5}
+        results = [
+            {
+                "parameter_errors": parameter_error_report(target, predicted),
+            },
+            {
+                "parameter_errors": parameter_error_report(high_target, predicted),
+            },
+        ]
+
+        distribution = patch_prediction_distribution(results)
+
+        self.assertEqual(distribution["osc1_level"]["predicted_std"], 0.0)
+        self.assertLess(distribution["osc1_level"]["std_ratio"], 0.1)
 
     def test_worst_clip_diagnostics_ranks_by_weighted_distance(self):
         target_patch = {
@@ -260,6 +295,7 @@ class TestPredictionEvaluation(unittest.TestCase):
         self.assertIn('"mean_weighted_distance"', report_text)
         self.assertIn('"failed_count": 0', report_text)
         self.assertIn('"diagnostics"', report_text)
+        self.assertIn('"prediction_distribution"', report_text)
         self.assertIn('"parameter_errors"', report_text)
 
     def test_evaluate_dataset_torch_cli_supports_pitch_conditioned_model(self):

@@ -20,6 +20,7 @@ from minisynth.torch_model import (
     DEFAULT_OPTIMIZER,
     DEFAULT_POOLING_MODE,
     DEFAULT_SCHEDULER,
+    DEFAULT_HEAD_MODE,
     DEFAULT_CHECKPOINT_SELECTION,
     DEFAULT_TEST_SIZE,
     DEFAULT_TORCH_METRICS_PATH,
@@ -30,7 +31,10 @@ from minisynth.torch_model import (
     DEFAULT_WAVEFORM_MODE,
     LOSS_PRESET_AUDIBILITY,
     LOSS_PRESET_FLAT,
+    LOSS_PRESET_GROUP_BALANCED,
     LOSS_PRESET_HYBRID,
+    HEAD_MODE_GROUPED,
+    HEAD_MODE_SHARED,
     MODEL_SIZE_LARGE,
     MODEL_SIZE_MEDIUM,
     MODEL_SIZE_SMALL,
@@ -160,8 +164,19 @@ def parse_args():
         help="How much time/frequency structure to preserve before the prediction head.",
     )
     parser.add_argument(
+        "--head-mode",
+        choices=(HEAD_MODE_SHARED, HEAD_MODE_GROUPED),
+        default=DEFAULT_HEAD_MODE,
+        help="Continuous prediction head shape.",
+    )
+    parser.add_argument(
         "--loss-preset",
-        choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY, LOSS_PRESET_HYBRID),
+        choices=(
+            LOSS_PRESET_FLAT,
+            LOSS_PRESET_AUDIBILITY,
+            LOSS_PRESET_HYBRID,
+            LOSS_PRESET_GROUP_BALANCED,
+        ),
         default=DEFAULT_LOSS_PRESET,
         help="Parameter weighting preset for the training loss.",
     )
@@ -210,6 +225,7 @@ def main() -> int:
         checkpoint_selection=args.checkpoint_selection,
         model_size=args.model_size,
         pooling_mode=args.pooling_mode,
+        head_mode=args.head_mode,
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,

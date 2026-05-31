@@ -46,7 +46,7 @@ Starting with the next model after `v10`, new comparison models use major/minor
 experiment versions:
 
 ```text
-v<major>.<minor>_<model_type>_<target>_<loss>_<size>_<pooling>_<training_size>
+v<major>.<minor>_<model_type>_<target>_<head>_<loss>_<size>_<pooling>_<training_size>
 ```
 
 Use this versioning rule:
@@ -59,7 +59,7 @@ Use this versioning rule:
 For newer PyTorch capability experiments, use:
 
 ```text
-v<major>.<minor>_pytorch_cnn_<target>_<loss>_<size>_<pooling>_<training_size>
+v<major>.<minor>_pytorch_cnn_<target>_<head>_<loss>_<size>_<pooling>_<training_size>
 ```
 
 Recommended tokens:
@@ -70,6 +70,11 @@ Recommended tokens:
 - Loss:
   - `flat`: unweighted/default loss.
   - `weighted`: audibility-weighted loss, currently `--loss-preset audibility`.
+  - `hybrid`: v2.1 diagnostic loss between flat and audibility weighting.
+  - `groupbalanced`: balances duration, oscillator, filter, and ADSR objective groups.
+- Head mode:
+  - `shared`: legacy shared continuous output head.
+  - `multihead`: grouped continuous heads, currently `--head-mode grouped`.
 - Model size:
   - `small`
   - `medium`
@@ -82,14 +87,14 @@ Example historical capability model IDs:
 
 - `v10_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds`
 
-Example next capability model IDs:
+Example recent and next capability model IDs:
 
 - `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`
-- `v2.1_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds`
-- `v2.2_pytorch_cnn_pitchctx_flat_large_tfpool_50kseeds`
+- `v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds`
+- `v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds`
 
 Shorter IDs are acceptable while iterating, but serious comparison runs should include
-target, loss, size, pooling, and training size so reports are self-explanatory.
+target, head mode for v3.0 and later, loss, size, pooling, and training size so reports are self-explanatory.
 
 Model checkpoints live under:
 
@@ -130,7 +135,7 @@ For the next 50,000-seed capability run:
 
 ```text
 Dataset: d8
-Model: v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds
+Model: v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds
 ```
 
 This means:
@@ -138,7 +143,8 @@ This means:
 - Dataset `d8`.
 - PyTorch CNN model.
 - Pitch-conditioned timbre target mode.
-- Flat/default loss.
-- Medium model capacity.
+- Grouped continuous heads.
+- Group-balanced loss.
+- Large model capacity.
 - Time-frequency pooling.
 - 50,000 generated training examples.

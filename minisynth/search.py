@@ -74,8 +74,8 @@ def search_report(result, patch_path, audio_path):
         "distances": result.get("distances", {}),
         "vector": list(result["vector"]),
         "config": result["config"].to_render_kwargs(),
-        "patch_path": str(patch_path),
-        "audio_path": str(audio_path),
+        "patch_path": Path(patch_path).as_posix(),
+        "audio_path": Path(audio_path).as_posix(),
         "sample_rate": DEFAULT_SAMPLE_RATE,
         "frames": len(result["audio"]),
     }

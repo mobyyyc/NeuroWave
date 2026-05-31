@@ -39,6 +39,7 @@ DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
 LOSS_PRESET_HYBRID = "hybrid"
+LOSS_PRESET_GROUP_BALANCED = "groupbalanced"
 DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
 OPTIMIZER_ADAM = "adam"
 OPTIMIZER_ADAMW = "adamw"
@@ -56,6 +57,9 @@ DEFAULT_MODEL_SIZE = MODEL_SIZE_SMALL
 POOLING_GLOBAL = "global"
 POOLING_TIME_FREQUENCY = "time_frequency"
 DEFAULT_POOLING_MODE = POOLING_TIME_FREQUENCY
+HEAD_MODE_SHARED = "shared"
+HEAD_MODE_GROUPED = "grouped"
+DEFAULT_HEAD_MODE = HEAD_MODE_SHARED
 MODEL_SIZE_SPECS = {
     MODEL_SIZE_SMALL: {
         "channels": (16, 32, 64),
@@ -102,6 +106,26 @@ PARAMETER_METRIC_GROUPS = {
         "sustain",
         "release",
     ),
+    "oscillator": (
+        "osc1_wave",
+        "osc1_level",
+        "osc2_wave",
+        "osc2_level",
+        "osc2_detune",
+    ),
+    "filter": ("cutoff", "resonance"),
+    "adsr": ("attack", "decay", "sustain", "release"),
+}
+CONTINUOUS_HEAD_GROUPS = {
+    "duration": ("length",),
+    "pitch": ("freq",),
+    "oscillator": ("osc1_level", "osc2_level", "osc2_detune"),
+    "filter": ("cutoff", "resonance"),
+    "adsr": ("attack", "decay", "sustain", "release"),
+}
+GROUP_BALANCED_LOSS_GROUPS = {
+    "duration": ("length",),
+    "pitch": ("freq",),
     "oscillator": (
         "osc1_wave",
         "osc1_level",
@@ -196,6 +220,56 @@ def continuous_parameter_indices(parameters=None):
     ]
 
 
+def continuous_head_groups(parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    parameter_names = {parameter.name for parameter in parameters}
+    continuous_positions = {
+        parameter.name: position
+        for position, parameter in enumerate(
+            parameter for parameter in parameters if parameter.kind != "enum"
+        )
+    }
+    groups = {}
+    assigned = set()
+
+    for group_name, group_parameters in CONTINUOUS_HEAD_GROUPS.items():
+        positions = [
+            continuous_positions[name]
+            for name in group_parameters
+            if name in parameter_names and name in continuous_positions
+        ]
+        if positions:
+            groups[group_name] = positions
+            assigned.update(positions)
+
+    remaining = [
+        position
+        for position in range(len(continuous_positions))
+        if position not in assigned
+    ]
+    if remaining:
+        groups["other"] = remaining
+
+    return groups
+
+
+def loss_groups_for_parameters(parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    parameter_names = {parameter.name for parameter in parameters}
+    return {
+        group_name: [
+            name
+            for name in group_parameters
+            if name in parameter_names
+        ]
+        for group_name, group_parameters in GROUP_BALANCED_LOSS_GROUPS.items()
+        if any(name in parameter_names for name in group_parameters)
+    }
+
+
 def select_torch_device():
     if torch.cuda.is_available():
         return torch.device("cuda")
@@ -217,6 +291,7 @@ class MelSpectrogramInverseModel(nn.Module):
         parameters=None,
         model_size=DEFAULT_MODEL_SIZE,
         pooling_mode=DEFAULT_POOLING_MODE,
+        head_mode=DEFAULT_HEAD_MODE,
     ):
         super().__init__()
         if parameters is None:
@@ -225,6 +300,8 @@ class MelSpectrogramInverseModel(nn.Module):
             raise ValueError(f"Unsupported model size: {model_size}")
         if pooling_mode not in (POOLING_GLOBAL, POOLING_TIME_FREQUENCY):
             raise ValueError(f"Unsupported pooling mode: {pooling_mode}")
+        if head_mode not in (HEAD_MODE_SHARED, HEAD_MODE_GROUPED):
+            raise ValueError(f"Unsupported head mode: {head_mode}")
         if output_dim < 1:
             raise ValueError("output_dim must be at least 1")
         if output_dim != len(parameters):
@@ -239,10 +316,12 @@ class MelSpectrogramInverseModel(nn.Module):
         self.waveform_mode = waveform_mode
         self.model_size = model_size
         self.pooling_mode = pooling_mode
+        self.head_mode = head_mode
         self.parameter_names = tuple(parameter.name for parameter in parameters)
         self.parameters_schema = tuple(parameters)
         self.enum_indices = enum_parameter_indices(parameters)
         self.continuous_indices = continuous_parameter_indices(parameters)
+        self.continuous_head_groups = continuous_head_groups(parameters)
         spec = MODEL_SIZE_SPECS[model_size]
         channels = spec["channels"]
         hidden_dim = spec["hidden_dim"]
@@ -269,10 +348,23 @@ class MelSpectrogramInverseModel(nn.Module):
                 nn.Linear(encoder_dim, hidden_dim),
                 nn.ReLU(),
             )
-            self.continuous_head = nn.Sequential(
-                nn.Linear(hidden_dim, len(self.continuous_indices)),
-                nn.Sigmoid(),
-            )
+            if head_mode == HEAD_MODE_GROUPED:
+                self.grouped_continuous_heads = nn.ModuleDict(
+                    {
+                        group_name: nn.Sequential(
+                            nn.Linear(hidden_dim, hidden_dim),
+                            nn.ReLU(),
+                            nn.Linear(hidden_dim, len(positions)),
+                            nn.Sigmoid(),
+                        )
+                        for group_name, positions in self.continuous_head_groups.items()
+                    }
+                )
+            else:
+                self.continuous_head = nn.Sequential(
+                    nn.Linear(hidden_dim, len(self.continuous_indices)),
+                    nn.Sigmoid(),
+                )
             self.waveform_heads = nn.ModuleDict(
                 {
                     parameters[index].name: nn.Linear(
@@ -310,8 +402,17 @@ class MelSpectrogramInverseModel(nn.Module):
             return {"vector": self.head(encoded)}
 
         shared = self.shared_head(encoded)
+        if self.head_mode == HEAD_MODE_GROUPED:
+            continuous = grouped_continuous_outputs_to_tensor(
+                self.grouped_continuous_heads,
+                self.continuous_head_groups,
+                shared,
+            )
+        else:
+            continuous = self.continuous_head(shared)
+
         return {
-            "continuous": self.continuous_head(shared),
+            "continuous": continuous,
             "waveforms": {
                 name: head(shared)
                 for name, head in self.waveform_heads.items()
@@ -326,6 +427,7 @@ def create_inverse_model(
     parameters=None,
     model_size=DEFAULT_MODEL_SIZE,
     pooling_mode=DEFAULT_POOLING_MODE,
+    head_mode=DEFAULT_HEAD_MODE,
 ):
     return MelSpectrogramInverseModel(
         output_dim=output_dim,
@@ -334,6 +436,7 @@ def create_inverse_model(
         parameters=parameters,
         model_size=model_size,
         pooling_mode=pooling_mode,
+        head_mode=head_mode,
     )
 
 
@@ -363,6 +466,19 @@ def build_cnn_encoder(input_channels, channels, pool_shape=(1, 1)):
 
     layers.append(nn.AdaptiveAvgPool2d(pool_shape))
     return layers
+
+
+def grouped_continuous_outputs_to_tensor(heads, groups, shared_features):
+    outputs = [None] * sum(len(positions) for positions in groups.values())
+    for group_name, positions in groups.items():
+        values = heads[group_name](shared_features)
+        for local_index, output_position in enumerate(positions):
+            outputs[output_position] = values[:, local_index : local_index + 1]
+
+    if any(output is None for output in outputs):
+        raise ValueError("grouped continuous heads did not produce every output")
+
+    return torch.cat(outputs, dim=1)
 
 
 def waveform_classification_outputs_to_vector(raw_outputs, parameters=None):
@@ -554,6 +670,8 @@ def parameter_loss_weights(parameters=None, preset=DEFAULT_LOSS_PRESET):
         if torch.sum(values) <= 0:
             raise ValueError("loss weights must include at least one positive value")
         return values * (len(values) / torch.sum(values))
+    if preset == LOSS_PRESET_GROUP_BALANCED:
+        return torch.ones(len(parameters), dtype=torch.float32)
 
     raise ValueError(f"Unsupported loss preset: {preset}")
 
@@ -608,6 +726,63 @@ def categorical_target_classes(values, parameter):
     return torch.clamp(torch.round(scaled), 0, len(choices) - 1).long()
 
 
+def group_balanced_loss(model, predictions, targets, features=None):
+    if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
+        if features is None:
+            raise ValueError("features are required for group-balanced classification loss")
+        raw = model.raw_outputs(features)
+    else:
+        raw = None
+
+    parameter_indices = {
+        parameter.name: index
+        for index, parameter in enumerate(model.parameters_schema)
+    }
+    continuous_positions = {
+        parameter.name: position
+        for position, parameter in enumerate(
+            parameter for parameter in model.parameters_schema if parameter.kind != "enum"
+        )
+    }
+    group_losses = []
+
+    for group_parameters in GROUP_BALANCED_LOSS_GROUPS.values():
+        component_losses = []
+        for name in group_parameters:
+            if name not in parameter_indices:
+                continue
+
+            index = parameter_indices[name]
+            parameter = model.parameters_schema[index]
+            if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION and parameter.kind == "enum":
+                target_classes = categorical_target_classes(targets[:, index], parameter)
+                class_count = len(categorical_values(parameter))
+                component_losses.append(
+                    nn.functional.cross_entropy(
+                        raw["waveforms"][parameter.name],
+                        target_classes,
+                    )
+                    / np.log(class_count)
+                )
+            elif model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
+                position = continuous_positions[name]
+                component_losses.append(
+                    torch.mean(torch.square(raw["continuous"][:, position] - targets[:, index]))
+                )
+            else:
+                component_losses.append(
+                    torch.mean(torch.square(predictions[:, index] - targets[:, index]))
+                )
+
+        if component_losses:
+            group_losses.append(torch.stack(component_losses).mean())
+
+    if not group_losses:
+        return torch.mean(torch.square(predictions - targets))
+
+    return torch.stack(group_losses).mean()
+
+
 def inverse_model_loss(
     model,
     predictions,
@@ -615,7 +790,16 @@ def inverse_model_loss(
     features=None,
     loss_function=None,
     loss_weights=None,
+    loss_preset=DEFAULT_LOSS_PRESET,
 ):
+    if loss_preset == LOSS_PRESET_GROUP_BALANCED:
+        return group_balanced_loss(
+            model,
+            predictions,
+            targets,
+            features=features,
+        )
+
     if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
         if features is None:
             raise ValueError("features are required for waveform classification loss")
@@ -674,6 +858,7 @@ def dataset_loss_torch(
     device=None,
     batch_size=DEFAULT_BATCH_SIZE,
     loss_weights=None,
+    loss_preset=DEFAULT_LOSS_PRESET,
 ):
     if device is None:
         device = select_torch_device()
@@ -697,6 +882,7 @@ def dataset_loss_torch(
                 features=batch_features,
                 loss_function=loss_function,
                 loss_weights=loss_weights,
+                loss_preset=loss_preset,
             )
             running_loss += loss.item() * len(batch_features)
             sample_count += len(batch_features)
@@ -765,6 +951,41 @@ def parameter_mae_by_name(predictions, targets, parameters=None):
         parameter.name: float(absolute_errors[:, index].mean())
         for index, parameter in enumerate(parameters)
     }
+
+
+def prediction_distribution_by_name(predictions, targets, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    predicted = np.asarray(predictions, dtype=np.float32)
+    expected = np.asarray(targets, dtype=np.float32)
+    if predicted.shape != expected.shape:
+        raise ValueError("predictions and targets must have the same shape")
+    if predicted.ndim != 2:
+        raise ValueError("predictions and targets must be 2D")
+    if predicted.shape[1] != len(parameters):
+        raise ValueError(f"Expected {len(parameters)} parameters, got {predicted.shape[1]}")
+
+    metrics = {}
+    for index, parameter in enumerate(parameters):
+        target_values = expected[:, index]
+        predicted_values = predicted[:, index]
+        target_std = float(np.std(target_values))
+        predicted_std = float(np.std(predicted_values))
+        metrics[parameter.name] = {
+            "target_mean": float(np.mean(target_values)),
+            "predicted_mean": float(np.mean(predicted_values)),
+            "mean_delta": float(np.mean(predicted_values) - np.mean(target_values)),
+            "target_std": target_std,
+            "predicted_std": predicted_std,
+            "std_ratio": float(predicted_std / target_std) if target_std > 0.0 else 0.0,
+            "target_min": float(np.min(target_values)),
+            "target_max": float(np.max(target_values)),
+            "predicted_min": float(np.min(predicted_values)),
+            "predicted_max": float(np.max(predicted_values)),
+        }
+
+    return metrics
 
 
 def continuous_parameter_mae(predictions, targets, parameters=None):
@@ -866,6 +1087,11 @@ def parameter_metrics_torch(
         "continuous_mae": continuous_parameter_mae(predictions, targets, parameters=parameters),
         "grouped_mae": grouped_parameter_mae(predictions, targets, parameters=parameters),
         "per_parameter_mae": parameter_mae_by_name(predictions, targets, parameters=parameters),
+        "prediction_distribution": prediction_distribution_by_name(
+            predictions,
+            targets,
+            parameters=parameters,
+        ),
         "waveform_accuracy": waveform_accuracy(predictions, targets, parameters=parameters),
         "waveform_accuracy_by_name": waveform_accuracy_by_name(
             predictions,
@@ -916,6 +1142,7 @@ def train_inverse_model(
     checkpoint_selection=DEFAULT_CHECKPOINT_SELECTION,
     model_size=DEFAULT_MODEL_SIZE,
     pooling_mode=DEFAULT_POOLING_MODE,
+    head_mode=DEFAULT_HEAD_MODE,
     random_state=0,
     device=None,
     progress=False,
@@ -930,6 +1157,8 @@ def train_inverse_model(
         raise ValueError("early_stopping_patience must be non-negative")
     if checkpoint_selection not in (CHECKPOINT_FINAL, CHECKPOINT_BEST_VALIDATION):
         raise ValueError(f"Unsupported checkpoint selection: {checkpoint_selection}")
+    if head_mode not in (HEAD_MODE_SHARED, HEAD_MODE_GROUPED):
+        raise ValueError(f"Unsupported head mode: {head_mode}")
     if device is None:
         device = select_torch_device()
     else:
@@ -957,6 +1186,7 @@ def train_inverse_model(
         parameters=target_parameters,
         model_size=model_size,
         pooling_mode=pooling_mode,
+        head_mode=head_mode,
     ).to(device)
     optimizer = create_optimizer(
         model,
@@ -1009,6 +1239,7 @@ def train_inverse_model(
                 features=batch_features,
                 loss_function=loss_function,
                 loss_weights=loss_weights,
+                loss_preset=loss_preset,
             )
             loss.backward()
             optimizer.step()
@@ -1031,6 +1262,7 @@ def train_inverse_model(
             device=device,
             batch_size=batch_size,
             loss_weights=loss_weights,
+            loss_preset=loss_preset,
         )
         test_losses.append(test_epoch_loss)
         learning_rates.append(float(optimizer.param_groups[0]["lr"]))
@@ -1078,11 +1310,15 @@ def train_inverse_model(
         "target_mode": target_mode,
         "model_size": model_size,
         "pooling_mode": pooling_mode,
+        "head_mode": head_mode,
         "loss_preset": loss_preset,
         "loss_weights": {
             parameter.name: float(weight)
             for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
         },
+        "loss_groups": loss_groups_for_parameters(target_parameters)
+        if loss_preset == LOSS_PRESET_GROUP_BALANCED
+        else {},
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],
         "num_samples": int(len(dataset["features"])),
@@ -1137,6 +1373,8 @@ def train_inverse_model(
         "test_continuous_mae": test_parameter_metrics["continuous_mae"],
         "train_per_parameter_mae": train_parameter_metrics["per_parameter_mae"],
         "test_per_parameter_mae": test_parameter_metrics["per_parameter_mae"],
+        "train_prediction_distribution": train_parameter_metrics["prediction_distribution"],
+        "test_prediction_distribution": test_parameter_metrics["prediction_distribution"],
         "train_grouped_mae": train_parameter_metrics["grouped_mae"],
         "test_grouped_mae": test_parameter_metrics["grouped_mae"],
         "train_waveform_accuracy": train_parameter_metrics["waveform_accuracy"],
@@ -1166,6 +1404,7 @@ def train_inverse_model(
                     device=device,
                     batch_size=batch_size,
                     loss_weights=loss_weights,
+                    loss_preset=loss_preset,
                 ),
                 "benchmark_loss": parameter_mse_torch(
                     model,
@@ -1177,6 +1416,9 @@ def train_inverse_model(
                 "benchmark_mae": benchmark_parameter_metrics["mae"],
                 "benchmark_continuous_mae": benchmark_parameter_metrics["continuous_mae"],
                 "benchmark_per_parameter_mae": benchmark_parameter_metrics["per_parameter_mae"],
+                "benchmark_prediction_distribution": benchmark_parameter_metrics[
+                    "prediction_distribution"
+                ],
                 "benchmark_grouped_mae": benchmark_parameter_metrics["grouped_mae"],
                 "benchmark_waveform_accuracy": benchmark_parameter_metrics["waveform_accuracy"],
                 "benchmark_waveform_accuracy_by_name": benchmark_parameter_metrics[
@@ -1204,6 +1446,7 @@ def save_torch_checkpoint(model, path=DEFAULT_TORCH_MODEL_PATH, metrics=None):
             "waveform_mode": getattr(model, "waveform_mode", WAVEFORM_MODE_SCALAR),
             "model_size": getattr(model, "model_size", DEFAULT_MODEL_SIZE),
             "pooling_mode": getattr(model, "pooling_mode", POOLING_GLOBAL),
+            "head_mode": getattr(model, "head_mode", DEFAULT_HEAD_MODE),
             "parameter_names": getattr(
                 model,
                 "parameter_names",
@@ -1234,6 +1477,7 @@ def load_torch_checkpoint(path=DEFAULT_TORCH_MODEL_PATH, device=None):
         parameters=parameters,
         model_size=checkpoint.get("model_size", DEFAULT_MODEL_SIZE),
         pooling_mode=checkpoint.get("pooling_mode", POOLING_GLOBAL),
+        head_mode=checkpoint.get("head_mode", DEFAULT_HEAD_MODE),
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)

@@ -208,6 +208,32 @@ python scripts/train_torch.py \
   --metrics-output runs/training/v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds_metrics.json
 ```
 
+The current recommended best model setup is the v3.0-style pitch-conditioned grouped-head model. It keeps exact synthetic pitch as context, uses separate continuous heads for duration, oscillator, filter, and ADSR controls, and trains with group-balanced loss so one parameter group cannot hide another:
+
+```bash
+python scripts/train_torch.py \
+  --model-id v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds \
+  --tensor-data data/generated/d8/features/mel_tensors.npz \
+  --target-mode pitch_conditioned_timbre \
+  --waveform-mode classification \
+  --model-size large \
+  --pooling-mode time_frequency \
+  --head-mode grouped \
+  --loss-preset groupbalanced \
+  --epochs 50 \
+  --batch-size 64 \
+  --optimizer adamw \
+  --weight-decay 0.01 \
+  --scheduler step \
+  --scheduler-step-size 10 \
+  --scheduler-gamma 0.5 \
+  --early-stopping-patience 8 \
+  --checkpoint-selection best_validation \
+  --device cuda \
+  --model-output models/v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds.pt \
+  --metrics-output runs/training/v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds_metrics.json
+```
+
 For longer model-quality runs, prefer explicit optimizer controls and best-validation checkpoint selection:
 
 ```bash

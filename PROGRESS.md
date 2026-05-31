@@ -194,9 +194,9 @@ Evidence from local reports:
 - [x] Add hybrid loss preset for the next v2.1 pitch-conditioned model.
 - [x] Train and evaluate first capability models against `v9_pytorch_cnn_200kseeds`.
 - [x] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
-- [ ] Add prediction distribution diagnostics for target-vs-predicted mean and standard deviation by parameter.
-- [ ] Fix non-finite rendered prediction handling so invalid predicted patches are captured and clamped or reported safely.
-- [ ] Implement the `v3.0` model-design step: pitch-conditioned, group-balanced, multi-head continuous prediction.
+- [x] Add prediction distribution diagnostics for target-vs-predicted mean and standard deviation by parameter.
+- [x] Fix non-finite rendered prediction handling so invalid predicted patches are captured and clamped or reported safely.
+- [x] Implement the `v3.0` model-design step: pitch-conditioned, group-balanced, multi-head continuous prediction.
 - [ ] Train and evaluate `v3.0` against `v10`, `v2.0`, `v2.1`, and `v9`.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
@@ -442,3 +442,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add hybrid loss preset`
 - Reexamined the model-capability roadmap after `v10`, `v2.0`, and `v2.1`. The current best rendered-audio setup is still `v10`, while `v2.1` has the best parameter metrics but worse audio due to filter/cutoff failures. Conclusion: stop minor loss-only tuning and move the next major model series to `v3.0` with prediction-spread diagnostics, safer render validation, and group-balanced multi-head continuous prediction.
   Commit: `Reassess model capability roadmap`
+- Implemented the v3.0-ready model setup: grouped continuous heads, group-balanced loss, prediction distribution diagnostics, checkpointed head-mode metadata, safer failed-render reports, portable JSON path serialization, and updated training commands/naming rules.
+  Commit: `Implement v3 model setup`

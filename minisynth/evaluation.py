@@ -6,7 +6,12 @@ from minisynth.compare import compare_audio_arrays
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
 from minisynth.ml import predict_patch_from_audio
-from minisynth.schema import SynthConfig, VECTOR_PARAMETERS, categorical_values, normalize_parameter_value
+from minisynth.schema import (
+    SynthConfig,
+    VECTOR_PARAMETERS,
+    categorical_values,
+    normalize_parameter_value,
+)
 from minisynth.search import local_refinement_search
 
 
@@ -145,12 +150,18 @@ def parameter_error_report(target_patch, predicted_patch, parameters=None):
             predicted_index = choices.index(predicted_value)
             if len(choices) == 1:
                 normalized_error = 0.0
+                target_normalized = 0.0
+                predicted_normalized = 0.0
             else:
                 normalized_error = abs(target_index - predicted_index) / (len(choices) - 1)
+                target_normalized = target_index / (len(choices) - 1)
+                predicted_normalized = predicted_index / (len(choices) - 1)
             errors[parameter.name] = {
                 "target": target_value,
                 "predicted": predicted_value,
                 "match": target_value == predicted_value,
+                "target_normalized": float(target_normalized),
+                "predicted_normalized": float(predicted_normalized),
                 "normalized_error": float(normalized_error),
             }
             continue
@@ -166,6 +177,45 @@ def parameter_error_report(target_patch, predicted_patch, parameters=None):
         }
 
     return errors
+
+
+def patch_prediction_distribution(results, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    metrics = {}
+    for parameter in parameters:
+        target_values = []
+        predicted_values = []
+        for result in results:
+            errors = result.get("parameter_errors")
+            if not errors or parameter.name not in errors:
+                continue
+            details = errors[parameter.name]
+            target_values.append(details["target_normalized"])
+            predicted_values.append(details["predicted_normalized"])
+
+        if not target_values:
+            continue
+
+        target_array = np.asarray(target_values, dtype=np.float32)
+        predicted_array = np.asarray(predicted_values, dtype=np.float32)
+        target_std = float(np.std(target_array))
+        predicted_std = float(np.std(predicted_array))
+        metrics[parameter.name] = {
+            "target_mean": float(np.mean(target_array)),
+            "predicted_mean": float(np.mean(predicted_array)),
+            "mean_delta": float(np.mean(predicted_array) - np.mean(target_array)),
+            "target_std": target_std,
+            "predicted_std": predicted_std,
+            "std_ratio": float(predicted_std / target_std) if target_std > 0.0 else 0.0,
+            "target_min": float(np.min(target_array)),
+            "target_max": float(np.max(target_array)),
+            "predicted_min": float(np.min(predicted_array)),
+            "predicted_max": float(np.max(predicted_array)),
+        }
+
+    return metrics
 
 
 def worst_clip_diagnostics(results, top_n=10):

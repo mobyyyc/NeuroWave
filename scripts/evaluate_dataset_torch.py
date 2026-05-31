@@ -15,6 +15,7 @@ from minisynth.dataset import DEFAULT_METADATA_PATH, load_metadata, resolve_meta
 from minisynth.evaluation import (
     evaluate_patch_prediction,
     parameter_error_report,
+    patch_prediction_distribution,
     summarize_weighted_distances,
     worst_clip_diagnostics,
 )
@@ -100,9 +101,12 @@ def main() -> int:
             "seed": row["seed"],
             "audio_path": str(audio_path),
         }
+        target_patch = None
+        patch = None
         try:
             patch_path = resolve_metadata_path(args.metadata, row["patch_path"])
             target_patch = load_patch(patch_path)
+            clip_result["target_patch"] = target_patch
             patch = predict_patch_from_audio(
                 checkpoint["model"],
                 target_audio,
@@ -118,7 +122,6 @@ def main() -> int:
                 refine_seed=row["seed"],
             )
             clip_result["comparison"] = result["comparison"]
-            clip_result["target_patch"] = target_patch
             clip_result["predicted_patch"] = result["patch"]
             clip_result["parameter_errors"] = parameter_error_report(
                 target_patch,
@@ -128,6 +131,13 @@ def main() -> int:
                 clip_result["refinement"] = result["refinement"]
         except ValueError as error:
             clip_result["error"] = str(error)
+            if patch is not None:
+                clip_result["predicted_patch"] = patch
+                if target_patch is not None:
+                    clip_result["parameter_errors"] = parameter_error_report(
+                        target_patch,
+                        patch,
+                    )
 
         clip_results.append(clip_result)
     print()
@@ -148,6 +158,7 @@ def main() -> int:
             "failed_count": len(clip_results) - len(successful_results),
         },
         "diagnostics": {
+            "prediction_distribution": patch_prediction_distribution(successful_results),
             "worst_clips": worst_clip_diagnostics(
                 successful_results,
                 top_n=args.diagnostics_top_n,

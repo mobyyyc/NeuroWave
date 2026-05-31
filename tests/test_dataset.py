@@ -110,11 +110,11 @@ class TestDatasetGeneration(unittest.TestCase):
             self.assertEqual(rows[0]["seed"], 50)
             self.assertEqual(
                 rows[0]["patch_path"],
-                str(root / "params" / "patch_000000_seed_50.json"),
+                (root / "params" / "patch_000000_seed_50.json").as_posix(),
             )
             self.assertEqual(
                 rows[0]["audio_path"],
-                str(root / "audio" / "patch_000000_seed_50.wav"),
+                (root / "audio" / "patch_000000_seed_50.wav").as_posix(),
             )
             self.assertEqual(rows[0]["sample_rate"], DEFAULT_SAMPLE_RATE)
             self.assertGreater(rows[0]["frames"], 0)

@@ -209,8 +209,8 @@ def metadata_record(record):
     return {
         "index": record["index"],
         "seed": record["seed"],
-        "patch_path": str(record["patch_path"]),
-        "audio_path": str(record["audio_path"]),
+        "patch_path": Path(record["patch_path"]).as_posix(),
+        "audio_path": Path(record["audio_path"]).as_posix(),
         "sample_rate": record["sample_rate"],
         "frames": record["frames"],
     }

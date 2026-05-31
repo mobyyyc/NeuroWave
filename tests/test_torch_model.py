@@ -14,6 +14,7 @@ from minisynth.io import load_patch
 from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
+    DEFAULT_HEAD_MODE,
     DEFAULT_MODEL_SIZE,
     DEFAULT_POOLING_MODE,
     DEFAULT_TARGET_MODE,
@@ -31,6 +32,7 @@ from minisynth.torch_model import (
     parameter_mae_by_name,
     parameter_loss_weights,
     parameter_mse_torch,
+    prediction_distribution_by_name,
     pooling_shape,
     prepare_model_arrays,
     predict_patch_from_audio,
@@ -89,6 +91,22 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(medium.model_size, "medium")
         self.assertEqual(large.model_size, "large")
 
+    def test_create_inverse_model_supports_grouped_head_mode(self):
+        model = create_inverse_model(head_mode="grouped")
+        inputs = torch.zeros(
+            2,
+            1,
+            DEFAULT_MEL_BINS,
+            DEFAULT_MEL_TENSOR_FRAMES,
+            dtype=torch.float32,
+        )
+
+        outputs = model(inputs)
+
+        self.assertEqual(outputs.shape, (2, len(VECTOR_PARAMETERS)))
+        self.assertEqual(model.head_mode, "grouped")
+        self.assertIn("filter", model.continuous_head_groups)
+
     def test_build_cnn_encoder_ends_with_pooling_layer(self):
         layers = build_cnn_encoder(input_channels=1, channels=(8, 16), pool_shape=(4, 4))
 
@@ -126,6 +144,10 @@ class TestTorchInverseModel(unittest.TestCase):
     def test_model_rejects_invalid_pooling_mode(self):
         with self.assertRaises(ValueError):
             MelSpectrogramInverseModel(pooling_mode="wide-open")
+
+    def test_model_rejects_invalid_head_mode(self):
+        with self.assertRaises(ValueError):
+            MelSpectrogramInverseModel(head_mode="one-head-per-wish")
 
     def test_predict_normalized_vectors_returns_numpy_array(self):
         model = create_inverse_model()
@@ -230,6 +252,32 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(set(metrics), {parameter.name for parameter in VECTOR_PARAMETERS})
         self.assertAlmostEqual(metrics["freq"], 0.25)
 
+    def test_prediction_distribution_by_name_reports_mean_collapse(self):
+        targets = np.asarray(
+            [
+                [0.0, 0.0],
+                [1.0, 1.0],
+            ],
+            dtype=np.float32,
+        )
+        predictions = np.asarray(
+            [
+                [0.5, 0.25],
+                [0.5, 0.75],
+            ],
+            dtype=np.float32,
+        )
+
+        metrics = prediction_distribution_by_name(
+            predictions,
+            targets,
+            parameters=VECTOR_PARAMETERS[:2],
+        )
+
+        self.assertEqual(metrics["freq"]["predicted_std"], 0.0)
+        self.assertLess(metrics["freq"]["std_ratio"], 0.1)
+        self.assertGreater(metrics["length"]["std_ratio"], 0.0)
+
     def test_grouped_parameter_mae_reports_model_quality_groups(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
         predictions = np.full((2, len(VECTOR_PARAMETERS)), 0.25, dtype=np.float32)
@@ -276,6 +324,12 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(float(weights[names.index("freq")]), 0.0)
         self.assertGreater(float(weights[names.index("release")]), float(weights[names.index("cutoff")]))
         self.assertGreater(float(weights[names.index("osc2_detune")]), float(weights[names.index("length")]))
+
+    def test_parameter_loss_weights_support_groupbalanced_preset(self):
+        weights = parameter_loss_weights(preset="groupbalanced")
+
+        self.assertEqual(len(weights), len(VECTOR_PARAMETERS))
+        self.assertTrue(torch.all(weights == 1.0))
 
     def test_weighted_mse_loss_applies_per_parameter_weights(self):
         predictions = torch.tensor([[1.0, 0.0]], dtype=torch.float32)
@@ -364,6 +418,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
         self.assertEqual(metrics["model_size"], DEFAULT_MODEL_SIZE)
         self.assertEqual(metrics["pooling_mode"], DEFAULT_POOLING_MODE)
+        self.assertEqual(metrics["head_mode"], DEFAULT_HEAD_MODE)
         self.assertEqual(metrics["loss_preset"], "flat")
         self.assertIn("cutoff", metrics["loss_weights"])
         self.assertEqual(metrics["optimizer"], "adam")
@@ -380,6 +435,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertGreaterEqual(metrics["test_objective_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
         self.assertIn("freq", metrics["test_per_parameter_mae"])
+        self.assertIn("freq", metrics["test_prediction_distribution"])
         self.assertIn("adsr", metrics["test_grouped_mae"])
         self.assertIn("pitch_conditioned_timbre", metrics["test_grouped_mae"])
         self.assertIn("osc1_wave", metrics["test_waveform_accuracy_by_name"])
@@ -496,6 +552,35 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["loss_preset"], "hybrid")
         self.assertGreater(metrics["loss_weights"]["release"], metrics["loss_weights"]["cutoff"])
         self.assertGreater(metrics["loss_weights"]["osc2_detune"], metrics["loss_weights"]["length"])
+
+    def test_train_inverse_model_supports_grouped_head_and_groupbalanced_loss(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                head_mode="grouped",
+                loss_preset="groupbalanced",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["head_mode"], "grouped")
+        self.assertEqual(metrics["loss_preset"], "groupbalanced")
+        self.assertIn("filter", metrics["loss_groups"])
+        self.assertIn("cutoff", metrics["test_prediction_distribution"])
 
     def test_train_inverse_model_supports_optimizer_controls(self):
         with TemporaryDirectory() as temp_dir:
@@ -620,7 +705,18 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(saved_path, path)
         self.assertEqual(checkpoint["metrics"]["test_mae"], 0.25)
         self.assertEqual(checkpoint["model"].waveform_mode, DEFAULT_WAVEFORM_MODE)
+        self.assertEqual(checkpoint["model"].head_mode, DEFAULT_HEAD_MODE)
         self.assertEqual(predictions.shape, (1, len(VECTOR_PARAMETERS)))
+
+    def test_save_and_load_torch_checkpoint_preserves_grouped_head_mode(self):
+        model = create_inverse_model(head_mode="grouped")
+
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "model.pt"
+            saved_path = save_torch_checkpoint(model, path)
+            checkpoint = load_torch_checkpoint(saved_path, device=torch.device("cpu"))
+
+        self.assertEqual(checkpoint["model"].head_mode, "grouped")
 
     def test_predict_patch_from_audio_returns_renderable_patch(self):
         model = create_inverse_model()
