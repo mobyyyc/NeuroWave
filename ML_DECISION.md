@@ -63,3 +63,34 @@ Near-term rule:
 - Do not spend major effort tuning the current MLP.
 - Add PyTorch only when the project is ready to train a spectrogram model and the
   dependency/runtime decision is explicit.
+
+## Milestone G Review
+
+Decision: keep scikit-learn as a lightweight baseline, but make PyTorch the primary
+model-development path.
+
+Evidence from the first PyTorch spectrogram model:
+
+- `v3_pytorch_cnn_500seeds` trained successfully on exported `d2` mel tensors.
+- The PyTorch checkpoint predicts valid patches, renders audio, and evaluates across
+  synthetic dataset clips.
+- On the same `d2` evaluation setup, `v3_pytorch_cnn_500seeds` improved mean weighted
+  audio distance from `150.61` to `132.54` compared with `v2_sklearn_mlp_500seeds`.
+- Median weighted audio distance improved from `71.80` to `57.73`.
+- The PyTorch model had zero failed predictions in the 20-clip report; the sklearn
+  baseline had one failed prediction.
+
+Interpretation:
+
+- PyTorch has passed the threshold for becoming the serious model path.
+- The sklearn baseline is still useful because it is fast, simple, and catches data
+  pipeline regressions without requiring neural-network training.
+- Removing sklearn now would save little complexity and would remove a useful reference
+  point while the PyTorch model is still early.
+
+Current rule:
+
+- Keep sklearn code and commands working as a quick regression baseline.
+- Do not tune sklearn unless it is needed to debug data or evaluation behavior.
+- Use PyTorch for future model quality work, larger datasets, spectrogram learning,
+  checkpointing, and eventual real-audio approximation.

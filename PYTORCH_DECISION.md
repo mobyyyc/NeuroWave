@@ -44,12 +44,14 @@ not GPU optimization.
 
 ## Baseline Rule
 
-Keep the scikit-learn MLP path until a PyTorch spectrogram model:
+Keep the scikit-learn MLP path as a lightweight sanity-check baseline.
+
+The PyTorch spectrogram model has now:
 
 - trains successfully,
 - predicts valid patches,
 - evaluates across dataset clips,
 - beats the scikit-learn baseline on weighted audio distance.
 
-Only after that should the project decide whether to remove scikit-learn or keep it as
-a lightweight sanity-check baseline.
+Future model-quality work should use PyTorch. Sklearn should remain available for quick
+pipeline checks unless it starts creating maintenance cost or dependency conflicts.
