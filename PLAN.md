@@ -632,13 +632,49 @@ The UI should show:
 - Compare PyTorch directly against the scikit-learn baseline.
 - Decide whether scikit-learn remains as a lightweight baseline or can be removed.
 
-### Milestone H: Real Audio Prototype
+### Milestone H: Model Capability And Target Quality
+
+Goal: make the inverse model itself strong enough that it is not the limiting factor when trained on a good synthetic dataset.
+
+Evidence from local PyTorch reports:
+
+- `v5_pytorch_cnn_10kseeds` reached `test_loss = 0.0461` and `test_mae = 0.1616`.
+- `v8_pytorch_cnn_50kseeds` reached `test_loss = 0.0375` and `test_mae = 0.1339`.
+- `v9_pytorch_cnn_200kseeds` reached `test_loss = 0.0356` and `test_mae = 0.1284`.
+- Train and test metrics remain close, so the current issue is not mainly overfitting.
+- More data helps, but the current small CNN, scalar categorical encoding, and plain averaged MSE are unlikely to reach `test_mae = 0.05` by scale alone.
+
+Roadmap:
+
+- Add per-parameter validation metrics so average MAE cannot hide weak targets.
+- Report waveform accuracy separately from continuous-parameter MAE.
+- Replace scalar waveform enum regression with explicit classification heads or continuous wave-mix targets.
+- Consider removing `freq` and `length` from the core timbre model, or handle them with separate pitch/duration estimators.
+- Add parameter-weighted losses so perceptually important parameters are not treated the same as low-impact parameters.
+- Build a larger model family with enough capacity for the current task, such as deeper CNN blocks, residual blocks, wider channel counts, and stronger MLP heads.
+- Preserve time-frequency structure longer instead of collapsing the spectrogram too early with global average pooling.
+- Add regularization and optimizer controls: AdamW, weight decay, learning-rate scheduling, early stopping, and best-validation checkpoint saving.
+- Add repeatable train/evaluate experiment configs so model comparisons differ by one intentional variable at a time.
+- Add a fixed benchmark evaluation set that is never used for training or hyperparameter selection.
+- Track both parameter metrics and rendered-audio metrics for every serious model.
+- Evaluate whether model predictions are better than nearest-neighbor retrieval and random/search baselines at similar compute.
+- Add optional prediction refinement after the model only after raw model quality is measured clearly.
+
+Acceptance criteria:
+
+- Training reports include per-parameter MAE, continuous-parameter MAE, waveform accuracy, train/test loss, train/test MAE, dataset ID, model ID, epochs, batch size, learning rate, optimizer, scheduler, and checkpoint-selection rule.
+- The model architecture can intentionally be scaled without editing core training code.
+- At least one stronger model reaches materially better validation quality than `v9_pytorch_cnn_200kseeds`.
+- The project can distinguish model bottlenecks from data bottlenecks using benchmark reports.
+- The target benchmark for this phase is `test_mae <= 0.05` on a well-defined synthetic holdout set, or a documented explanation of which parameters make that target unrealistic under the current synth representation.
+
+### Milestone I: Real Audio Prototype
 
 - Add audio preprocessing.
 - Match clean one-note real samples.
 - Export comparison reports.
 
-### Milestone I: Interface And Workflow
+### Milestone J: Interface And Workflow
 
 - Consolidate scripts into stable CLI commands.
 - Add predictable command names for render, random, compare, match, train, and predict.

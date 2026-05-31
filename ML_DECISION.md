@@ -117,3 +117,40 @@ Interpretation:
   synth matching.
 - The next quality improvement should focus on evaluation-informed training, parameter
   weighting, better splits, or architecture changes before scaling to 50k+ seeds.
+
+## Model Capability Roadmap Decision
+
+Decision: add a dedicated model-capability milestone before real-audio work.
+
+Evidence from later local PyTorch reports:
+
+- `v5_pytorch_cnn_10kseeds` reached `test_loss = 0.0461` and `test_mae = 0.1616`.
+- `v6_pytorch_cnn_50kseeds` reached `test_loss = 0.0406` and `test_mae = 0.1446`.
+- `v7_pytorch_cnn_50kseeds` reached `test_loss = 0.0377` and `test_mae = 0.1357`.
+- `v8_pytorch_cnn_50kseeds` reached `test_loss = 0.0375` and `test_mae = 0.1339`.
+- `v9_pytorch_cnn_200kseeds` reached `test_loss = 0.0356` and `test_mae = 0.1284`.
+
+Interpretation:
+
+- The current normalized parameter MSE is already below `0.1`, but the average normalized
+  parameter MAE is still far from the desired `0.05` target.
+- Train and test metrics remain close across the larger runs, so the current pattern does
+  not look like simple overfitting.
+- The current model is probably underpowered for the target: it is a small CNN with a
+  single averaged regression head and early global pooling.
+- The current target representation is also likely limiting quality because waveform
+  categories are encoded as scalar regression values.
+- Future quality work should make the model and target design strong enough that remaining
+  errors can be blamed on data quality, synth ambiguity, or representation limits rather
+  than an obviously weak network.
+
+Current rule:
+
+- Do not move straight to real-audio approximation until synthetic model capability is
+  measured and improved.
+- Add per-parameter metrics before changing the model so every later experiment explains
+  what improved and what did not.
+- Treat waveform identity, continuous timbre parameters, pitch, and duration as separable
+  prediction problems unless evidence shows a single regression vector is sufficient.
+- Use stronger PyTorch architectures, better checkpoint selection, optimizer controls, and
+  fixed benchmark reports before scaling datasets again.

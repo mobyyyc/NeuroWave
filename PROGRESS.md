@@ -162,7 +162,33 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 - [x] Generate `d3` with 10,000 seeds and train `v4_pytorch_cnn_10kseeds`.
 - [ ] Commit Milestone G completion.
 
-## Milestone H: Real Audio Prototype
+## Milestone H: Model Capability And Target Quality
+
+Goal: make the PyTorch inverse model strong enough that the model itself is not the bottleneck when trained on a good synthetic dataset.
+
+Evidence from local reports:
+
+- `v5_pytorch_cnn_10kseeds`: `test_loss = 0.0461`, `test_mae = 0.1616`.
+- `v8_pytorch_cnn_50kseeds`: `test_loss = 0.0375`, `test_mae = 0.1339`.
+- `v9_pytorch_cnn_200kseeds`: `test_loss = 0.0356`, `test_mae = 0.1284`.
+- Train/test metrics remain close, which suggests undercapacity, target representation limits, or loss design limits more than overfitting.
+- The next target is to push toward `test_mae <= 0.05` on a fixed synthetic holdout, while also improving rendered-audio distance.
+
+- [ ] Add per-parameter MAE reporting to PyTorch training metrics.
+- [ ] Add waveform prediction metrics separate from continuous-parameter MAE.
+- [ ] Add a fixed benchmark split or benchmark dataset that is not used for training or tuning.
+- [ ] Add model comparison reporting across parameter metrics and rendered-audio metrics.
+- [ ] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
+- [ ] Decide whether `freq` and `length` stay in the timbre model or move to separate pitch/duration handling.
+- [ ] Add parameter-weighted loss support.
+- [ ] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
+- [ ] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
+- [ ] Preserve more time-frequency structure before pooling in the model architecture.
+- [ ] Train and evaluate a first capability model against `v9_pytorch_cnn_200kseeds`.
+- [ ] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
+- [ ] Commit Milestone H completion.
+
+## Milestone I: Real Audio Prototype
 
 Goal: approximate clean single-note real audio clips.
 
@@ -173,9 +199,9 @@ Goal: approximate clean single-note real audio clips.
 - [ ] Export target/result comparison WAVs.
 - [ ] Export comparison feature plots or data.
 - [ ] Document known failure cases.
-- [ ] Commit Milestone H completion.
+- [ ] Commit Milestone I completion.
 
-## Milestone I: Interface And Workflow
+## Milestone J: Interface And Workflow
 
 Goal: make NeuroWave usable as a tool.
 
@@ -187,7 +213,7 @@ Goal: make NeuroWave usable as a tool.
 - [ ] Add `neurowave match`.
 - [ ] Add `neurowave predict`.
 - [ ] Consider a simple local web UI after CLI is stable.
-- [ ] Commit Milestone I completion.
+- [ ] Commit Milestone J completion.
 
 ## Progress Log
 
