@@ -151,7 +151,7 @@ Goal: move beyond the compact scikit-learn baseline toward a richer inverse mode
 
 - [x] Make an explicit PyTorch dependency and runtime decision.
 - [x] Create mel-spectrogram dataset tensor export from generated metadata.
-- [ ] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
+- [x] Build first PyTorch inverse model for normalized `SynthConfig` vectors.
 - [ ] Train on `d2` or a larger synthetic dataset.
 - [ ] Save PyTorch checkpoints and metrics.
 - [ ] Add prediction script for one clip using the PyTorch model.
@@ -354,3 +354,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Clarify dataset and model naming`
 - Updated the PyTorch runtime decision after verifying current official Python 3.14 support, installed `torch==2.12.0` into the project `.venv`, and verified local torch import.
   Commit: `Update PyTorch runtime decision`
+- Added the first PyTorch CNN inverse model scaffold that maps mel-spectrogram tensors to normalized `SynthConfig` parameter vectors.
+  Commit: `Add PyTorch inverse model`
