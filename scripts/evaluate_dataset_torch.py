@@ -54,7 +54,7 @@ def parse_args():
     )
     parser.add_argument(
         "--device",
-        help="Optional torch device override, such as cpu or mps.",
+        help="Optional torch device override, such as cpu, mps, or cuda.",
     )
     parser.add_argument(
         "--refine-iterations",
@@ -77,8 +77,10 @@ def main() -> int:
 
     checkpoint = load_torch_checkpoint(args.model, device=args.device)
     clip_results = []
+    total_clips = len(selected_rows)
 
-    for row in selected_rows:
+    for offset, row in enumerate(selected_rows, start=1):
+        print(f"\rEvaluating clip {offset}/{total_clips}", end="", flush=True)
         audio_path = resolve_metadata_path(args.metadata, row["audio_path"])
         target_audio, target_sample_rate = sf.read(audio_path)
         clip_result = {
@@ -105,6 +107,7 @@ def main() -> int:
             clip_result["error"] = str(error)
 
         clip_results.append(clip_result)
+    print()
 
     successful_results = [result for result in clip_results if "comparison" in result]
     if not successful_results:

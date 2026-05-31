@@ -42,15 +42,17 @@ Outputs are written under `data/generated/d1/`, which is ignored by git.
 Generate a larger versioned dataset for scaled training:
 
 ```bash
-python scripts/random_patch.py --dataset-version d2 --seed 2000 --count 500
+python scripts/random_patch.py --dataset-version d2 --seed 2000 --count 500 --workers 0
 ```
 
 Generate the 10k-seed PyTorch scale-up dataset:
 
 ```bash
-python scripts/random_patch.py --dataset-version d3 --seed 3000 --count 10000
-python scripts/export_mel_tensors.py --dataset-version d3
+python scripts/random_patch.py --dataset-version d3 --seed 3000 --count 10000 --workers 0
+python scripts/export_mel_tensors.py --dataset-version d3 --workers 0
 ```
+
+Use `--workers 1` for serial mode. Use `--workers 0` for a conservative automatic worker count that limits NumPy/SciPy worker threads to avoid CPU overload.
 
 ## Train The MLP Baseline
 
@@ -81,7 +83,7 @@ python -m pip install torch
 Export generated audio as channel-first mel-spectrogram tensors for future PyTorch training:
 
 ```bash
-python scripts/export_mel_tensors.py --dataset-version d2
+python scripts/export_mel_tensors.py --dataset-version d2 --workers 0
 ```
 
 Train the first PyTorch CNN inverse model on exported `d2` mel tensors:
@@ -91,6 +93,8 @@ python scripts/train_torch.py
 ```
 
 The command saves an ignored checkpoint to `models/v3_pytorch_cnn_500seeds.pt` and an ignored training report to `runs/training/v3_pytorch_cnn_500seeds_metrics.json`.
+
+Training automatically uses CUDA if available, then Apple MPS if available, then CPU. Override it with `--device cpu`, `--device mps`, or `--device cuda`. Add `--quiet` to hide epoch and batch progress.
 
 Train the next 10k-seed PyTorch CNN model after generating/exporting `d3`:
 

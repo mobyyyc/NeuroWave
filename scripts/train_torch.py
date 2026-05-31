@@ -68,7 +68,12 @@ def parse_args():
     )
     parser.add_argument(
         "--device",
-        help="Optional torch device override, such as cpu or mps.",
+        help="Optional torch device override, such as cpu, mps, or cuda.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Disable epoch/batch progress output.",
     )
     parser.add_argument(
         "--model-output",
@@ -94,6 +99,7 @@ def main() -> int:
         test_size=args.test_size,
         random_state=args.random_state,
         device=args.device,
+        progress=not args.quiet,
     )
     model_path = save_torch_checkpoint(
         result["model"],

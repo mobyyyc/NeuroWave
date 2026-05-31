@@ -1,10 +1,24 @@
 """Dataset file generation helpers."""
 
+import concurrent.futures
 import json
+import os
 from pathlib import Path
 
-import soundfile as sf
+# Limit BLAS worker threads before importing numerical libraries. This avoids
+# multiplying CPU usage when dataset work is split across processes.
+CPU_THREAD_LIMIT_ENV_VARS = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
+for env_var in CPU_THREAD_LIMIT_ENV_VARS:
+    os.environ.setdefault(env_var, "1")
+
 import numpy as np
+import soundfile as sf
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
@@ -19,6 +33,7 @@ DEFAULT_METADATA_PATH = Path("data/generated/d1/metadata.jsonl")
 DEFAULT_DATASET_VERSION = "d1"
 DEFAULT_MEL_TENSOR_PATH = Path("data/generated/d1/features/mel_tensors.npz")
 DEFAULT_MEL_TENSOR_FRAMES = 256
+DEFAULT_WORKER_FRACTION = 0.75
 
 
 def generated_dataset_paths(version=DEFAULT_DATASET_VERSION, root=Path("data/generated")):
@@ -39,6 +54,33 @@ def audio_filename(index, seed):
     return f"patch_{index:06d}_seed_{seed}.wav"
 
 
+def default_worker_count(cpu_count=None, fraction=DEFAULT_WORKER_FRACTION):
+    if cpu_count is None:
+        cpu_count = os.cpu_count() or 1
+    if fraction <= 0.0 or fraction > 1.0:
+        raise ValueError("fraction must be in (0, 1]")
+
+    return max(1, int(cpu_count * fraction))
+
+
+def resolve_worker_count(workers):
+    if workers is None:
+        return 1
+    if workers < 0:
+        raise ValueError("workers must be 0 or greater")
+    if workers == 0:
+        return default_worker_count()
+    return workers
+
+
+def print_progress(prefix, completed, total, workers):
+    print(
+        f"\r{prefix} {completed}/{total} (workers: {workers})",
+        end="",
+        flush=True,
+    )
+
+
 def write_random_patch_files(output_dir=DEFAULT_PARAM_DIR, seed=0, count=1):
     if count < 1:
         raise ValueError("count must be at least 1")
@@ -55,49 +97,102 @@ def write_random_patch_files(output_dir=DEFAULT_PARAM_DIR, seed=0, count=1):
     return paths
 
 
+def generate_random_dataset_record(index, seed, param_dir, audio_dir):
+    patch_seed = seed + index
+    patch = random_patch(patch_seed)
+    audio = render_patch(**patch)
+
+    if not audio_avoids_clipping(audio):
+        raise ValueError(f"Generated audio failed clipping constraint: seed {patch_seed}")
+
+    patch_path = Path(param_dir) / patch_filename(index, patch_seed)
+    audio_path = Path(audio_dir) / audio_filename(index, patch_seed)
+
+    save_patch(patch, patch_path)
+    sf.write(audio_path, audio, DEFAULT_SAMPLE_RATE)
+    return {
+        "index": index,
+        "seed": patch_seed,
+        "patch_path": patch_path,
+        "audio_path": audio_path,
+        "sample_rate": DEFAULT_SAMPLE_RATE,
+        "frames": len(audio),
+    }
+
+
+def _generate_random_dataset_record_task(args):
+    return generate_random_dataset_record(*args)
+
+
 def write_random_dataset_files(
     param_dir=DEFAULT_PARAM_DIR,
     audio_dir=DEFAULT_AUDIO_DIR,
     metadata_path=DEFAULT_METADATA_PATH,
     seed=0,
     count=1,
+    workers=1,
+    progress=False,
 ):
     if count < 1:
         raise ValueError("count must be at least 1")
 
     param_destination = Path(param_dir)
     audio_destination = Path(audio_dir)
+    param_destination.mkdir(parents=True, exist_ok=True)
     audio_destination.mkdir(parents=True, exist_ok=True)
     metadata_destination = Path(metadata_path)
     metadata_destination.parent.mkdir(parents=True, exist_ok=True)
-    records = []
+    worker_count = resolve_worker_count(workers)
 
-    for index in range(count):
-        patch_seed = seed + index
-        patch = random_patch(patch_seed)
-        audio = render_patch(**patch)
-
-        if not audio_avoids_clipping(audio):
-            raise ValueError(f"Generated audio failed clipping constraint: seed {patch_seed}")
-
-        patch_path = param_destination / patch_filename(index, patch_seed)
-        audio_path = audio_destination / audio_filename(index, patch_seed)
-
-        save_patch(patch, patch_path)
-        sf.write(audio_path, audio, DEFAULT_SAMPLE_RATE)
-        records.append(
-            {
-                "index": index,
-                "seed": patch_seed,
-                "patch_path": patch_path,
-                "audio_path": audio_path,
-                "sample_rate": DEFAULT_SAMPLE_RATE,
-                "frames": len(audio),
-            }
-        )
+    records = generate_random_dataset_records(
+        param_destination,
+        audio_destination,
+        seed,
+        count,
+        workers=worker_count,
+        progress=progress,
+    )
 
     write_metadata(records, metadata_destination)
 
+    return records
+
+
+def generate_random_dataset_records(param_dir, audio_dir, seed, count, workers=1, progress=False):
+    if workers == 1:
+        records = []
+        for index in range(count):
+            records.append(generate_random_dataset_record(index, seed, param_dir, audio_dir))
+            if progress:
+                print_progress("Generating audio", len(records), count, workers)
+        if progress:
+            print()
+        return records
+
+    tasks = [(index, seed, str(param_dir), str(audio_dir)) for index in range(count)]
+    records = []
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_generate_random_dataset_record_task, task) for task in tasks]
+            for future in concurrent.futures.as_completed(futures):
+                records.append(future.result())
+                if progress:
+                    print_progress("Generating audio", len(records), count, workers)
+    except (OSError, PermissionError) as error:
+        if progress:
+            print(f"\nMultiprocessing unavailable ({error}); falling back to serial generation.")
+        return generate_random_dataset_records(
+            param_dir,
+            audio_dir,
+            seed,
+            count,
+            workers=1,
+            progress=progress,
+        )
+
+    records.sort(key=lambda record: record["index"])
+    if progress:
+        print()
     return records
 
 
@@ -188,6 +283,25 @@ def mel_tensor_from_audio(audio, sample_rate, frames=DEFAULT_MEL_TENSOR_FRAMES):
     return fixed[np.newaxis, :, :].astype(np.float32)
 
 
+def mel_tensor_dataset_record(row, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAMES):
+    audio_path = resolve_metadata_path(metadata_path, row["audio_path"])
+    patch_path = resolve_metadata_path(metadata_path, row["patch_path"])
+
+    audio, sample_rate = sf.read(audio_path)
+    patch = load_patch(patch_path)
+
+    return {
+        "feature": mel_tensor_from_audio(audio, sample_rate, frames=frames),
+        "target": SynthConfig(**patch).to_vector(),
+        "index": row["index"],
+        "seed": row["seed"],
+    }
+
+
+def _mel_tensor_dataset_record_task(args):
+    return mel_tensor_dataset_record(*args)
+
+
 def load_training_dataset(metadata_path=DEFAULT_METADATA_PATH):
     rows = load_metadata(metadata_path)
     features = []
@@ -209,42 +323,82 @@ def load_training_dataset(metadata_path=DEFAULT_METADATA_PATH):
     return np.vstack(features), np.asarray(targets, dtype=float)
 
 
-def load_mel_tensor_dataset(metadata_path=DEFAULT_METADATA_PATH, frames=DEFAULT_MEL_TENSOR_FRAMES):
+def load_mel_tensor_dataset(
+    metadata_path=DEFAULT_METADATA_PATH,
+    frames=DEFAULT_MEL_TENSOR_FRAMES,
+    workers=1,
+    progress=False,
+):
     rows = load_metadata(metadata_path)
-    features = []
-    targets = []
-    indices = []
-    seeds = []
-
-    for row in rows:
-        audio_path = resolve_metadata_path(metadata_path, row["audio_path"])
-        patch_path = resolve_metadata_path(metadata_path, row["patch_path"])
-
-        audio, sample_rate = sf.read(audio_path)
-        patch = load_patch(patch_path)
-
-        features.append(mel_tensor_from_audio(audio, sample_rate, frames=frames))
-        targets.append(SynthConfig(**patch).to_vector())
-        indices.append(row["index"])
-        seeds.append(row["seed"])
-
-    if not features:
+    if not rows:
         raise ValueError("metadata did not contain any training rows")
+    worker_count = resolve_worker_count(workers)
+    records = load_mel_tensor_records(
+        rows,
+        metadata_path,
+        frames=frames,
+        workers=worker_count,
+        progress=progress,
+    )
 
     return {
-        "features": np.stack(features).astype(np.float32),
-        "targets": np.asarray(targets, dtype=np.float32),
-        "indices": np.asarray(indices, dtype=np.int64),
-        "seeds": np.asarray(seeds, dtype=np.int64),
+        "features": np.stack([record["feature"] for record in records]).astype(np.float32),
+        "targets": np.asarray([record["target"] for record in records], dtype=np.float32),
+        "indices": np.asarray([record["index"] for record in records], dtype=np.int64),
+        "seeds": np.asarray([record["seed"] for record in records], dtype=np.int64),
     }
+
+
+def load_mel_tensor_records(rows, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAMES, workers=1, progress=False):
+    if workers == 1:
+        records = []
+        for row in rows:
+            records.append(mel_tensor_dataset_record(row, metadata_path, frames=frames))
+            if progress:
+                print_progress("Exporting tensors", len(records), len(rows), workers)
+        if progress:
+            print()
+        return records
+
+    tasks = [(row, str(metadata_path), frames) for row in rows]
+    records = []
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_mel_tensor_dataset_record_task, task) for task in tasks]
+            for future in concurrent.futures.as_completed(futures):
+                records.append(future.result())
+                if progress:
+                    print_progress("Exporting tensors", len(records), len(rows), workers)
+    except (OSError, PermissionError) as error:
+        if progress:
+            print(f"\nMultiprocessing unavailable ({error}); falling back to serial export.")
+        return load_mel_tensor_records(
+            rows,
+            metadata_path,
+            frames=frames,
+            workers=1,
+            progress=progress,
+        )
+
+    records.sort(key=lambda record: record["index"])
+    if progress:
+        print()
+    return records
 
 
 def save_mel_tensor_dataset(
     metadata_path=DEFAULT_METADATA_PATH,
     output_path=DEFAULT_MEL_TENSOR_PATH,
     frames=DEFAULT_MEL_TENSOR_FRAMES,
+    workers=1,
+    progress=False,
 ):
-    dataset = load_mel_tensor_dataset(metadata_path, frames=frames)
+    dataset = load_mel_tensor_dataset(
+        metadata_path,
+        frames=frames,
+        workers=workers,
+        progress=progress,
+    )
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(

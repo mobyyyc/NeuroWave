@@ -42,6 +42,12 @@ def parse_args():
         default=None,
         help="Path for generated metadata JSONL.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="Worker processes for dataset generation. Use 0 for conservative auto, 1 for serial.",
+    )
     parser.add_argument("--output", help="Optional single patch JSON path.")
     return parser.parse_args()
 
@@ -67,6 +73,8 @@ def main() -> int:
             metadata_path=metadata_output,
             seed=args.seed,
             count=args.count,
+            workers=args.workers,
+            progress=args.count > 1,
         )
 
         if args.count == 1:

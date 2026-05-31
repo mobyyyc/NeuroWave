@@ -40,6 +40,12 @@ def parse_args():
         default=DEFAULT_MEL_TENSOR_FRAMES,
         help="Fixed mel-spectrogram time frames after crop/pad.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="Worker processes for tensor export. Use 0 for conservative auto, 1 for serial.",
+    )
     return parser.parse_args()
 
 
@@ -60,6 +66,8 @@ def main() -> int:
         metadata_path=metadata_path,
         output_path=output_path,
         frames=args.frames,
+        workers=args.workers,
+        progress=True,
     )
     with np.load(saved_path) as tensors:
         result = {

@@ -11,6 +11,7 @@ from minisynth.dataset import (
     DEFAULT_METADATA_PATH,
     audio_filename,
     audio_feature_vector,
+    default_worker_count,
     fixed_frame_array,
     generated_dataset_paths,
     load_mel_tensor_dataset,
@@ -20,6 +21,7 @@ from minisynth.dataset import (
     metadata_record,
     patch_filename,
     resolve_metadata_path,
+    resolve_worker_count,
     save_mel_tensor_dataset,
     write_random_dataset_files,
     write_random_patch_files,
@@ -186,6 +188,18 @@ class TestDatasetGeneration(unittest.TestCase):
             Path("data/generated/d2/metadata.jsonl"),
         )
 
+    def test_default_worker_count_uses_cpu_fraction(self):
+        self.assertEqual(default_worker_count(cpu_count=8), 6)
+        self.assertEqual(default_worker_count(cpu_count=1), 1)
+
+    def test_resolve_worker_count_handles_serial_auto_and_invalid_values(self):
+        self.assertEqual(resolve_worker_count(None), 1)
+        self.assertEqual(resolve_worker_count(1), 1)
+        self.assertGreaterEqual(resolve_worker_count(0), 1)
+
+        with self.assertRaises(ValueError):
+            resolve_worker_count(-1)
+
     def test_write_random_dataset_files_rejects_invalid_count(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaises(ValueError):
@@ -321,6 +335,24 @@ class TestDatasetGeneration(unittest.TestCase):
             self.assertEqual(dataset["targets"].dtype, np.float32)
             self.assertEqual(dataset["indices"].tolist(), [0, 1])
             self.assertEqual(dataset["seeds"].tolist(), [110, 111])
+
+    def test_load_mel_tensor_dataset_supports_serial_worker_mode(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            metadata_path = root / "metadata.jsonl"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=115,
+                count=2,
+                workers=1,
+            )
+
+            dataset = load_mel_tensor_dataset(metadata_path, frames=8, workers=1)
+
+            self.assertEqual(dataset["indices"].tolist(), [0, 1])
+            self.assertEqual(dataset["seeds"].tolist(), [115, 116])
 
     def test_save_mel_tensor_dataset_writes_npz(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -79,7 +79,7 @@ class TestTorchInverseModel(unittest.TestCase):
     def test_select_torch_device_returns_cpu_or_mps(self):
         device = select_torch_device()
 
-        self.assertIn(device.type, ("cpu", "mps"))
+        self.assertIn(device.type, ("cpu", "mps", "cuda"))
 
     def test_expected_mel_tensor_shape_matches_export_shape(self):
         self.assertEqual(
@@ -127,14 +127,16 @@ class TestTorchInverseModel(unittest.TestCase):
                 frames=np.asarray(16, dtype=np.int64),
             )
 
-            result = train_inverse_model(
-                tensor_path=path,
-                model_id="v_test_pytorch_cnn",
-                epochs=1,
-                batch_size=2,
-                random_state=1,
-                device=torch.device("cpu"),
-            )
+            with redirect_stdout(StringIO()):
+                result = train_inverse_model(
+                    tensor_path=path,
+                    model_id="v_test_pytorch_cnn",
+                    epochs=1,
+                    batch_size=2,
+                    random_state=1,
+                    device=torch.device("cpu"),
+                    progress=True,
+                )
 
         metrics = result["metrics"]
 

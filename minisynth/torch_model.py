@@ -25,6 +25,9 @@ DEFAULT_TEST_SIZE = 0.2
 
 
 def select_torch_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+
     if torch.backends.mps.is_available():
         return torch.device("mps")
 
@@ -197,6 +200,7 @@ def train_inverse_model(
     test_size=DEFAULT_TEST_SIZE,
     random_state=0,
     device=None,
+    progress=False,
 ):
     if epochs < 1:
         raise ValueError("epochs must be at least 1")
@@ -220,16 +224,20 @@ def train_inverse_model(
     loss_function = nn.MSELoss()
 
     epoch_losses = []
-    for _ in range(epochs):
+    for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         sample_count = 0
-        for batch_features, batch_targets in tensor_loader(
+        loader = tensor_loader(
             split["train_features"],
             split["train_targets"],
             batch_size=batch_size,
             shuffle=True,
-        ):
+        )
+        total_batches = len(loader)
+        if progress:
+            print(f"Epoch {epoch + 1}/{epochs} starting on {device.type}.")
+        for batch_index, (batch_features, batch_targets) in enumerate(loader, start=1):
             batch_features = batch_features.to(device)
             batch_targets = batch_targets.to(device)
             optimizer.zero_grad()
@@ -239,8 +247,17 @@ def train_inverse_model(
             optimizer.step()
             running_loss += loss.item() * len(batch_features)
             sample_count += len(batch_features)
+            if progress:
+                print(
+                    f"\r  Batch {batch_index}/{total_batches} - loss {loss.item():.6f}",
+                    end="",
+                    flush=True,
+                )
 
-        epoch_losses.append(float(running_loss / sample_count))
+        epoch_loss = float(running_loss / sample_count)
+        epoch_losses.append(epoch_loss)
+        if progress:
+            print(f"\nEpoch {epoch + 1} complete - average loss {epoch_loss:.6f}")
 
     metrics = {
         "model_id": model_id,
