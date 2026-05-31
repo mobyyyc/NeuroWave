@@ -165,6 +165,18 @@ python scripts/train_torch.py \
   --metrics-output runs/training/vN_pytorch_cnn_pitchctx_<training_size>_metrics.json
 ```
 
+Use `--loss-preset audibility` to weight waveform, detune, filter, and envelope parameters more strongly than low-impact normalized parameters:
+
+```bash
+python scripts/train_torch.py \
+  --model-id vN_pytorch_cnn_pitchctx_weighted_<training_size> \
+  --tensor-data data/generated/dN/features/mel_tensors.npz \
+  --target-mode pitch_conditioned_timbre \
+  --loss-preset audibility \
+  --model-output models/vN_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
+  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
+```
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

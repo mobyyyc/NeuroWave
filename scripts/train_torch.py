@@ -15,6 +15,7 @@ from minisynth.torch_model import (
     DEFAULT_BENCHMARK_SIZE,
     DEFAULT_EPOCHS,
     DEFAULT_LEARNING_RATE,
+    DEFAULT_LOSS_PRESET,
     DEFAULT_TEST_SIZE,
     DEFAULT_TORCH_METRICS_PATH,
     DEFAULT_TORCH_MODEL_ID,
@@ -22,6 +23,8 @@ from minisynth.torch_model import (
     DEFAULT_TORCH_TENSOR_PATH,
     DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
+    LOSS_PRESET_AUDIBILITY,
+    LOSS_PRESET_FLAT,
     TARGET_MODE_FULL,
     TARGET_MODE_PITCH_CONDITIONED_TIMBRE,
     WAVEFORM_MODE_CLASSIFICATION,
@@ -86,6 +89,12 @@ def parse_args():
         help="Which synth parameters are used as model outputs.",
     )
     parser.add_argument(
+        "--loss-preset",
+        choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY),
+        default=DEFAULT_LOSS_PRESET,
+        help="Parameter weighting preset for the training loss.",
+    )
+    parser.add_argument(
         "--random-state",
         type=int,
         default=0,
@@ -125,6 +134,7 @@ def main() -> int:
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,
         target_mode=args.target_mode,
+        loss_preset=args.loss_preset,
         random_state=args.random_state,
         device=args.device,
         progress=not args.quiet,

@@ -29,6 +29,9 @@ DEFAULT_WAVEFORM_MODE = WAVEFORM_MODE_CLASSIFICATION
 TARGET_MODE_FULL = "full"
 TARGET_MODE_PITCH_CONDITIONED_TIMBRE = "pitch_conditioned_timbre"
 DEFAULT_TARGET_MODE = TARGET_MODE_FULL
+LOSS_PRESET_FLAT = "flat"
+LOSS_PRESET_AUDIBILITY = "audibility"
+DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
 PARAMETER_METRIC_GROUPS = {
     "global": ("freq", "length"),
     "pitch": ("freq",),
@@ -70,6 +73,21 @@ PARAMETER_METRIC_GROUPS = {
     ),
     "filter": ("cutoff", "resonance"),
     "adsr": ("attack", "decay", "sustain", "release"),
+}
+AUDIBILITY_PARAMETER_WEIGHTS = {
+    "freq": 0.0,
+    "length": 0.75,
+    "osc1_wave": 2.0,
+    "osc1_level": 1.25,
+    "osc2_wave": 2.0,
+    "osc2_level": 1.0,
+    "osc2_detune": 1.5,
+    "cutoff": 2.0,
+    "resonance": 1.25,
+    "attack": 1.5,
+    "decay": 1.25,
+    "sustain": 1.0,
+    "release": 1.25,
 }
 
 
@@ -400,11 +418,49 @@ def tensor_loader(features, targets, batch_size=DEFAULT_BATCH_SIZE, shuffle=True
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
 
-def waveform_classification_loss(model, batch_features, batch_targets):
+def parameter_loss_weights(parameters=None, preset=DEFAULT_LOSS_PRESET):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    if preset == LOSS_PRESET_FLAT:
+        return torch.ones(len(parameters), dtype=torch.float32)
+    if preset == LOSS_PRESET_AUDIBILITY:
+        weights = [
+            AUDIBILITY_PARAMETER_WEIGHTS.get(parameter.name, 1.0)
+            for parameter in parameters
+        ]
+        values = torch.as_tensor(weights, dtype=torch.float32)
+        if torch.sum(values) <= 0:
+            raise ValueError("loss weights must include at least one positive value")
+        return values * (len(values) / torch.sum(values))
+
+    raise ValueError(f"Unsupported loss preset: {preset}")
+
+
+def weighted_mse_loss(predictions, targets, weights):
+    if predictions.shape != targets.shape:
+        raise ValueError("predictions and targets must have the same shape")
+    if weights.ndim != 1 or weights.shape[0] != predictions.shape[1]:
+        raise ValueError("weights must have one value per target parameter")
+
+    batch_weights = weights.to(device=predictions.device, dtype=predictions.dtype)
+    return torch.mean(torch.square(predictions - targets) * batch_weights)
+
+
+def waveform_classification_loss(model, batch_features, batch_targets, loss_weights=None):
     raw = model.raw_outputs(batch_features)
-    continuous_loss = nn.functional.mse_loss(
+    if loss_weights is None:
+        loss_weights = torch.ones(
+            len(model.parameters_schema),
+            dtype=batch_targets.dtype,
+            device=batch_targets.device,
+        )
+    else:
+        loss_weights = loss_weights.to(device=batch_targets.device, dtype=batch_targets.dtype)
+
+    continuous_loss = weighted_mse_loss(
         raw["continuous"],
         batch_targets[:, model.continuous_indices],
+        loss_weights[model.continuous_indices],
     )
     waveform_losses = []
     for index in model.enum_indices:
@@ -415,6 +471,7 @@ def waveform_classification_loss(model, batch_features, batch_targets):
                 raw["waveforms"][parameter.name],
                 target_classes,
             )
+            * loss_weights[index]
         )
 
     if not waveform_losses:
@@ -429,14 +486,28 @@ def categorical_target_classes(values, parameter):
     return torch.clamp(torch.round(scaled), 0, len(choices) - 1).long()
 
 
-def inverse_model_loss(model, predictions, targets, features=None, loss_function=None):
+def inverse_model_loss(
+    model,
+    predictions,
+    targets,
+    features=None,
+    loss_function=None,
+    loss_weights=None,
+):
     if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
         if features is None:
             raise ValueError("features are required for waveform classification loss")
-        return waveform_classification_loss(model, features, targets)
+        return waveform_classification_loss(
+            model,
+            features,
+            targets,
+            loss_weights=loss_weights,
+        )
 
     if loss_function is None:
         loss_function = nn.MSELoss()
+    if loss_weights is not None:
+        return weighted_mse_loss(predictions, targets, loss_weights)
     return loss_function(predictions, targets)
 
 
@@ -642,6 +713,7 @@ def train_inverse_model(
     benchmark_size=DEFAULT_BENCHMARK_SIZE,
     waveform_mode=DEFAULT_WAVEFORM_MODE,
     target_mode=DEFAULT_TARGET_MODE,
+    loss_preset=DEFAULT_LOSS_PRESET,
     random_state=0,
     device=None,
     progress=False,
@@ -678,6 +750,10 @@ def train_inverse_model(
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_function = nn.MSELoss()
+    loss_weights = parameter_loss_weights(
+        target_parameters,
+        preset=loss_preset,
+    ).to(device)
 
     epoch_losses = []
     for epoch in range(epochs):
@@ -704,6 +780,7 @@ def train_inverse_model(
                 batch_targets,
                 features=batch_features,
                 loss_function=loss_function,
+                loss_weights=loss_weights,
             )
             loss.backward()
             optimizer.step()
@@ -741,6 +818,11 @@ def train_inverse_model(
         "model_type": "pytorch_cnn",
         "waveform_mode": waveform_mode,
         "target_mode": target_mode,
+        "loss_preset": loss_preset,
+        "loss_weights": {
+            parameter.name: float(weight)
+            for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
+        },
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],
         "num_samples": int(len(dataset["features"])),

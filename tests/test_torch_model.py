@@ -23,6 +23,7 @@ from minisynth.torch_model import (
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mae_by_name,
+    parameter_loss_weights,
     parameter_mse_torch,
     prepare_model_arrays,
     predict_patch_from_audio,
@@ -33,6 +34,7 @@ from minisynth.torch_model import (
     predict_normalized_vectors,
     select_torch_device,
     waveform_accuracy_by_name,
+    weighted_mse_loss,
 )
 
 
@@ -222,6 +224,23 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["osc1_wave"], 1.0)
         self.assertEqual(metrics["osc2_wave"], 0.0)
 
+    def test_parameter_loss_weights_support_audibility_preset(self):
+        weights = parameter_loss_weights(preset="audibility")
+        names = [parameter.name for parameter in VECTOR_PARAMETERS]
+
+        self.assertEqual(len(weights), len(VECTOR_PARAMETERS))
+        self.assertEqual(float(weights[names.index("freq")]), 0.0)
+        self.assertGreater(float(weights[names.index("cutoff")]), 1.0)
+
+    def test_weighted_mse_loss_applies_per_parameter_weights(self):
+        predictions = torch.tensor([[1.0, 0.0]], dtype=torch.float32)
+        targets = torch.zeros_like(predictions)
+        weights = torch.tensor([2.0, 0.0], dtype=torch.float32)
+
+        loss = weighted_mse_loss(predictions, targets, weights)
+
+        self.assertAlmostEqual(float(loss), 1.0)
+
     def test_train_inverse_model_returns_metrics(self):
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "mel_tensors.npz"
@@ -255,6 +274,8 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["device"], "cpu")
         self.assertEqual(metrics["waveform_mode"], DEFAULT_WAVEFORM_MODE)
         self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
+        self.assertEqual(metrics["loss_preset"], "flat")
+        self.assertIn("cutoff", metrics["loss_weights"])
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
@@ -319,6 +340,33 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["num_features"][0], 2)
         self.assertNotIn("freq", metrics["target_parameters"])
         self.assertNotIn("freq", metrics["test_per_parameter_mae"])
+
+    def test_train_inverse_model_supports_audibility_loss_preset(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                loss_preset="audibility",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["loss_preset"], "audibility")
+        self.assertEqual(metrics["loss_weights"]["freq"], 0.0)
+        self.assertGreater(metrics["loss_weights"]["cutoff"], 1.0)
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()
