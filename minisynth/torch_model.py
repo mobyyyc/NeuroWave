@@ -10,7 +10,13 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES, mel_tensor_from_audio
 from minisynth.randomize import constrain_envelope_fits_length
-from minisynth.schema import SynthConfig, VECTOR_PARAMETERS, categorical_values
+from minisynth.schema import (
+    SynthConfig,
+    VECTOR_PARAMETERS,
+    categorical_values,
+    config_from_vector,
+    normalize_parameter_value,
+)
 
 DEFAULT_MEL_BINS = 64
 DEFAULT_INPUT_CHANNELS = 1
@@ -142,6 +148,15 @@ def parameter_index(name, parameters=None):
     for index, parameter in enumerate(parameters):
         if parameter.name == name:
             return index
+    raise ValueError(f"Unknown parameter: {name}")
+
+
+def parameter_by_name(name, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    for parameter in parameters:
+        if parameter.name == name:
+            return parameter
     raise ValueError(f"Unknown parameter: {name}")
 
 
@@ -455,6 +470,19 @@ def add_pitch_context_channel(features, full_targets):
         (len(targets), 1, x.shape[2], x.shape[3]),
     ).astype(np.float32)
     return np.concatenate([x, pitch_context], axis=1)
+
+
+def add_pitch_context_to_mel_tensor(mel_tensor, freq):
+    if freq is None:
+        raise ValueError("freq is required for pitch-conditioned model prediction")
+    normalized_freq = normalize_parameter_value(parameter_by_name("freq"), float(freq))
+    x = np.asarray(mel_tensor, dtype=np.float32)
+    pitch_context = np.full(
+        (1, x.shape[1], x.shape[2]),
+        normalized_freq,
+        dtype=np.float32,
+    )
+    return np.concatenate([x, pitch_context], axis=0)
 
 
 def targets_for_parameters(full_targets, parameters):
@@ -1053,12 +1081,24 @@ def train_inverse_model(
         "checkpoint_selection": checkpoint_selection,
         "best_epoch": int(best_epoch),
         "best_test_loss": float(best_test_loss),
+        "best_test_objective_loss": float(best_test_loss),
         "test_size": float(test_size),
         "benchmark_size": float(benchmark_size),
         "device": device.type,
         "train_loss": epoch_losses[-1],
+        "train_objective_loss": epoch_losses[-1],
         "train_losses": epoch_losses,
+        "train_objective_losses": epoch_losses,
         "test_losses": test_losses,
+        "test_objective_losses": test_losses,
+        "test_objective_loss": test_losses[-1],
+        "train_parameter_mse": parameter_mse_torch(
+            model,
+            split["train_features"],
+            split["train_targets"],
+            device=device,
+            batch_size=batch_size,
+        ),
         "test_loss": parameter_mse_torch(
             model,
             split["test_features"],
@@ -1082,6 +1122,7 @@ def train_inverse_model(
         "test_indices": split["test_indices"].astype(int).tolist(),
         "benchmark_indices": split["benchmark_indices"].astype(int).tolist(),
     }
+    metrics["test_parameter_mse"] = metrics["test_loss"]
 
     if len(split["benchmark_features"]) > 0:
         benchmark_parameter_metrics = parameter_metrics_torch(
@@ -1093,6 +1134,14 @@ def train_inverse_model(
         )
         metrics.update(
             {
+                "benchmark_objective_loss": dataset_loss_torch(
+                    model,
+                    split["benchmark_features"],
+                    split["benchmark_targets"],
+                    device=device,
+                    batch_size=batch_size,
+                    loss_weights=loss_weights,
+                ),
                 "benchmark_loss": parameter_mse_torch(
                     model,
                     split["benchmark_features"],
@@ -1110,6 +1159,7 @@ def train_inverse_model(
                 ],
             }
         )
+        metrics["benchmark_parameter_mse"] = metrics["benchmark_loss"]
 
     return {
         "model": model,
@@ -1183,8 +1233,21 @@ def predict_normalized_vectors(model, mel_tensors, device=None):
     return predictions.cpu().numpy()
 
 
-def predict_patch_from_audio(model, audio, sample_rate, device=None, frames=DEFAULT_MEL_TENSOR_FRAMES):
+def predict_patch_from_audio(
+    model,
+    audio,
+    sample_rate,
+    device=None,
+    frames=DEFAULT_MEL_TENSOR_FRAMES,
+    freq=None,
+):
     mel_tensor = mel_tensor_from_audio(audio, sample_rate, frames=frames)
+    if getattr(model, "input_channels", DEFAULT_INPUT_CHANNELS) == 2:
+        mel_tensor = add_pitch_context_to_mel_tensor(mel_tensor, freq)
+    elif mel_tensor.shape[0] != getattr(model, "input_channels", DEFAULT_INPUT_CHANNELS):
+        raise ValueError(
+            f"model expects {model.input_channels} input channels, got {mel_tensor.shape[0]}"
+        )
     vector = tuple(
         float(value)
         for value in predict_normalized_vectors(
@@ -1193,7 +1256,12 @@ def predict_patch_from_audio(model, audio, sample_rate, device=None, frames=DEFA
             device=device,
         )[0]
     )
-    patch = SynthConfig.from_vector(vector).to_render_kwargs()
+    parameters = getattr(model, "parameters_schema", VECTOR_PARAMETERS)
+    patch = config_from_vector(vector, parameters=parameters).to_render_kwargs()
+    if "freq" not in getattr(model, "parameter_names", (parameter.name for parameter in VECTOR_PARAMETERS)):
+        if freq is None:
+            raise ValueError("freq is required to render pitch-conditioned predictions")
+        patch["freq"] = float(freq)
     constrain_envelope_fits_length(patch)
     return patch
 

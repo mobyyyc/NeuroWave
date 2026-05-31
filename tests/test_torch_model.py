@@ -40,6 +40,7 @@ from minisynth.torch_model import (
     train_inverse_model,
     predict_normalized_vectors,
     select_torch_device,
+    target_parameters_for_mode,
     waveform_accuracy_by_name,
     weighted_mse_loss,
 )
@@ -362,8 +363,12 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["completed_epochs"], 1)
         self.assertEqual(metrics["best_epoch"], 1)
         self.assertEqual(len(metrics["test_losses"]), 1)
+        self.assertEqual(len(metrics["test_objective_losses"]), 1)
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
+        self.assertGreaterEqual(metrics["train_objective_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
+        self.assertGreaterEqual(metrics["test_parameter_mse"], 0.0)
+        self.assertGreaterEqual(metrics["test_objective_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
         self.assertIn("freq", metrics["test_per_parameter_mae"])
         self.assertIn("adsr", metrics["test_grouped_mae"])
@@ -396,6 +401,8 @@ class TestTorchInverseModel(unittest.TestCase):
 
         self.assertEqual(metrics["benchmark_samples"], 2)
         self.assertIn("benchmark_loss", metrics)
+        self.assertIn("benchmark_parameter_mse", metrics)
+        self.assertIn("benchmark_objective_loss", metrics)
         self.assertIn("benchmark_per_parameter_mae", metrics)
         self.assertIn("benchmark_grouped_mae", metrics)
 
@@ -609,6 +616,41 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertIn("osc1_wave", patch)
         self.assertIn("cutoff", patch)
         self.assertGreater(len(rendered), 0)
+
+    def test_predict_patch_from_audio_accepts_pitch_context(self):
+        model = create_inverse_model(
+            output_dim=len(VECTOR_PARAMETERS) - 1,
+            input_channels=2,
+            parameters=target_parameters_for_mode("pitch_conditioned_timbre"),
+        )
+        audio = render_patch(length=1.0, freq=440.0)
+
+        patch = predict_patch_from_audio(
+            model,
+            audio,
+            44100,
+            device=torch.device("cpu"),
+            freq=440.0,
+        )
+
+        self.assertEqual(patch["freq"], 440.0)
+        self.assertIn("osc1_wave", patch)
+
+    def test_predict_patch_from_audio_requires_pitch_context_when_needed(self):
+        model = create_inverse_model(
+            output_dim=len(VECTOR_PARAMETERS) - 1,
+            input_channels=2,
+            parameters=target_parameters_for_mode("pitch_conditioned_timbre"),
+        )
+        audio = render_patch(length=1.0, freq=440.0)
+
+        with self.assertRaises(ValueError):
+            predict_patch_from_audio(
+                model,
+                audio,
+                44100,
+                device=torch.device("cpu"),
+            )
 
     def test_predict_patch_torch_cli_writes_patch_json(self):
         from scripts.predict_patch_torch import main

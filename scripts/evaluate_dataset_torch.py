@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from minisynth.dataset import DEFAULT_METADATA_PATH, load_metadata, resolve_metadata_path
 from minisynth.evaluation import evaluate_patch_prediction, summarize_weighted_distances
+from minisynth.io import load_patch
 from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
@@ -89,11 +90,14 @@ def main() -> int:
             "audio_path": str(audio_path),
         }
         try:
+            patch_path = resolve_metadata_path(args.metadata, row["patch_path"])
+            target_patch = load_patch(patch_path)
             patch = predict_patch_from_audio(
                 checkpoint["model"],
                 target_audio,
                 target_sample_rate,
                 device=args.device,
+                freq=target_patch.get("freq"),
             )
             result = evaluate_patch_prediction(
                 patch,

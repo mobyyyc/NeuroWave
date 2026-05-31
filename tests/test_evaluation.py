@@ -190,6 +190,57 @@ class TestPredictionEvaluation(unittest.TestCase):
         self.assertIn('"mean_weighted_distance"', report_text)
         self.assertIn('"failed_count": 0', report_text)
 
+    def test_evaluate_dataset_torch_cli_supports_pitch_conditioned_model(self):
+        from minisynth.torch_model import target_parameters_for_mode
+        from scripts.evaluate_dataset_torch import main
+
+        model = create_inverse_model(
+            output_dim=len(target_parameters_for_mode("pitch_conditioned_timbre")),
+            input_channels=2,
+            parameters=target_parameters_for_mode("pitch_conditioned_timbre"),
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            metadata_path = root / "metadata.jsonl"
+            model_path = root / "model.pt"
+            output_path = root / "eval.json"
+            write_random_dataset_files(
+                param_dir=root / "params",
+                audio_dir=root / "audio",
+                metadata_path=metadata_path,
+                seed=5100,
+                count=2,
+            )
+            save_torch_checkpoint(model, model_path, metrics={"target_mode": "pitch_conditioned_timbre"})
+
+            import sys
+
+            original_argv = sys.argv
+            try:
+                sys.argv = [
+                    "evaluate_dataset_torch.py",
+                    "--metadata",
+                    str(metadata_path),
+                    "--model",
+                    str(model_path),
+                    "--count",
+                    "2",
+                    "--output",
+                    str(output_path),
+                    "--device",
+                    "cpu",
+                ]
+                with redirect_stdout(StringIO()):
+                    exit_code = main()
+            finally:
+                sys.argv = original_argv
+
+            report_text = output_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn('"failed_count": 0', report_text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,6 +32,11 @@ def parse_args():
         "--device",
         help="Optional torch device override, such as cpu or mps.",
     )
+    parser.add_argument(
+        "--freq",
+        type=float,
+        help="Known or estimated fundamental frequency in Hz for pitch-conditioned models.",
+    )
     return parser.parse_args()
 
 
@@ -44,6 +49,7 @@ def main() -> int:
         audio,
         sample_rate,
         device=args.device,
+        freq=args.freq,
     )
 
     save_patch(patch, args.output)
