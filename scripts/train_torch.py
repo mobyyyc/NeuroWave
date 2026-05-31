@@ -16,6 +16,7 @@ from minisynth.torch_model import (
     DEFAULT_EPOCHS,
     DEFAULT_LEARNING_RATE,
     DEFAULT_LOSS_PRESET,
+    DEFAULT_MODEL_SIZE,
     DEFAULT_OPTIMIZER,
     DEFAULT_SCHEDULER,
     DEFAULT_CHECKPOINT_SELECTION,
@@ -28,6 +29,9 @@ from minisynth.torch_model import (
     DEFAULT_WAVEFORM_MODE,
     LOSS_PRESET_AUDIBILITY,
     LOSS_PRESET_FLAT,
+    MODEL_SIZE_LARGE,
+    MODEL_SIZE_MEDIUM,
+    MODEL_SIZE_SMALL,
     OPTIMIZER_ADAM,
     OPTIMIZER_ADAMW,
     SCHEDULER_NONE,
@@ -140,6 +144,12 @@ def parse_args():
         help="Which synth parameters are used as model outputs.",
     )
     parser.add_argument(
+        "--model-size",
+        choices=(MODEL_SIZE_SMALL, MODEL_SIZE_MEDIUM, MODEL_SIZE_LARGE),
+        default=DEFAULT_MODEL_SIZE,
+        help="Named PyTorch CNN capacity preset.",
+    )
+    parser.add_argument(
         "--loss-preset",
         choices=(LOSS_PRESET_FLAT, LOSS_PRESET_AUDIBILITY),
         default=DEFAULT_LOSS_PRESET,
@@ -188,6 +198,7 @@ def main() -> int:
         scheduler_gamma=args.scheduler_gamma,
         early_stopping_patience=args.early_stopping_patience,
         checkpoint_selection=args.checkpoint_selection,
+        model_size=args.model_size,
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,

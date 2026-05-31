@@ -196,6 +196,8 @@ python scripts/train_torch.py \
   --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
 ```
 
+Use `--model-size medium` or `--model-size large` to scale model capacity without changing source code. Keep `small` for direct comparisons against earlier runs.
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

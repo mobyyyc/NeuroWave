@@ -14,9 +14,11 @@ from minisynth.io import load_patch
 from minisynth.schema import VECTOR_PARAMETERS
 from minisynth.torch_model import (
     DEFAULT_MEL_BINS,
+    DEFAULT_MODEL_SIZE,
     DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
+    build_cnn_encoder,
     create_optimizer,
     create_scheduler,
     create_inverse_model,
@@ -74,6 +76,20 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(outputs.shape, (2, len(VECTOR_PARAMETERS)))
         self.assertEqual(model.waveform_mode, "scalar_regression")
 
+    def test_create_inverse_model_supports_named_model_sizes(self):
+        small = create_inverse_model(model_size="small")
+        medium = create_inverse_model(model_size="medium")
+        large = create_inverse_model(model_size="large")
+
+        self.assertEqual(small.model_size, DEFAULT_MODEL_SIZE)
+        self.assertEqual(medium.model_size, "medium")
+        self.assertEqual(large.model_size, "large")
+
+    def test_build_cnn_encoder_ends_with_pooling_layer(self):
+        layers = build_cnn_encoder(input_channels=1, channels=(8, 16))
+
+        self.assertEqual(layers[-1].__class__.__name__, "AdaptiveAvgPool2d")
+
     def test_model_rejects_wrong_input_rank(self):
         model = create_inverse_model()
 
@@ -93,6 +109,10 @@ class TestTorchInverseModel(unittest.TestCase):
     def test_model_rejects_invalid_waveform_mode(self):
         with self.assertRaises(ValueError):
             MelSpectrogramInverseModel(waveform_mode="bad-mode")
+
+    def test_model_rejects_invalid_model_size(self):
+        with self.assertRaises(ValueError):
+            MelSpectrogramInverseModel(model_size="huge")
 
     def test_predict_normalized_vectors_returns_numpy_array(self):
         model = create_inverse_model()
@@ -320,6 +340,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["device"], "cpu")
         self.assertEqual(metrics["waveform_mode"], DEFAULT_WAVEFORM_MODE)
         self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
+        self.assertEqual(metrics["model_size"], DEFAULT_MODEL_SIZE)
         self.assertEqual(metrics["loss_preset"], "flat")
         self.assertIn("cutoff", metrics["loss_weights"])
         self.assertEqual(metrics["optimizer"], "adam")
@@ -454,6 +475,31 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["scheduler"], "step")
         self.assertLessEqual(metrics["completed_epochs"], 2)
         self.assertGreaterEqual(metrics["best_test_loss"], 0.0)
+
+    def test_train_inverse_model_supports_model_size(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                model_size="medium",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["model_size"], "medium")
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()

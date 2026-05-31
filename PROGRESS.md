@@ -185,7 +185,7 @@ Evidence from local reports:
 - [x] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
 - [x] Add parameter-weighted loss support.
 - [x] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
-- [ ] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
+- [x] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
 - [ ] Preserve more time-frequency structure before pooling in the model architecture.
 - [ ] Train and evaluate a first capability model against `v9_pytorch_cnn_200kseeds`.
 - [ ] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
@@ -422,3 +422,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add parameter weighted loss`
 - Added PyTorch optimizer and training controls for AdamW, weight decay, step LR scheduling, early stopping, validation-loss history, and best-validation checkpoint selection. Scaling note: add richer schedulers such as cosine or reduce-on-plateau after the first medium/large model comparisons.
   Commit: `Add training control options`
+- Added named PyTorch model-size presets (`small`, `medium`, `large`) so capacity can scale without editing training code. Scaling note: add residual blocks or attention-style encoders after comparing these preset sizes on the fixed benchmark.
+  Commit: `Add scalable model sizes`
