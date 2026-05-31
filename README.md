@@ -63,7 +63,13 @@ python scripts/train_mlp.py --metadata data/generated/d2/metadata.jsonl --model-
 
 ## PyTorch Runtime
 
-PyTorch work is planned in a separate runtime path. See `PYTORCH_DECISION.md` before installing or adding PyTorch dependencies.
+PyTorch work uses the current Python 3.14 project environment. See `PYTORCH_DECISION.md` for the runtime decision.
+
+Install PyTorch for Milestone G work:
+
+```bash
+python -m pip install torch
+```
 
 Export generated audio as channel-first mel-spectrogram tensors for future PyTorch training:
 

@@ -1,41 +1,39 @@
 # NeuroWave PyTorch Runtime Decision
 
-Decision: do not add PyTorch to the current project `.venv` yet.
+Decision: use PyTorch in the current project `.venv`.
 
 ## Current Runtime
 
 - Local Python: `3.14.0`.
 - Platform: macOS arm64.
-- `torch` is not currently installed.
+- PyTorch now officially recommends Python 3.10 through 3.14 on macOS.
+- Local PyTorch install: `2.12.0`.
+- Local MPS availability check: unavailable, so use CPU locally unless this changes.
 - The existing scikit-learn baseline works and remains the regression baseline.
 
 ## Compatibility Decision
 
-Use a separate Python 3.12 environment for PyTorch work unless official PyTorch macOS
-wheel support for the active local Python version is confirmed at implementation time.
+Use the existing Python 3.14 project environment for PyTorch work.
 
 Reason:
 
 - The current project `.venv` uses Python 3.14.
-- PyTorch's macOS install documentation recommends Python 3.9 through 3.12.
-- Adding PyTorch directly to the current `.venv` would risk destabilizing the working
-  baseline and test environment.
+- Current PyTorch install documentation recommends Python 3.10 through 3.14 on macOS.
+- The PyTorch release compatibility matrix lists recent PyTorch releases with Python
+  3.14 support.
+- Keeping one project environment is simpler now that the active Python version is
+  inside the supported range.
 
 ## Dependency Policy
 
-- Do not add `torch` to `requirements.txt` yet.
-- Do not install PyTorch as part of ordinary setup yet.
-- When Milestone G implementation begins, create an explicit PyTorch setup path, likely:
+- Install PyTorch into the existing `.venv` for Milestone G work.
+- Keep PyTorch code isolated enough that the existing scikit-learn baseline remains usable.
+- Add PyTorch dependency documentation before relying on it for normal setup.
+- The local install command is:
 
 ```bash
-python3.12 -m venv .venv-torch
-source .venv-torch/bin/activate
-python -m pip install -r requirements.txt
 python -m pip install torch
 ```
-
-If Python 3.12 is unavailable locally, install or select a compatible Python runtime
-before adding PyTorch code.
 
 ## Training Runtime
 

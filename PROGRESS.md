@@ -352,3 +352,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Export mel tensors for PyTorch training`
 - Added explicit dataset/model/run naming rules and separated dataset IDs (`d1`, `d2`) from model IDs (`vN_modeltype_size`).
   Commit: `Clarify dataset and model naming`
+- Updated the PyTorch runtime decision after verifying current official Python 3.14 support, installed `torch==2.12.0` into the project `.venv`, and verified local torch import.
+  Commit: `Update PyTorch runtime decision`
