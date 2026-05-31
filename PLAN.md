@@ -649,7 +649,9 @@ Roadmap:
 - Add per-parameter validation metrics so average MAE cannot hide weak targets.
 - Report waveform accuracy separately from continuous-parameter MAE.
 - Replace scalar waveform enum regression with explicit classification heads or continuous wave-mix targets.
-- Consider removing `freq` and `length` from the core timbre model, or handle them with separate pitch/duration estimators.
+- Remove `freq` from the core timbre prediction target while still giving the model pitch context. For synthetic data, use the exact patch `freq` as known conditioning; for real audio later, estimate pitch with a classical monophonic pitch detector or allow manual pitch input.
+- Keep `length` in the model design for now because note duration changes the interpretation of ADSR parameters and the difference between plucks and pads.
+- Add target groups so reports can separate pitch-conditioned timbre quality from pitch estimation and duration handling.
 - Add parameter-weighted losses so perceptually important parameters are not treated the same as low-impact parameters.
 - Build a larger model family with enough capacity for the current task, such as deeper CNN blocks, residual blocks, wider channel counts, and stronger MLP heads.
 - Preserve time-frequency structure longer instead of collapsing the spectrogram too early with global average pooling.
@@ -663,6 +665,7 @@ Roadmap:
 Acceptance criteria:
 
 - Training reports include per-parameter MAE, continuous-parameter MAE, waveform accuracy, train/test loss, train/test MAE, dataset ID, model ID, epochs, batch size, learning rate, optimizer, scheduler, and checkpoint-selection rule.
+- Training reports include grouped metrics such as timbre MAE, ADSR MAE, oscillator MAE, filter MAE, waveform accuracy, and pitch-conditioned metrics that exclude `freq` from model quality.
 - The model architecture can intentionally be scaled without editing core training code.
 - At least one stronger model reaches materially better validation quality than `v9_pytorch_cnn_200kseeds`.
 - The project can distinguish model bottlenecks from data bottlenecks using benchmark reports.
@@ -706,7 +709,11 @@ The ML system should start with a fixed-length vector. Avoid dynamic patch graph
 
 ### Separate Pitch From Timbre
 
-For early training, keep pitch controlled by `note_midi` and focus the model on timbre. Otherwise the model may waste capacity learning pitch instead of synth settings.
+For synthetic training, use the exact patch pitch as known context and focus the inverse model on timbre. The model should use pitch to interpret the mel spectrogram, because the same synth settings produce different spectra at different fundamentals, but it should not waste output capacity predicting `freq` when synthetic data already provides it exactly.
+
+For real single-note clips, estimate pitch before model inference with a classical monophonic pitch estimator such as YIN or pYIN, and allow manual pitch input when automatic estimation fails. A separate learned pitch model should wait until classical pitch detection becomes a proven bottleneck.
+
+Keep duration separate from pitch. Unlike `freq`, `length` affects ADSR interpretation and whether a sound behaves like a pluck, key, or pad, so it should remain visible to the model design until benchmark evidence shows a better representation.
 
 ### Save Everything
 

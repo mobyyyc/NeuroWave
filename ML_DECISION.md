@@ -150,7 +150,40 @@ Current rule:
   measured and improved.
 - Add per-parameter metrics before changing the model so every later experiment explains
   what improved and what did not.
-- Treat waveform identity, continuous timbre parameters, pitch, and duration as separable
-  prediction problems unless evidence shows a single regression vector is sufficient.
+- Treat waveform identity, continuous timbre parameters, pitch context, and duration context
+  as separable modeling concerns unless evidence shows a single regression vector is sufficient.
 - Use stronger PyTorch architectures, better checkpoint selection, optimizer controls, and
   fixed benchmark reports before scaling datasets again.
+
+## Pitch And Length Target Decision
+
+Decision: do not make `freq` a core timbre prediction target in the next model design.
+Use exact synthetic patch `freq` as pitch conditioning during synthetic training, and
+use classical pitch estimation or manual pitch input later for real single-note clips.
+
+Reason:
+
+- Different fundamentals produce different mel spectrograms for the same synth settings, so
+  the model should be pitch-aware.
+- Synthetic datasets already contain exact `freq`, so forcing the model to predict it wastes
+  output capacity and can contaminate timbre-quality metrics.
+- For real monophonic clips, pitch is a well-scoped preprocessing problem that can start with
+  YIN or pYIN before introducing any learned pitch model.
+
+Decision: keep `length` visible to the model design for now.
+
+Reason:
+
+- Duration changes how ADSR parameters are interpreted.
+- The difference between a pluck, key-like sound, and pad depends partly on note length and
+  envelope timing.
+- Removing `length` too early could make envelope prediction look worse for the wrong reason.
+
+Near-term rule:
+
+- Add grouped target metrics before changing the training target: timbre metrics excluding
+  `freq`, ADSR metrics, oscillator metrics, filter metrics, and waveform accuracy.
+- Then train a pitch-conditioned timbre model that receives exact synthetic `freq` as input
+  context but does not include `freq` in the output loss.
+- Keep real-audio pitch estimation in Milestone I unless synthetic pitch conditioning exposes
+  a blocker earlier.

@@ -179,7 +179,10 @@ Evidence from local reports:
 - [x] Add a fixed benchmark split or benchmark dataset that is not used for training or tuning.
 - [x] Add model comparison reporting across parameter metrics and rendered-audio metrics.
 - [ ] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
-- [ ] Decide whether `freq` and `length` stay in the timbre model or move to separate pitch/duration handling.
+- [x] Decide pitch/length handling strategy for the next model-design iteration.
+- [ ] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
+- [ ] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
+- [ ] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
 - [ ] Add parameter-weighted loss support.
 - [ ] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
 - [ ] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
@@ -403,3 +406,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Reorganize training README`
 - Added PyTorch per-parameter metrics, waveform accuracy metrics, optional fixed benchmark splits, and comparison reporting that combines parameter metrics with rendered-audio evaluation.
   Commit: `Add PyTorch model diagnostics`
+- Decided the next inverse-model design should not predict `freq`; synthetic patch `freq` should condition the model, real-audio pitch should later come from classical pitch estimation or manual input, and `length` should remain visible because it affects ADSR interpretation.
+  Commit: `Document pitch conditioning strategy`

@@ -177,6 +177,14 @@ python scripts/evaluate_dataset_torch.py \
 
 Evaluation reports include weighted audio distance plus the component distances used to score predicted renders against target audio.
 
+## Pitch And Length Strategy
+
+For future model-quality work, `freq` should be treated as pitch context rather than a core timbre prediction target. Synthetic datasets already know the exact patch `freq`, so the model can use that value to interpret the mel spectrogram without spending output capacity predicting pitch.
+
+For real one-note clips later, estimate pitch before prediction with a classical monophonic pitch estimator or allow manual pitch input.
+
+Keep `length` visible to the model design for now because duration affects ADSR interpretation and whether a sound behaves like a pluck, key, or pad.
+
 ## Predict One Patch
 
 Predict a patch JSON from one audio clip using a PyTorch checkpoint:
