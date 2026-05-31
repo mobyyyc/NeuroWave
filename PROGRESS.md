@@ -187,6 +187,7 @@ Evidence from local reports:
 - [x] Add optimizer and training controls: AdamW, weight decay, scheduler, early stopping, and best-validation checkpoint saving.
 - [x] Build a larger scalable PyTorch model family with deeper/wider CNN or residual blocks.
 - [x] Preserve more time-frequency structure before pooling in the model architecture.
+- [x] Add worst-clip diagnostics that compare target and predicted synth parameters for rendered-audio failures.
 - [ ] Train and evaluate a first capability model against `v9_pytorch_cnn_200kseeds`.
 - [ ] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
 - [ ] Commit Milestone H completion.
@@ -426,3 +427,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add scalable model sizes`
 - Added `time_frequency` pooling mode that preserves a small time-frequency grid before the prediction head, while keeping `global` pooling for legacy comparisons. Scaling note: evaluate whether the retained grid should grow or become attention-based once medium and large models are benchmarked.
   Commit: `Preserve time frequency pooling`
+- Added rendered-audio evaluation diagnostics that save target patches, predicted patches, normalized per-parameter errors, and the worst clips ranked by weighted audio distance. Scaling note: use these diagnostics to design hybrid losses and model heads before increasing dataset size again.
+  Commit: `Add worst clip evaluation diagnostics`

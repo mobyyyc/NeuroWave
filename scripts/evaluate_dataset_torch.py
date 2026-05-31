@@ -12,7 +12,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.dataset import DEFAULT_METADATA_PATH, load_metadata, resolve_metadata_path
-from minisynth.evaluation import evaluate_patch_prediction, summarize_weighted_distances
+from minisynth.evaluation import (
+    evaluate_patch_prediction,
+    parameter_error_report,
+    summarize_weighted_distances,
+    worst_clip_diagnostics,
+)
 from minisynth.io import load_patch
 from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_PATH,
@@ -63,6 +68,12 @@ def parse_args():
         default=0,
         help="Optional local search iterations after each PyTorch prediction.",
     )
+    parser.add_argument(
+        "--diagnostics-top-n",
+        type=int,
+        default=10,
+        help="Number of worst clips to summarize with target/predicted parameter errors.",
+    )
     return parser.parse_args()
 
 
@@ -107,6 +118,14 @@ def main() -> int:
                 refine_seed=row["seed"],
             )
             clip_result["comparison"] = result["comparison"]
+            clip_result["target_patch"] = target_patch
+            clip_result["predicted_patch"] = result["patch"]
+            clip_result["parameter_errors"] = parameter_error_report(
+                target_patch,
+                result["patch"],
+            )
+            if "refinement" in result:
+                clip_result["refinement"] = result["refinement"]
         except ValueError as error:
             clip_result["error"] = str(error)
 
@@ -127,6 +146,12 @@ def main() -> int:
         "summary": {
             **summarize_weighted_distances(successful_results),
             "failed_count": len(clip_results) - len(successful_results),
+        },
+        "diagnostics": {
+            "worst_clips": worst_clip_diagnostics(
+                successful_results,
+                top_n=args.diagnostics_top_n,
+            ),
         },
         "clips": clip_results,
     }

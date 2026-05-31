@@ -229,7 +229,7 @@ python scripts/evaluate_dataset_torch.py \
   --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json
 ```
 
-Evaluation reports include weighted audio distance plus the component distances used to score predicted renders against target audio.
+Evaluation reports include weighted audio distance plus the component distances used to score predicted renders against target audio. They also include target patches, predicted patches, normalized per-parameter errors, and a `diagnostics.worst_clips` section ranked by weighted audio distance. Use `--diagnostics-top-n 20` when you want a larger worst-case review set.
 
 ## Pitch And Length Strategy
 

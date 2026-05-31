@@ -6,7 +6,7 @@ from minisynth.compare import compare_audio_arrays
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.engine import render_patch
 from minisynth.ml import predict_patch_from_audio
-from minisynth.schema import SynthConfig
+from minisynth.schema import SynthConfig, VECTOR_PARAMETERS, categorical_values, normalize_parameter_value
 from minisynth.search import local_refinement_search
 
 
@@ -129,3 +129,82 @@ def summarize_weighted_distances(results):
         "min_weighted_distance": float(np.min(scores)),
         "max_weighted_distance": float(np.max(scores)),
     }
+
+
+def parameter_error_report(target_patch, predicted_patch, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+
+    errors = {}
+    for parameter in parameters:
+        target_value = target_patch[parameter.name]
+        predicted_value = predicted_patch[parameter.name]
+        if parameter.kind == "enum" and parameter.scale == "categorical":
+            choices = categorical_values(parameter)
+            target_index = choices.index(target_value)
+            predicted_index = choices.index(predicted_value)
+            if len(choices) == 1:
+                normalized_error = 0.0
+            else:
+                normalized_error = abs(target_index - predicted_index) / (len(choices) - 1)
+            errors[parameter.name] = {
+                "target": target_value,
+                "predicted": predicted_value,
+                "match": target_value == predicted_value,
+                "normalized_error": float(normalized_error),
+            }
+            continue
+
+        target_normalized = normalize_parameter_value(parameter, target_value)
+        predicted_normalized = normalize_parameter_value(parameter, predicted_value)
+        errors[parameter.name] = {
+            "target": float(target_value),
+            "predicted": float(predicted_value),
+            "target_normalized": float(target_normalized),
+            "predicted_normalized": float(predicted_normalized),
+            "normalized_error": float(abs(target_normalized - predicted_normalized)),
+        }
+
+    return errors
+
+
+def worst_clip_diagnostics(results, top_n=10):
+    if top_n < 1:
+        return []
+
+    diagnostic_results = [
+        result
+        for result in results
+        if "comparison" in result and "parameter_errors" in result
+    ]
+    diagnostic_results.sort(
+        key=lambda result: result["comparison"]["weighted_distance"],
+        reverse=True,
+    )
+
+    worst = []
+    for result in diagnostic_results[:top_n]:
+        parameter_errors = result["parameter_errors"]
+        ranked_errors = sorted(
+            parameter_errors.items(),
+            key=lambda item: item[1]["normalized_error"],
+            reverse=True,
+        )
+        worst.append(
+            {
+                "index": result["index"],
+                "seed": result["seed"],
+                "audio_path": result["audio_path"],
+                "weighted_distance": result["comparison"]["weighted_distance"],
+                "comparison": result["comparison"],
+                "largest_parameter_errors": [
+                    {"parameter": name, **details}
+                    for name, details in ranked_errors[:5]
+                ],
+                "parameter_errors": parameter_errors,
+                "target_patch": result["target_patch"],
+                "predicted_patch": result["predicted_patch"],
+            }
+        )
+
+    return worst

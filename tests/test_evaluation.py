@@ -13,7 +13,9 @@ from minisynth.dataset import write_random_dataset_files
 from minisynth.engine import render_patch
 from minisynth.evaluation import evaluate_audio_prediction
 from minisynth.evaluation import evaluate_patch_prediction
+from minisynth.evaluation import parameter_error_report
 from minisynth.evaluation import summarize_weighted_distances
+from minisynth.evaluation import worst_clip_diagnostics
 from minisynth.ml import train_mlp_from_metadata
 from minisynth.torch_model import create_inverse_model, save_torch_checkpoint
 
@@ -104,6 +106,74 @@ class TestPredictionEvaluation(unittest.TestCase):
         self.assertGreaterEqual(result["comparison"]["weighted_distance"], 0.0)
         self.assertEqual(result["rendered_audio"].ndim, 1)
 
+    def test_parameter_error_report_compares_normalized_parameters(self):
+        target = {
+            "freq": 440.0,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.8,
+            "osc2_wave": "sine",
+            "osc2_level": 0.4,
+            "osc2_detune": 0.0,
+            "cutoff": 1200.0,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        predicted = {**target, "osc1_wave": "noise", "sustain": 0.5}
+
+        errors = parameter_error_report(target, predicted)
+
+        self.assertFalse(errors["osc1_wave"]["match"])
+        self.assertGreater(errors["osc1_wave"]["normalized_error"], 0.0)
+        self.assertAlmostEqual(errors["sustain"]["normalized_error"], 0.2)
+        self.assertEqual(errors["osc2_wave"]["normalized_error"], 0.0)
+
+    def test_worst_clip_diagnostics_ranks_by_weighted_distance(self):
+        target_patch = {
+            "freq": 440.0,
+            "length": 1.0,
+            "osc1_wave": "saw",
+            "osc1_level": 0.8,
+            "osc2_wave": "sine",
+            "osc2_level": 0.4,
+            "osc2_detune": 0.0,
+            "cutoff": 1200.0,
+            "resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.3,
+        }
+        predicted_patch = {**target_patch, "osc1_wave": "noise"}
+        results = [
+            {
+                "index": 1,
+                "seed": 1,
+                "audio_path": "a.wav",
+                "comparison": {"weighted_distance": 1.0},
+                "target_patch": target_patch,
+                "predicted_patch": target_patch,
+                "parameter_errors": parameter_error_report(target_patch, target_patch),
+            },
+            {
+                "index": 2,
+                "seed": 2,
+                "audio_path": "b.wav",
+                "comparison": {"weighted_distance": 5.0},
+                "target_patch": target_patch,
+                "predicted_patch": predicted_patch,
+                "parameter_errors": parameter_error_report(target_patch, predicted_patch),
+            },
+        ]
+
+        diagnostics = worst_clip_diagnostics(results, top_n=1)
+
+        self.assertEqual(diagnostics[0]["index"], 2)
+        self.assertEqual(diagnostics[0]["largest_parameter_errors"][0]["parameter"], "osc1_wave")
+
     def test_evaluate_prediction_torch_cli_writes_report(self):
         from scripts.evaluate_prediction_torch import main
 
@@ -189,6 +259,8 @@ class TestPredictionEvaluation(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn('"mean_weighted_distance"', report_text)
         self.assertIn('"failed_count": 0', report_text)
+        self.assertIn('"diagnostics"', report_text)
+        self.assertIn('"parameter_errors"', report_text)
 
     def test_evaluate_dataset_torch_cli_supports_pitch_conditioned_model(self):
         from minisynth.torch_model import target_parameters_for_mode
