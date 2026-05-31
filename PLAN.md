@@ -662,6 +662,23 @@ Roadmap:
 - Evaluate whether model predictions are better than nearest-neighbor retrieval and random/search baselines at similar compute.
 - Add optional prediction refinement after the model only after raw model quality is measured clearly.
 
+Reassessment after the first pitch-conditioned capability runs:
+
+- `v10_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds` gave the best rendered-audio distance among the first capability models, but it had weaker parameter metrics and weak waveform accuracy.
+- `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds` improved parameter MAE and waveform accuracy, but rendered audio got worse.
+- `v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds` improved test MAE, waveform accuracy, oscillator MAE, and ADSR MAE again, but rendered audio got worse because filter/cutoff errors grew.
+- Prediction diagnostics show strong regression toward average parameter values, especially for oscillator levels, resonance, ADSR times, release, and sometimes length. This means the current shared continuous head and scalar loss tuning are likely a model-design bottleneck.
+
+The next major model series should therefore be `v3.0`, not another minor loss-weight tweak.
+The preferred setup is:
+
+- Keep pitch-conditioned timbre prediction: exact synthetic `freq` is input context and not an output target.
+- Keep waveform classification for the current schema, but treat continuous wave-mix targets as the next synth-schema upgrade if waveform accuracy remains limiting.
+- Replace the single shared continuous output vector with group-aware or per-parameter heads, such as separate heads for length, oscillator levels/detune, filter cutoff/resonance, and ADSR.
+- Use group-balanced loss so oscillator, filter, ADSR, and duration objectives cannot drown each other out.
+- Track prediction distribution diagnostics, especially target-vs-predicted standard deviation per parameter, so mean-collapse is visible before rendered-audio evaluation.
+- Use a larger or residual CNN backbone only after the reporting can prove whether capacity, target representation, or data ambiguity is the bottleneck.
+
 Acceptance criteria:
 
 - Training reports include per-parameter MAE, continuous-parameter MAE, waveform accuracy, train/test loss, train/test MAE, dataset ID, model ID, epochs, batch size, learning rate, optimizer, scheduler, and checkpoint-selection rule.

@@ -171,8 +171,11 @@ Evidence from local reports:
 - `v5_pytorch_cnn_10kseeds`: `test_loss = 0.0461`, `test_mae = 0.1616`.
 - `v8_pytorch_cnn_50kseeds`: `test_loss = 0.0375`, `test_mae = 0.1339`.
 - `v9_pytorch_cnn_200kseeds`: `test_loss = 0.0356`, `test_mae = 0.1284`.
+- `v10_pytorch_cnn_pitchctx_weighted_medium_tfpool_50kseeds`: best rendered-audio result in the first capability set, but weaker parameter metrics.
+- `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`: better parameter MAE and waveform accuracy than `v10`, but worse rendered-audio distance.
+- `v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds`: best parameter MAE and waveform accuracy in the capability set, but worse rendered-audio distance because filter/cutoff errors grew.
 - Train/test metrics remain close, which suggests undercapacity, target representation limits, or loss design limits more than overfitting.
-- The next target is to push toward `test_mae <= 0.05` on a fixed synthetic holdout, while also improving rendered-audio distance.
+- Prediction spread diagnostics show strong regression toward average values for oscillator levels, resonance, ADSR timing, and release. The next target is to push toward `test_mae <= 0.05` on a fixed synthetic holdout while fixing this mean-collapse behavior and improving rendered-audio distance.
 
 - [x] Add per-parameter MAE reporting to PyTorch training metrics.
 - [x] Add waveform prediction metrics separate from continuous-parameter MAE.
@@ -189,8 +192,13 @@ Evidence from local reports:
 - [x] Preserve more time-frequency structure before pooling in the model architecture.
 - [x] Add worst-clip diagnostics that compare target and predicted synth parameters for rendered-audio failures.
 - [x] Add hybrid loss preset for the next v2.1 pitch-conditioned model.
-- [ ] Train and evaluate a first capability model against `v9_pytorch_cnn_200kseeds`.
-- [ ] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
+- [x] Train and evaluate first capability models against `v9_pytorch_cnn_200kseeds`.
+- [x] Document whether remaining error is model capacity, target ambiguity, dataset quality, or synth parameter non-uniqueness.
+- [ ] Add prediction distribution diagnostics for target-vs-predicted mean and standard deviation by parameter.
+- [ ] Fix non-finite rendered prediction handling so invalid predicted patches are captured and clamped or reported safely.
+- [ ] Implement the `v3.0` model-design step: pitch-conditioned, group-balanced, multi-head continuous prediction.
+- [ ] Train and evaluate `v3.0` against `v10`, `v2.0`, `v2.1`, and `v9`.
+- [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 
 ## Milestone I: Real Audio Prototype
@@ -432,3 +440,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Add worst clip evaluation diagnostics`
 - Added a `hybrid` PyTorch loss preset for v2.1 that moderately emphasizes waveform identity, oscillator levels, detune, resonance, sustain, and release while keeping cutoff closer to flat weighting.
   Commit: `Add hybrid loss preset`
+- Reexamined the model-capability roadmap after `v10`, `v2.0`, and `v2.1`. The current best rendered-audio setup is still `v10`, while `v2.1` has the best parameter metrics but worse audio due to filter/cutoff failures. Conclusion: stop minor loss-only tuning and move the next major model series to `v3.0` with prediction-spread diagnostics, safer render validation, and group-balanced multi-head continuous prediction.
+  Commit: `Reassess model capability roadmap`
