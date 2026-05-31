@@ -17,7 +17,10 @@ from minisynth.torch_model import (
     DEFAULT_TARGET_MODE,
     DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
+    create_optimizer,
+    create_scheduler,
     create_inverse_model,
+    dataset_loss_torch,
     expected_mel_tensor_shape,
     grouped_parameter_mae,
     load_mel_tensor_npz,
@@ -241,6 +244,49 @@ class TestTorchInverseModel(unittest.TestCase):
 
         self.assertAlmostEqual(float(loss), 1.0)
 
+    def test_create_optimizer_supports_adamw(self):
+        model = create_inverse_model()
+
+        optimizer = create_optimizer(
+            model,
+            optimizer_name="adamw",
+            learning_rate=0.001,
+            weight_decay=0.01,
+        )
+
+        self.assertEqual(optimizer.__class__.__name__, "AdamW")
+        self.assertEqual(optimizer.param_groups[0]["weight_decay"], 0.01)
+
+    def test_create_scheduler_supports_step_scheduler(self):
+        model = create_inverse_model()
+        optimizer = create_optimizer(model)
+
+        scheduler = create_scheduler(
+            optimizer,
+            scheduler_name="step",
+            step_size=2,
+            gamma=0.5,
+        )
+
+        self.assertEqual(scheduler.step_size, 2)
+
+    def test_dataset_loss_torch_returns_average_loss(self):
+        model = create_inverse_model()
+        features = np.zeros(
+            (2, 1, DEFAULT_MEL_BINS, DEFAULT_MEL_TENSOR_FRAMES),
+            dtype=np.float32,
+        )
+        targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
+
+        loss = dataset_loss_torch(
+            model,
+            features,
+            targets,
+            device=torch.device("cpu"),
+        )
+
+        self.assertGreaterEqual(loss, 0.0)
+
     def test_train_inverse_model_returns_metrics(self):
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "mel_tensors.npz"
@@ -276,6 +322,12 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["target_mode"], DEFAULT_TARGET_MODE)
         self.assertEqual(metrics["loss_preset"], "flat")
         self.assertIn("cutoff", metrics["loss_weights"])
+        self.assertEqual(metrics["optimizer"], "adam")
+        self.assertEqual(metrics["scheduler"], "none")
+        self.assertEqual(metrics["checkpoint_selection"], "best_validation")
+        self.assertEqual(metrics["completed_epochs"], 1)
+        self.assertEqual(metrics["best_epoch"], 1)
+        self.assertEqual(len(metrics["test_losses"]), 1)
         self.assertGreaterEqual(metrics["train_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
@@ -367,6 +419,41 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["loss_preset"], "audibility")
         self.assertEqual(metrics["loss_weights"]["freq"], 0.0)
         self.assertGreater(metrics["loss_weights"]["cutoff"], 1.0)
+
+    def test_train_inverse_model_supports_optimizer_controls(self):
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "mel_tensors.npz"
+            np.savez_compressed(
+                path,
+                features=np.zeros((10, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                targets=np.full((10, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                metadata_path="metadata.jsonl",
+                frames=np.asarray(16, dtype=np.int64),
+            )
+
+            result = train_inverse_model(
+                tensor_path=path,
+                model_id="v_test_pytorch_cnn",
+                epochs=2,
+                batch_size=2,
+                random_state=1,
+                optimizer_name="adamw",
+                weight_decay=0.01,
+                scheduler_name="step",
+                scheduler_step_size=1,
+                scheduler_gamma=0.5,
+                early_stopping_patience=1,
+                checkpoint_selection="best_validation",
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+
+        self.assertEqual(metrics["optimizer"], "adamw")
+        self.assertEqual(metrics["weight_decay"], 0.01)
+        self.assertEqual(metrics["scheduler"], "step")
+        self.assertLessEqual(metrics["completed_epochs"], 2)
+        self.assertGreaterEqual(metrics["best_test_loss"], 0.0)
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()

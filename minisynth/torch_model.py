@@ -1,5 +1,6 @@
 """PyTorch inverse model for mel spectrogram to synth parameter prediction."""
 
+import copy
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,15 @@ DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
 DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
+OPTIMIZER_ADAM = "adam"
+OPTIMIZER_ADAMW = "adamw"
+DEFAULT_OPTIMIZER = OPTIMIZER_ADAM
+SCHEDULER_NONE = "none"
+SCHEDULER_STEP = "step"
+DEFAULT_SCHEDULER = SCHEDULER_NONE
+CHECKPOINT_FINAL = "final"
+CHECKPOINT_BEST_VALIDATION = "best_validation"
+DEFAULT_CHECKPOINT_SELECTION = CHECKPOINT_BEST_VALIDATION
 PARAMETER_METRIC_GROUPS = {
     "global": ("freq", "length"),
     "pitch": ("freq",),
@@ -511,6 +521,77 @@ def inverse_model_loss(
     return loss_function(predictions, targets)
 
 
+def create_optimizer(model, optimizer_name=DEFAULT_OPTIMIZER, learning_rate=DEFAULT_LEARNING_RATE, weight_decay=0.0):
+    if optimizer_name == OPTIMIZER_ADAM:
+        return torch.optim.Adam(
+            model.parameters(),
+            lr=learning_rate,
+            weight_decay=weight_decay,
+        )
+    if optimizer_name == OPTIMIZER_ADAMW:
+        return torch.optim.AdamW(
+            model.parameters(),
+            lr=learning_rate,
+            weight_decay=weight_decay,
+        )
+
+    raise ValueError(f"Unsupported optimizer: {optimizer_name}")
+
+
+def create_scheduler(optimizer, scheduler_name=DEFAULT_SCHEDULER, step_size=10, gamma=0.5):
+    if scheduler_name == SCHEDULER_NONE:
+        return None
+    if scheduler_name == SCHEDULER_STEP:
+        if step_size < 1:
+            raise ValueError("scheduler step_size must be at least 1")
+        if gamma <= 0.0:
+            raise ValueError("scheduler gamma must be positive")
+        return torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=step_size,
+            gamma=gamma,
+        )
+
+    raise ValueError(f"Unsupported scheduler: {scheduler_name}")
+
+
+def dataset_loss_torch(
+    model,
+    features,
+    targets,
+    device=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    loss_weights=None,
+):
+    if device is None:
+        device = select_torch_device()
+
+    model = model.to(device)
+    model.eval()
+    loader = tensor_loader(features, targets, batch_size=batch_size, shuffle=False)
+    loss_function = nn.MSELoss()
+    running_loss = 0.0
+    sample_count = 0
+
+    with torch.no_grad():
+        for batch_features, batch_targets in loader:
+            batch_features = batch_features.to(device)
+            batch_targets = batch_targets.to(device)
+            predictions = model(batch_features)
+            loss = inverse_model_loss(
+                model,
+                predictions,
+                batch_targets,
+                features=batch_features,
+                loss_function=loss_function,
+                loss_weights=loss_weights,
+            )
+            running_loss += loss.item() * len(batch_features)
+            sample_count += len(batch_features)
+
+    return float(running_loss / sample_count)
+
+
 def parameter_mae_torch(model, features, targets, device=None, batch_size=DEFAULT_BATCH_SIZE):
     if device is None:
         device = select_torch_device()
@@ -714,6 +795,13 @@ def train_inverse_model(
     waveform_mode=DEFAULT_WAVEFORM_MODE,
     target_mode=DEFAULT_TARGET_MODE,
     loss_preset=DEFAULT_LOSS_PRESET,
+    optimizer_name=DEFAULT_OPTIMIZER,
+    weight_decay=0.0,
+    scheduler_name=DEFAULT_SCHEDULER,
+    scheduler_step_size=10,
+    scheduler_gamma=0.5,
+    early_stopping_patience=0,
+    checkpoint_selection=DEFAULT_CHECKPOINT_SELECTION,
     random_state=0,
     device=None,
     progress=False,
@@ -722,6 +810,12 @@ def train_inverse_model(
         raise ValueError("epochs must be at least 1")
     if learning_rate <= 0.0:
         raise ValueError("learning_rate must be positive")
+    if weight_decay < 0.0:
+        raise ValueError("weight_decay must be non-negative")
+    if early_stopping_patience < 0:
+        raise ValueError("early_stopping_patience must be non-negative")
+    if checkpoint_selection not in (CHECKPOINT_FINAL, CHECKPOINT_BEST_VALIDATION):
+        raise ValueError(f"Unsupported checkpoint selection: {checkpoint_selection}")
     if device is None:
         device = select_torch_device()
     else:
@@ -748,7 +842,18 @@ def train_inverse_model(
         input_channels=prepared["features"].shape[1],
         parameters=target_parameters,
     ).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = create_optimizer(
+        model,
+        optimizer_name=optimizer_name,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+    )
+    scheduler = create_scheduler(
+        optimizer,
+        scheduler_name=scheduler_name,
+        step_size=scheduler_step_size,
+        gamma=scheduler_gamma,
+    )
     loss_function = nn.MSELoss()
     loss_weights = parameter_loss_weights(
         target_parameters,
@@ -756,6 +861,13 @@ def train_inverse_model(
     ).to(device)
 
     epoch_losses = []
+    test_losses = []
+    learning_rates = []
+    best_epoch = 0
+    best_test_loss = float("inf")
+    best_state_dict = copy.deepcopy(model.state_dict())
+    epochs_without_improvement = 0
+    completed_epochs = 0
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
@@ -795,8 +907,38 @@ def train_inverse_model(
 
         epoch_loss = float(running_loss / sample_count)
         epoch_losses.append(epoch_loss)
+        completed_epochs = epoch + 1
+        test_epoch_loss = dataset_loss_torch(
+            model,
+            split["test_features"],
+            split["test_targets"],
+            device=device,
+            batch_size=batch_size,
+            loss_weights=loss_weights,
+        )
+        test_losses.append(test_epoch_loss)
+        learning_rates.append(float(optimizer.param_groups[0]["lr"]))
+        if test_epoch_loss < best_test_loss:
+            best_test_loss = test_epoch_loss
+            best_epoch = epoch + 1
+            best_state_dict = copy.deepcopy(model.state_dict())
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+        if scheduler is not None:
+            scheduler.step()
         if progress:
-            print(f"\nEpoch {epoch + 1} complete - average loss {epoch_loss:.6f}\n")
+            print(
+                f"\nEpoch {epoch + 1} complete - "
+                f"train loss {epoch_loss:.6f}, test loss {test_epoch_loss:.6f}\n"
+            )
+        if early_stopping_patience and epochs_without_improvement >= early_stopping_patience:
+            if progress:
+                print(f"Early stopping after epoch {epoch + 1}.")
+            break
+
+    if checkpoint_selection == CHECKPOINT_BEST_VALIDATION:
+        model.load_state_dict(best_state_dict)
 
     train_parameter_metrics = parameter_metrics_torch(
         model,
@@ -833,13 +975,25 @@ def train_inverse_model(
         "test_samples": int(len(split["test_features"])),
         "benchmark_samples": int(len(split["benchmark_features"])),
         "epochs": int(epochs),
+        "completed_epochs": int(completed_epochs),
         "batch_size": int(batch_size),
         "learning_rate": float(learning_rate),
+        "learning_rates": learning_rates,
+        "optimizer": optimizer_name,
+        "weight_decay": float(weight_decay),
+        "scheduler": scheduler_name,
+        "scheduler_step_size": int(scheduler_step_size),
+        "scheduler_gamma": float(scheduler_gamma),
+        "early_stopping_patience": int(early_stopping_patience),
+        "checkpoint_selection": checkpoint_selection,
+        "best_epoch": int(best_epoch),
+        "best_test_loss": float(best_test_loss),
         "test_size": float(test_size),
         "benchmark_size": float(benchmark_size),
         "device": device.type,
         "train_loss": epoch_losses[-1],
         "train_losses": epoch_losses,
+        "test_losses": test_losses,
         "test_loss": parameter_mse_torch(
             model,
             split["test_features"],

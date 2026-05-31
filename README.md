@@ -177,6 +177,25 @@ python scripts/train_torch.py \
   --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
 ```
 
+For longer model-quality runs, prefer explicit optimizer controls and best-validation checkpoint selection:
+
+```bash
+python scripts/train_torch.py \
+  --model-id vN_pytorch_cnn_pitchctx_weighted_<training_size> \
+  --tensor-data data/generated/dN/features/mel_tensors.npz \
+  --target-mode pitch_conditioned_timbre \
+  --loss-preset audibility \
+  --optimizer adamw \
+  --weight-decay 0.01 \
+  --scheduler step \
+  --scheduler-step-size 10 \
+  --scheduler-gamma 0.5 \
+  --early-stopping-patience 8 \
+  --checkpoint-selection best_validation \
+  --model-output models/vN_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
+  --metrics-output runs/training/vN_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
+```
+
 ## Evaluate PyTorch Models
 
 Evaluate `v3_pytorch_cnn_500seeds` on `d2`:

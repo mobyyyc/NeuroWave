@@ -16,6 +16,9 @@ from minisynth.torch_model import (
     DEFAULT_EPOCHS,
     DEFAULT_LEARNING_RATE,
     DEFAULT_LOSS_PRESET,
+    DEFAULT_OPTIMIZER,
+    DEFAULT_SCHEDULER,
+    DEFAULT_CHECKPOINT_SELECTION,
     DEFAULT_TEST_SIZE,
     DEFAULT_TORCH_METRICS_PATH,
     DEFAULT_TORCH_MODEL_ID,
@@ -25,6 +28,12 @@ from minisynth.torch_model import (
     DEFAULT_WAVEFORM_MODE,
     LOSS_PRESET_AUDIBILITY,
     LOSS_PRESET_FLAT,
+    OPTIMIZER_ADAM,
+    OPTIMIZER_ADAMW,
+    SCHEDULER_NONE,
+    SCHEDULER_STEP,
+    CHECKPOINT_FINAL,
+    CHECKPOINT_BEST_VALIDATION,
     TARGET_MODE_FULL,
     TARGET_MODE_PITCH_CONDITIONED_TIMBRE,
     WAVEFORM_MODE_CLASSIFICATION,
@@ -63,6 +72,48 @@ def parse_args():
         type=float,
         default=DEFAULT_LEARNING_RATE,
         help="Adam learning rate.",
+    )
+    parser.add_argument(
+        "--optimizer",
+        choices=(OPTIMIZER_ADAM, OPTIMIZER_ADAMW),
+        default=DEFAULT_OPTIMIZER,
+        help="Optimizer to use for training.",
+    )
+    parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=0.0,
+        help="Optimizer weight decay.",
+    )
+    parser.add_argument(
+        "--scheduler",
+        choices=(SCHEDULER_NONE, SCHEDULER_STEP),
+        default=DEFAULT_SCHEDULER,
+        help="Learning-rate scheduler.",
+    )
+    parser.add_argument(
+        "--scheduler-step-size",
+        type=int,
+        default=10,
+        help="Epoch interval for the step scheduler.",
+    )
+    parser.add_argument(
+        "--scheduler-gamma",
+        type=float,
+        default=0.5,
+        help="Learning-rate multiplier for the step scheduler.",
+    )
+    parser.add_argument(
+        "--early-stopping-patience",
+        type=int,
+        default=0,
+        help="Stop after this many epochs without validation improvement. Use 0 to disable.",
+    )
+    parser.add_argument(
+        "--checkpoint-selection",
+        choices=(CHECKPOINT_FINAL, CHECKPOINT_BEST_VALIDATION),
+        default=DEFAULT_CHECKPOINT_SELECTION,
+        help="Which epoch state to save in the returned model checkpoint.",
     )
     parser.add_argument(
         "--test-size",
@@ -130,6 +181,13 @@ def main() -> int:
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
+        optimizer_name=args.optimizer,
+        weight_decay=args.weight_decay,
+        scheduler_name=args.scheduler,
+        scheduler_step_size=args.scheduler_step_size,
+        scheduler_gamma=args.scheduler_gamma,
+        early_stopping_patience=args.early_stopping_patience,
+        checkpoint_selection=args.checkpoint_selection,
         test_size=args.test_size,
         benchmark_size=args.benchmark_size,
         waveform_mode=args.waveform_mode,
