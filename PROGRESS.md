@@ -180,7 +180,7 @@ Evidence from local reports:
 - [x] Add model comparison reporting across parameter metrics and rendered-audio metrics.
 - [ ] Replace scalar waveform enum regression with classification heads or continuous wave-mix targets.
 - [x] Decide pitch/length handling strategy for the next model-design iteration.
-- [ ] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
+- [x] Add target groups for pitch-conditioned timbre metrics, ADSR metrics, oscillator metrics, and filter metrics.
 - [ ] Remove `freq` from the core timbre prediction target while feeding exact synthetic `freq` as model conditioning.
 - [ ] Keep `length` visible to the model design while evaluating how it interacts with ADSR and pluck/pad behavior.
 - [ ] Add parameter-weighted loss support.
@@ -410,3 +410,5 @@ Goal: make NeuroWave usable as a tool.
   Commit: `Document pitch conditioning strategy`
 - Completed Milestone G tracker closeout and moved the active phase to Milestone H model capability work.
   Commit: `Complete Milestone G`
+- Added grouped PyTorch target metrics for pitch, duration, pitch-conditioned timbre, oscillator, filter, and ADSR error reporting.
+  Commit: `Add grouped model metrics`

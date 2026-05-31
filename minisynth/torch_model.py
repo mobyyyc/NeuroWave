@@ -23,6 +23,48 @@ DEFAULT_EPOCHS = 10
 DEFAULT_LEARNING_RATE = 0.001
 DEFAULT_TEST_SIZE = 0.2
 DEFAULT_BENCHMARK_SIZE = 0.0
+PARAMETER_METRIC_GROUPS = {
+    "global": ("freq", "length"),
+    "pitch": ("freq",),
+    "duration": ("length",),
+    "timbre": (
+        "length",
+        "osc1_wave",
+        "osc1_level",
+        "osc2_wave",
+        "osc2_level",
+        "osc2_detune",
+        "cutoff",
+        "resonance",
+        "attack",
+        "decay",
+        "sustain",
+        "release",
+    ),
+    "pitch_conditioned_timbre": (
+        "length",
+        "osc1_wave",
+        "osc1_level",
+        "osc2_wave",
+        "osc2_level",
+        "osc2_detune",
+        "cutoff",
+        "resonance",
+        "attack",
+        "decay",
+        "sustain",
+        "release",
+    ),
+    "oscillator": (
+        "osc1_wave",
+        "osc1_level",
+        "osc2_wave",
+        "osc2_level",
+        "osc2_detune",
+    ),
+    "filter": ("cutoff", "resonance"),
+    "adsr": ("attack", "decay", "sustain", "release"),
+}
 
 
 def select_torch_device():
@@ -257,6 +299,36 @@ def continuous_parameter_mae(predictions, targets, parameters=None):
     return float(np.abs(predicted[:, continuous_indices] - expected[:, continuous_indices]).mean())
 
 
+def grouped_parameter_mae(predictions, targets, groups=None, parameters=None):
+    if parameters is None:
+        parameters = VECTOR_PARAMETERS
+    if groups is None:
+        groups = PARAMETER_METRIC_GROUPS
+
+    predicted = np.asarray(predictions, dtype=np.float32)
+    expected = np.asarray(targets, dtype=np.float32)
+    if predicted.shape != expected.shape:
+        raise ValueError("predictions and targets must have the same shape")
+
+    parameter_indices = {
+        parameter.name: index
+        for index, parameter in enumerate(parameters)
+    }
+    metrics = {}
+
+    for group_name, parameter_names in groups.items():
+        indices = [
+            parameter_indices[name]
+            for name in parameter_names
+            if name in parameter_indices
+        ]
+        if not indices:
+            continue
+        metrics[group_name] = float(np.abs(predicted[:, indices] - expected[:, indices]).mean())
+
+    return metrics
+
+
 def categorical_predictions(values, parameter):
     choices = categorical_values(parameter)
     scaled = np.asarray(values, dtype=np.float32) * (len(choices) - 1)
@@ -298,6 +370,7 @@ def parameter_metrics_torch(model, features, targets, device=None, batch_size=DE
     return {
         "mae": float(np.abs(predictions - targets).mean()),
         "continuous_mae": continuous_parameter_mae(predictions, targets),
+        "grouped_mae": grouped_parameter_mae(predictions, targets),
         "per_parameter_mae": parameter_mae_by_name(predictions, targets),
         "waveform_accuracy": waveform_accuracy(predictions, targets),
         "waveform_accuracy_by_name": waveform_accuracy_by_name(predictions, targets),
@@ -442,6 +515,8 @@ def train_inverse_model(
         "test_continuous_mae": test_parameter_metrics["continuous_mae"],
         "train_per_parameter_mae": train_parameter_metrics["per_parameter_mae"],
         "test_per_parameter_mae": test_parameter_metrics["per_parameter_mae"],
+        "train_grouped_mae": train_parameter_metrics["grouped_mae"],
+        "test_grouped_mae": test_parameter_metrics["grouped_mae"],
         "train_waveform_accuracy": train_parameter_metrics["waveform_accuracy"],
         "test_waveform_accuracy": test_parameter_metrics["waveform_accuracy"],
         "train_waveform_accuracy_by_name": train_parameter_metrics["waveform_accuracy_by_name"],
@@ -471,6 +546,7 @@ def train_inverse_model(
                 "benchmark_mae": benchmark_parameter_metrics["mae"],
                 "benchmark_continuous_mae": benchmark_parameter_metrics["continuous_mae"],
                 "benchmark_per_parameter_mae": benchmark_parameter_metrics["per_parameter_mae"],
+                "benchmark_grouped_mae": benchmark_parameter_metrics["grouped_mae"],
                 "benchmark_waveform_accuracy": benchmark_parameter_metrics["waveform_accuracy"],
                 "benchmark_waveform_accuracy_by_name": benchmark_parameter_metrics[
                     "waveform_accuracy_by_name"

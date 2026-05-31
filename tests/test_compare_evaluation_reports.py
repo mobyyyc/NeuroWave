@@ -43,6 +43,10 @@ class TestCompareEvaluationReports(unittest.TestCase):
                     "freq": 0.2,
                     "cutoff": 0.1,
                 },
+                "test_grouped_mae": {
+                    "adsr": 0.12,
+                    "filter": 0.1,
+                },
                 "test_waveform_accuracy_by_name": {
                     "osc1_wave": 0.4,
                 },
@@ -65,6 +69,10 @@ class TestCompareEvaluationReports(unittest.TestCase):
                     "freq": 0.15,
                     "cutoff": 0.08,
                 },
+                "test_grouped_mae": {
+                    "adsr": 0.1,
+                    "filter": 0.08,
+                },
                 "test_waveform_accuracy_by_name": {
                     "osc1_wave": 0.6,
                 },
@@ -83,6 +91,10 @@ class TestCompareEvaluationReports(unittest.TestCase):
         self.assertAlmostEqual(comparison["test_waveform_accuracy_delta"], 0.25)
         self.assertAlmostEqual(
             comparison["test_per_parameter_mae_delta_by_name"]["cutoff"],
+            -0.02,
+        )
+        self.assertAlmostEqual(
+            comparison["test_grouped_mae_delta_by_name"]["adsr"],
             -0.02,
         )
         self.assertAlmostEqual(

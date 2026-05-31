@@ -17,6 +17,7 @@ from minisynth.torch_model import (
     MelSpectrogramInverseModel,
     create_inverse_model,
     expected_mel_tensor_shape,
+    grouped_parameter_mae,
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mae_by_name,
@@ -152,6 +153,18 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(set(metrics), {parameter.name for parameter in VECTOR_PARAMETERS})
         self.assertAlmostEqual(metrics["freq"], 0.25)
 
+    def test_grouped_parameter_mae_reports_model_quality_groups(self):
+        targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
+        predictions = np.full((2, len(VECTOR_PARAMETERS)), 0.25, dtype=np.float32)
+
+        metrics = grouped_parameter_mae(predictions, targets)
+
+        self.assertAlmostEqual(metrics["pitch"], 0.25)
+        self.assertAlmostEqual(metrics["adsr"], 0.25)
+        self.assertAlmostEqual(metrics["oscillator"], 0.25)
+        self.assertAlmostEqual(metrics["filter"], 0.25)
+        self.assertAlmostEqual(metrics["pitch_conditioned_timbre"], 0.25)
+
     def test_waveform_accuracy_by_name_decodes_categorical_targets(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
         predictions = targets.copy()
@@ -205,6 +218,8 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertGreaterEqual(metrics["test_loss"], 0.0)
         self.assertGreaterEqual(metrics["test_mae"], 0.0)
         self.assertIn("freq", metrics["test_per_parameter_mae"])
+        self.assertIn("adsr", metrics["test_grouped_mae"])
+        self.assertIn("pitch_conditioned_timbre", metrics["test_grouped_mae"])
         self.assertIn("osc1_wave", metrics["test_waveform_accuracy_by_name"])
         self.assertGreaterEqual(metrics["test_continuous_mae"], 0.0)
 
@@ -234,6 +249,7 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(metrics["benchmark_samples"], 2)
         self.assertIn("benchmark_loss", metrics)
         self.assertIn("benchmark_per_parameter_mae", metrics)
+        self.assertIn("benchmark_grouped_mae", metrics)
 
     def test_parameter_mse_torch_returns_single_distance(self):
         model = create_inverse_model()

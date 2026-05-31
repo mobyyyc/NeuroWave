@@ -62,6 +62,13 @@ def compare_reports(baseline, candidate):
         compare_named_metrics(
             baseline_metrics,
             candidate_metrics,
+            "test_grouped_mae",
+        )
+    )
+    comparison.update(
+        compare_named_metrics(
+            baseline_metrics,
+            candidate_metrics,
             "test_waveform_accuracy_by_name",
         )
     )
