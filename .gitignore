@@ -11,6 +11,9 @@ __pycache__/
 # macOS metadata
 .DS_Store
 
+# IDEs and Editors
+.vscode/
+
 # Generated audio and experiment outputs
 *.wav
 data/generated/
