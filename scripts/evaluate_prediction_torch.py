@@ -16,7 +16,6 @@ from minisynth.evaluation import evaluate_patch_prediction
 from minisynth.io import save_patch
 from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
-    DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
     predict_patch_from_audio,
 )
@@ -30,7 +29,7 @@ def parse_args():
     parser.add_argument("target", help="Path to the target audio clip.")
     parser.add_argument(
         "--model",
-        default=DEFAULT_TORCH_MODEL_PATH,
+        required=True,
         help="Path to a saved PyTorch model checkpoint.",
     )
     parser.add_argument(
@@ -40,25 +39,12 @@ def parse_args():
     )
     parser.add_argument(
         "--device",
-        help="Optional torch device override, such as cpu or mps.",
+        help="Optional torch device override, such as cpu or cuda.",
     )
     parser.add_argument(
-        "--refine-iterations",
-        type=int,
-        default=0,
-        help="Optional local search iterations after the PyTorch prediction.",
-    )
-    parser.add_argument(
-        "--refine-seed",
-        type=int,
-        default=0,
-        help="Random seed for optional local refinement.",
-    )
-    parser.add_argument(
-        "--refine-step-size",
+        "--freq",
         type=float,
-        default=0.05,
-        help="Normalized parameter perturbation size for optional local refinement.",
+        help="Known or estimated fundamental frequency in Hz for pitch-conditioned models.",
     )
     return parser.parse_args()
 
@@ -77,14 +63,12 @@ def main() -> int:
         target_audio,
         target_sample_rate,
         device=args.device,
+        freq=args.freq,
     )
     result = evaluate_patch_prediction(
         patch,
         target_audio,
         target_sample_rate,
-        refine_iterations=args.refine_iterations,
-        refine_seed=args.refine_seed,
-        refine_step_size=args.refine_step_size,
     )
 
     save_patch(result["patch"], patch_path)
@@ -99,9 +83,6 @@ def main() -> int:
         "predicted_audio": str(audio_path),
         "comparison": result["comparison"],
     }
-    if "refinement" in result:
-        report["refinement"] = result["refinement"]
-
     with report_path.open("w", encoding="utf-8") as file:
         json.dump(report, file, indent=2)
         file.write("\n")

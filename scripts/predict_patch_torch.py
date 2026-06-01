@@ -14,7 +14,6 @@ if str(ROOT) not in sys.path:
 from minisynth.io import save_patch
 from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
-    DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
     predict_patch_from_audio,
 )
@@ -26,12 +25,12 @@ def parse_args():
     parser.add_argument("output", help="Path to write the predicted patch JSON.")
     parser.add_argument(
         "--model",
-        default=DEFAULT_TORCH_MODEL_PATH,
+        required=True,
         help="Path to a saved PyTorch model checkpoint.",
     )
     parser.add_argument(
         "--device",
-        help="Optional torch device override, such as cpu or mps.",
+        help="Optional torch device override, such as cpu or cuda.",
     )
     parser.add_argument(
         "--freq",

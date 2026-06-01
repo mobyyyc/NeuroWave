@@ -197,7 +197,32 @@ Evidence from local reports:
 - [x] Add prediction distribution diagnostics for target-vs-predicted mean and standard deviation by parameter.
 - [x] Fix non-finite rendered prediction handling so invalid predicted patches are captured and clamped or reported safely.
 - [x] Implement the `v3.0` model-design step: pitch-conditioned, group-balanced, multi-head continuous prediction.
-- [ ] Train and evaluate `v3.0` against `v10`, `v2.0`, `v2.1`, and `v9`.
+- [x] Train and evaluate `v3.0` against `v10`, `v2.0`, `v2.1`, and `v9`.
+- [x] Scale the v3 setup to `v3.1` on 500k synthetic examples.
+- [ ] Implement `v3.2` oscillator-mix target improvements so oscillator levels are learned
+  by canonical waveform/level contribution rather than arbitrary oscillator slot identity.
+
+Current v3 findings:
+
+- `v3.0` confirmed that pitch conditioning, grouped heads, and group-balanced loss are
+  the correct model family: parameter metrics and rendered-audio distance improved
+  together.
+- `v3.1` confirmed the setup scales with larger data: test MAE reached about `0.0715`,
+  waveform accuracy reached about `0.882`, and d8 mean weighted distance reached about
+  `32.2`.
+- The active bottleneck is now oscillator mix representation, especially `osc1_level`,
+  `osc2_level`, and `osc2_detune`.
+- Because the two oscillator slots are partly exchangeable, the next improvement should
+  make oscillator targets slot-invariant or canonical. A quiet saw in oscillator 1 plus
+  a loud sine in oscillator 2 should not be treated as a fundamentally different target
+  from the same saw/sine level contributions swapped between slots.
+
+Next recommended task:
+
+- Add oscillator-mix diagnostics before changing training targets: total level,
+  balance, per-wave level contribution, slot-swapped/best-assignment error, and worst
+  clips grouped by oscillator-mix failure. This gives v3.2 a precise before/after
+  comparison against v3.1.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 

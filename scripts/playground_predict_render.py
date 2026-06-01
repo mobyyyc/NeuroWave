@@ -20,7 +20,6 @@ from minisynth.randomize import random_patch
 from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
     DEFAULT_MEL_TENSOR_FRAMES,
-    DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
     predict_patch_from_audio,
 )
@@ -30,7 +29,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model",
-        default=DEFAULT_TORCH_MODEL_PATH,
+        required=True,
         help="Path to a saved PyTorch checkpoint.",
     )
     parser.add_argument(

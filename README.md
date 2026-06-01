@@ -70,13 +70,9 @@ python scripts/smoke_render.py
 
 ## Generate Datasets
 
-Datasets are named `dN`. Historical models used `vN_<model_type>_<training_size>`.
-Starting with the next capability series, models use `v<major>.<minor>_...`,
-for example `v2.0_pytorch_cnn_pitchctx_flat_medium_tfpool_50kseeds`.
-Increment the minor version for ablations within the same capability series, and
-reserve the next major version, such as `v3.0`, for a material architecture,
-target, objective, evaluation, or data-generation upgrade. Keep dataset IDs and
-model IDs separate.
+Datasets are named `dN`. Historical models used long descriptive IDs, but new
+models use short change-focused IDs such as `v3.0_restructure`,
+`v3.1_500ksamples`, and `v3.2_oscmix`. Keep dataset IDs and model IDs separate.
 
 Generate the first tiny local dataset:
 
@@ -110,45 +106,22 @@ The dataset code limits NumPy/SciPy worker threads so multicore generation does 
 
 Use PyTorch for future model-quality work. The scikit-learn model remains only as a lightweight baseline.
 
-Train the explicit `d2` PyTorch model:
-
-```bash
-python scripts/train_torch.py \
-  --model-id v3_pytorch_cnn_500seeds \
-  --tensor-data data/generated/d2/features/mel_tensors.npz \
-  --model-output models/v3_pytorch_cnn_500seeds.pt \
-  --metrics-output runs/training/v3_pytorch_cnn_500seeds_metrics.json
-```
-
-Train the current 10,000-seed PyTorch model on `d3`:
-
-```bash
-python scripts/train_torch.py \
-  --model-id v4_pytorch_cnn_10kseeds \
-  --tensor-data data/generated/d3/features/mel_tensors.npz \
-  --model-output models/v4_pytorch_cnn_10kseeds.pt \
-  --metrics-output runs/training/v4_pytorch_cnn_10kseeds_metrics.json
-```
+Future training uses the current best v3 defaults: pitch-conditioned timbre,
+waveform classification, large CNN, time-frequency pooling, grouped heads,
+group-balanced loss, AdamW, step LR, early stopping, and best-validation
+checkpoint saving. These are report fields, not model-name tokens.
 
 Template for future models:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id vX.Y_pytorch_cnn_<training_size> \
-  --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --model-output models/vX.Y_pytorch_cnn_<training_size>.pt \
-  --metrics-output runs/training/vX.Y_pytorch_cnn_<training_size>_metrics.json
-```
-
-Reserve a fixed benchmark subset when you want metrics beyond the validation split:
-
-```bash
-python scripts/train_torch.py \
-  --model-id vX.Y_pytorch_cnn_<training_size> \
-  --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --benchmark-size 0.1 \
-  --model-output models/vX.Y_pytorch_cnn_<training_size>.pt \
-  --metrics-output runs/training/vX.Y_pytorch_cnn_<training_size>_metrics.json
+  --model-id v3.2_oscmix \
+  --tensor-data data/generated/dN/features \
+  --epochs 50 \
+  --batch-size 64 \
+  --device cuda \
+  --model-output models/v3.2_oscmix.pt \
+  --metrics-output runs/training/v3.2_oscmix_metrics.json
 ```
 
 Training output:
@@ -156,128 +129,39 @@ Training output:
 - Checkpoint: `models/<model_id>.pt`
 - Metrics report: `runs/training/<model_id>_metrics.json`
 - Console progress: device selection, epochs, batches, and final metrics unless `--quiet` is used.
-- Metrics include train/test loss, train/test MAE, continuous-parameter MAE, per-parameter MAE, waveform accuracy, and optional benchmark metrics.
+- Metrics include train/test loss, train/test MAE, continuous-parameter MAE,
+  per-parameter MAE, grouped MAE, waveform accuracy, and compact loss-history tails.
 
-New PyTorch models train waveform parameters with classification heads by default. Use `--waveform-mode scalar_regression` only for legacy comparison runs.
+The current best proven model family is the v3 pitch-conditioned grouped-head setup. It keeps exact synthetic pitch as context, uses separate heads for duration, oscillator, filter, and ADSR controls, and trains with group-balanced loss so one parameter group cannot hide another.
 
-For pitch-conditioned timbre training, remove `freq` from the output target and feed exact synthetic pitch as an input channel:
+`v3.1` scaled that setup to 500k synthetic examples and became the current best checkpoint. The next planned improvement is `v3.2`, focused on oscillator-mix representation. The two oscillator slots are partly exchangeable: a quiet saw in oscillator 1 plus a loud sine in oscillator 2 can be equivalent, or nearly equivalent, to the same saw/sine level contributions assigned to the opposite slots. Future v3.2 work should therefore canonicalize oscillator targets or predict total oscillator level plus balance/per-wave level contribution, so the model learns the audible mix instead of arbitrary slot identity.
 
-```bash
-python scripts/train_torch.py \
-  --model-id vX.Y_pytorch_cnn_pitchctx_<training_size> \
-  --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --target-mode pitch_conditioned_timbre \
-  --model-output models/vX.Y_pytorch_cnn_pitchctx_<training_size>.pt \
-  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_<training_size>_metrics.json
-```
-
-Use `--loss-preset audibility` to weight waveform, detune, filter, and envelope parameters more strongly than low-impact normalized parameters:
-
-```bash
-python scripts/train_torch.py \
-  --model-id vX.Y_pytorch_cnn_pitchctx_weighted_<training_size> \
-  --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --target-mode pitch_conditioned_timbre \
-  --loss-preset audibility \
-  --model-output models/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
-  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
-```
-
-Use `--loss-preset hybrid` for the v2.1-style middle ground between flat and audibility weighting. This preset moderately emphasizes waveform identity, oscillator levels, detune, resonance, sustain, and release based on worst-clip diagnostics, while keeping cutoff closer to flat:
-
-```bash
-python scripts/train_torch.py \
-  --model-id v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds \
-  --tensor-data data/generated/d8/features/mel_tensors.npz \
-  --target-mode pitch_conditioned_timbre \
-  --waveform-mode classification \
-  --model-size medium \
-  --pooling-mode time_frequency \
-  --loss-preset hybrid \
-  --epochs 50 \
-  --batch-size 64 \
-  --optimizer adamw \
-  --weight-decay 0.01 \
-  --scheduler step \
-  --scheduler-step-size 10 \
-  --scheduler-gamma 0.5 \
-  --early-stopping-patience 8 \
-  --checkpoint-selection best_validation \
-  --device cuda \
-  --model-output models/v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds.pt \
-  --metrics-output runs/training/v2.1_pytorch_cnn_pitchctx_hybrid_medium_tfpool_50kseeds_metrics.json
-```
-
-The current recommended best model setup is the v3.0-style pitch-conditioned grouped-head model. It keeps exact synthetic pitch as context, uses separate continuous heads for duration, oscillator, filter, and ADSR controls, and trains with group-balanced loss so one parameter group cannot hide another:
-
-```bash
-python scripts/train_torch.py \
-  --model-id v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds \
-  --tensor-data data/generated/d8/features/mel_tensors.npz \
-  --target-mode pitch_conditioned_timbre \
-  --waveform-mode classification \
-  --model-size large \
-  --pooling-mode time_frequency \
-  --head-mode grouped \
-  --loss-preset groupbalanced \
-  --epochs 50 \
-  --batch-size 64 \
-  --optimizer adamw \
-  --weight-decay 0.01 \
-  --scheduler step \
-  --scheduler-step-size 10 \
-  --scheduler-gamma 0.5 \
-  --early-stopping-patience 8 \
-  --checkpoint-selection best_validation \
-  --device cuda \
-  --model-output models/v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds.pt \
-  --metrics-output runs/training/v3.0_pytorch_cnn_pitchctx_multihead_groupbalanced_large_tfpool_50kseeds_metrics.json
-```
-
-For longer model-quality runs, prefer explicit optimizer controls and best-validation checkpoint selection:
-
-```bash
-python scripts/train_torch.py \
-  --model-id vX.Y_pytorch_cnn_pitchctx_weighted_<training_size> \
-  --tensor-data data/generated/dN/features/mel_tensors.npz \
-  --target-mode pitch_conditioned_timbre \
-  --loss-preset audibility \
-  --optimizer adamw \
-  --weight-decay 0.01 \
-  --scheduler step \
-  --scheduler-step-size 10 \
-  --scheduler-gamma 0.5 \
-  --early-stopping-patience 8 \
-  --checkpoint-selection best_validation \
-  --model-output models/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>.pt \
-  --metrics-output runs/training/vX.Y_pytorch_cnn_pitchctx_weighted_<training_size>_metrics.json
-```
-
-Use `--model-size medium` or `--model-size large` to scale model capacity without changing source code. Keep `small` for direct comparisons against earlier runs.
-
-New models default to `--pooling-mode time_frequency`, which preserves a small time-frequency grid before the prediction head. Use `--pooling-mode global` for legacy global-pooling comparisons.
+The v3 defaults are intentionally not exposed as routine CLI switches. If a future
+experiment needs a different architecture or loss, change the code deliberately and
+record that change as the model suffix.
 
 ## Evaluate PyTorch Models
 
-Evaluate `v3_pytorch_cnn_500seeds` on `d2`:
+Evaluate a current PyTorch checkpoint on a generated dataset:
 
 ```bash
 python scripts/evaluate_dataset_torch.py \
-  --metadata data/generated/d2/metadata.jsonl \
-  --model models/v3_pytorch_cnn_500seeds.pt \
-  --count 20 \
-  --output runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json
+  --metadata data/generated/dN/metadata.jsonl \
+  --model models/v3.2_oscmix.pt \
+  --count 1000 \
+  --start-index 0 \
+  --device cuda \
+  --output runs/evaluation/v3.2_oscmix_on_dN_eval.json
 ```
 
-Evaluate `v4_pytorch_cnn_10kseeds` on `d3`:
+Use a smaller count for quick checks:
 
 ```bash
 python scripts/evaluate_dataset_torch.py \
-  --metadata data/generated/d3/metadata.jsonl \
-  --model models/v4_pytorch_cnn_10kseeds.pt \
+  --metadata data/generated/dN/metadata.jsonl \
+  --model models/v3.2_oscmix.pt \
   --count 200 \
-  --start-index 8000 \
-  --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json
+  --output runs/evaluation/v3.2_oscmix_smoke_eval.json
 ```
 
 Evaluation reports are compact by default: they include weighted audio distance summaries,
@@ -302,16 +186,20 @@ Predict a patch JSON from one audio clip using a PyTorch checkpoint:
 
 ```bash
 python scripts/predict_patch_torch.py \
-  data/generated/d2/audio/patch_000000_seed_2000.wav \
-  runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000.json
+  data/generated/dN/audio/patch_000000_seed_0000.wav \
+  runs/pytorch_prediction/v3.2_oscmix_patch.json \
+  --model models/v3.2_oscmix.pt \
+  --freq 440
 ```
 
 Render and compare a PyTorch prediction against the target audio:
 
 ```bash
 python scripts/evaluate_prediction_torch.py \
-  data/generated/d2/audio/patch_000000_seed_2000.wav \
-  --output-dir runs/pytorch_prediction/v3_pytorch_cnn_500seeds_patch_000000_seed_2000_eval
+  data/generated/dN/audio/patch_000000_seed_0000.wav \
+  --model models/v3.2_oscmix.pt \
+  --freq 440 \
+  --output-dir runs/pytorch_prediction/v3.2_oscmix_patch_eval
 ```
 
 ## Compare Reports

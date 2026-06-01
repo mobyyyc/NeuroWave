@@ -26,13 +26,12 @@ from minisynth.reporting import (
     compact_prediction_distribution,
 )
 from minisynth.torch_model import (
-    DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
     predict_patch_from_audio,
 )
 
 
-DEFAULT_OUTPUT = Path("runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json")
+DEFAULT_OUTPUT = Path("runs/evaluation/eval.json")
 
 
 def parse_args():
@@ -44,7 +43,7 @@ def parse_args():
     )
     parser.add_argument(
         "--model",
-        default=DEFAULT_TORCH_MODEL_PATH,
+        required=True,
         help="Path to a saved PyTorch model checkpoint.",
     )
     parser.add_argument(
@@ -69,12 +68,6 @@ def parse_args():
         help="Optional torch device override, such as cpu, mps, or cuda.",
     )
     parser.add_argument(
-        "--refine-iterations",
-        type=int,
-        default=0,
-        help="Optional local search iterations after each PyTorch prediction.",
-    )
-    parser.add_argument(
         "--diagnostics-top-n",
         type=int,
         default=10,
@@ -89,11 +82,6 @@ def parse_args():
         "--include-full-clips",
         action="store_true",
         help="Include full per-clip patches, comparisons, and parameter errors.",
-    )
-    parser.add_argument(
-        "--include-full-model-metrics",
-        action="store_true",
-        help="Embed the full checkpoint metrics instead of compact model metrics.",
     )
     return parser.parse_args()
 
@@ -138,8 +126,6 @@ def main() -> int:
                 patch,
                 target_audio,
                 target_sample_rate,
-                refine_iterations=args.refine_iterations,
-                refine_seed=row["seed"],
             )
             clip_result["comparison"] = result["comparison"]
             clip_result["predicted_patch"] = result["patch"]
@@ -147,8 +133,6 @@ def main() -> int:
                 target_patch,
                 result["patch"],
             )
-            if "refinement" in result:
-                clip_result["refinement"] = result["refinement"]
         except ValueError as error:
             clip_result["error"] = str(error)
             if patch is not None:
@@ -169,12 +153,9 @@ def main() -> int:
     report = {
         "metadata_path": str(args.metadata),
         "model_path": str(args.model),
-        "model_metrics": checkpoint["metrics"]
-        if args.include_full_model_metrics
-        else compact_model_metrics(checkpoint["metrics"]),
+        "model_metrics": compact_model_metrics(checkpoint["metrics"]),
         "start_index": args.start_index,
         "count": args.count,
-        "refine_iterations": args.refine_iterations,
         "summary": {
             **summarize_weighted_distances(successful_results),
             "failed_count": len(clip_results) - len(successful_results),

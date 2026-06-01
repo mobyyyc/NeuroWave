@@ -688,6 +688,53 @@ Acceptance criteria:
 - The project can distinguish model bottlenecks from data bottlenecks using benchmark reports.
 - The target benchmark for this phase is `test_mae <= 0.05` on a well-defined synthetic holdout set, or a documented explanation of which parameters make that target unrealistic under the current synth representation.
 
+Reassessment after `v3.0` and `v3.1`:
+
+- `v3.0_restructure` proved the pitch-conditioned grouped-head design was the right
+  direction: parameter MAE, waveform accuracy, and rendered-audio distance all improved
+  together.
+- `v3.1_500ksamples` proved the same design scales with data: test MAE reached about
+  `0.0715`, waveform accuracy reached about `0.882`, and the 200-clip d8 mean weighted
+  distance dropped to about `32.2`.
+- The remaining dominant error is oscillator mix quality, especially `osc1_level`,
+  `osc2_level`, and `osc2_detune`. The level predictions still regress toward average
+  levels, even though waveform classification is now strong.
+- The two oscillator slots are partly exchangeable. A patch with oscillator 1 as a quiet
+  saw and oscillator 2 as a loud sine can be perceptually equivalent, or nearly equivalent,
+  to the same waves and levels assigned to the opposite slots. Treating `osc1_level` and
+  `osc2_level` as independent slot-specific regression targets therefore creates an
+  artificial target ambiguity.
+
+The next model series should therefore be `v3.2`, focused on canonical oscillator-mix
+targets rather than a larger backbone. The preferred design is:
+
+- Convert oscillator slots into a canonical order before training targets are produced.
+  A deterministic rule should sort the two oscillators by waveform identity and/or level
+  so equivalent two-oscillator patches map to the same target representation.
+- Predict oscillator mix in perceptual terms: waveform identity plus level associated
+  with that waveform, not arbitrary slot identity.
+- Consider replacing raw `osc1_level` and `osc2_level` targets with `osc_total_level`
+  and `osc_balance`, then reconstruct render parameters after prediction.
+- Keep `osc2_detune` tied to the canonical pair definition. If oscillator order changes,
+  detune sign and meaning must be handled explicitly so the rendered result remains
+  equivalent.
+- Add slot-invariant oscillator diagnostics: best assignment error, total-level error,
+  balance error, per-wave level error, and worst-clip analysis focused on oscillator mix.
+- Keep the rest of the proven v3 setup unchanged for the first v3.2 run: pitch-conditioned
+  timbre, waveform classification, large CNN, time-frequency pooling, grouped heads,
+  group-balanced loss, AdamW, early stopping, and best-validation checkpointing.
+
+Acceptance criteria for `v3.2`:
+
+- Reports show oscillator-level errors in a representation that is not punished merely
+  because the two oscillator slots were swapped.
+- Reconstructed `osc1_level` and `osc2_level` MAE improve meaningfully versus v3.1's
+  roughly `0.18` per level, or the report proves the rendered-audio metric improves even
+  when slot-specific MAE is not directly comparable.
+- Oscillator grouped MAE improves versus v3.1's roughly `0.111`.
+- The fixed d8 evaluation mean weighted distance moves below v3.1's roughly `32`, with
+  no regression in median distance or waveform accuracy.
+
 ### Milestone I: Real Audio Prototype
 
 - Add audio preprocessing.
