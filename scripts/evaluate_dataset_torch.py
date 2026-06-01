@@ -20,6 +20,10 @@ from minisynth.evaluation import (
     worst_clip_diagnostics,
 )
 from minisynth.io import load_patch
+from minisynth.oscillator_mix import (
+    oscillator_mix_error_report,
+    summarize_oscillator_mix_errors,
+)
 from minisynth.reporting import (
     compact_clip_result,
     compact_model_metrics,
@@ -133,12 +137,20 @@ def main() -> int:
                 target_patch,
                 result["patch"],
             )
+            clip_result["oscillator_mix_errors"] = oscillator_mix_error_report(
+                target_patch,
+                result["patch"],
+            )
         except ValueError as error:
             clip_result["error"] = str(error)
             if patch is not None:
                 clip_result["predicted_patch"] = patch
                 if target_patch is not None:
                     clip_result["parameter_errors"] = parameter_error_report(
+                        target_patch,
+                        patch,
+                    )
+                    clip_result["oscillator_mix_errors"] = oscillator_mix_error_report(
                         target_patch,
                         patch,
                     )
@@ -164,6 +176,7 @@ def main() -> int:
             "prediction_distribution": compact_prediction_distribution(
                 patch_prediction_distribution(successful_results)
             ),
+            "oscillator_mix": summarize_oscillator_mix_errors(successful_results),
             "worst_clips": worst_clip_diagnostics(
                 successful_results,
                 top_n=args.diagnostics_top_n,

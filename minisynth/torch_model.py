@@ -10,11 +10,18 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from minisynth.dataset import DEFAULT_MEL_TENSOR_FRAMES, mel_tensor_from_audio
 from minisynth.randomize import constrain_envelope_fits_length
+from minisynth.oscillator_mix import (
+    canonicalize_oscillator_slots,
+    oscillator_balance,
+    oscillator_total_level,
+)
 from minisynth.schema import (
+    Parameter,
     SynthConfig,
     VECTOR_PARAMETERS,
     categorical_values,
     config_from_vector,
+    denormalize_parameter_value,
     normalize_parameter_value,
 )
 
@@ -35,6 +42,7 @@ WAVEFORM_MODE_CLASSIFICATION = "classification"
 DEFAULT_WAVEFORM_MODE = WAVEFORM_MODE_CLASSIFICATION
 TARGET_MODE_FULL = "full"
 TARGET_MODE_PITCH_CONDITIONED_TIMBRE = "pitch_conditioned_timbre"
+TARGET_MODE_OSCILLATOR_MIX = "oscillator_mix"
 DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
@@ -60,6 +68,34 @@ DEFAULT_POOLING_MODE = POOLING_TIME_FREQUENCY
 HEAD_MODE_SHARED = "shared"
 HEAD_MODE_GROUPED = "grouped"
 DEFAULT_HEAD_MODE = HEAD_MODE_SHARED
+OSC_TOTAL_LEVEL_PARAMETER = Parameter(
+    "osc_total_level",
+    "float",
+    0.0,
+    2.0,
+    1.0,
+    "linear",
+    "oscillator",
+)
+OSC_BALANCE_PARAMETER = Parameter(
+    "osc_balance",
+    "float",
+    0.0,
+    1.0,
+    0.5,
+    "linear",
+    "oscillator",
+)
+OSCILLATOR_MIX_PARAMETERS = tuple(
+    parameter
+    for parameter in VECTOR_PARAMETERS
+    if parameter.name not in ("freq", "osc1_level", "osc2_level")
+)
+OSCILLATOR_MIX_PARAMETERS = (
+    OSCILLATOR_MIX_PARAMETERS[:2]
+    + (OSC_TOTAL_LEVEL_PARAMETER, OSC_BALANCE_PARAMETER)
+    + OSCILLATOR_MIX_PARAMETERS[2:]
+)
 MODEL_SIZE_SPECS = {
     MODEL_SIZE_SMALL: {
         "channels": (16, 32, 64),
@@ -82,6 +118,8 @@ PARAMETER_METRIC_GROUPS = {
         "length",
         "osc1_wave",
         "osc1_level",
+        "osc_total_level",
+        "osc_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
@@ -96,6 +134,8 @@ PARAMETER_METRIC_GROUPS = {
         "length",
         "osc1_wave",
         "osc1_level",
+        "osc_total_level",
+        "osc_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
@@ -109,6 +149,8 @@ PARAMETER_METRIC_GROUPS = {
     "oscillator": (
         "osc1_wave",
         "osc1_level",
+        "osc_total_level",
+        "osc_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
@@ -119,7 +161,7 @@ PARAMETER_METRIC_GROUPS = {
 CONTINUOUS_HEAD_GROUPS = {
     "duration": ("length",),
     "pitch": ("freq",),
-    "oscillator": ("osc1_level", "osc2_level", "osc2_detune"),
+    "oscillator": ("osc1_level", "osc_total_level", "osc_balance", "osc2_level", "osc2_detune"),
     "filter": ("cutoff", "resonance"),
     "adsr": ("attack", "decay", "sustain", "release"),
 }
@@ -129,6 +171,8 @@ GROUP_BALANCED_LOSS_GROUPS = {
     "oscillator": (
         "osc1_wave",
         "osc1_level",
+        "osc_total_level",
+        "osc_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
@@ -169,7 +213,10 @@ HYBRID_PARAMETER_WEIGHTS = {
 
 
 def parameters_from_names(names):
-    by_name = {parameter.name: parameter for parameter in VECTOR_PARAMETERS}
+    by_name = {
+        parameter.name: parameter
+        for parameter in tuple(VECTOR_PARAMETERS) + tuple(OSCILLATOR_MIX_PARAMETERS)
+    }
     return tuple(by_name[name] for name in names)
 
 
@@ -178,6 +225,8 @@ def target_parameters_for_mode(target_mode=DEFAULT_TARGET_MODE):
         return VECTOR_PARAMETERS
     if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
         return tuple(parameter for parameter in VECTOR_PARAMETERS if parameter.name != "freq")
+    if target_mode == TARGET_MODE_OSCILLATOR_MIX:
+        return OSCILLATOR_MIX_PARAMETERS
 
     raise ValueError(f"Unsupported target mode: {target_mode}")
 
@@ -623,15 +672,37 @@ def targets_for_parameters(full_targets, parameters):
     return source[:, indices]
 
 
+def oscillator_mix_targets(full_targets):
+    source = np.asarray(full_targets, dtype=np.float32)
+    rows = []
+    for row in source:
+        patch = config_from_vector(row, parameters=VECTOR_PARAMETERS).to_render_kwargs()
+        patch = canonicalize_oscillator_slots(patch)
+        values = []
+        for parameter in OSCILLATOR_MIX_PARAMETERS:
+            if parameter.name == "osc_total_level":
+                values.append(oscillator_total_level(patch) / 2.0)
+            elif parameter.name == "osc_balance":
+                values.append(oscillator_balance(patch))
+            else:
+                values.append(normalize_parameter_value(parameter, patch[parameter.name]))
+        rows.append(values)
+    return np.asarray(rows, dtype=np.float32)
+
+
 def prepare_model_arrays(features, targets, target_mode=DEFAULT_TARGET_MODE):
     parameters = target_parameters_for_mode(target_mode)
     x = np.asarray(features, dtype=np.float32)
-    if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
+    if target_mode in (TARGET_MODE_PITCH_CONDITIONED_TIMBRE, TARGET_MODE_OSCILLATOR_MIX):
         x = add_pitch_context_channel(x, targets)
+    if target_mode == TARGET_MODE_OSCILLATOR_MIX:
+        target_values = oscillator_mix_targets(targets)
+    else:
+        target_values = targets_for_parameters(targets, parameters)
 
     return {
         "features": x,
-        "targets": targets_for_parameters(targets, parameters),
+        "targets": target_values,
         "parameters": parameters,
     }
 
@@ -1609,7 +1680,7 @@ def train_inverse_model_sharded(
     source = load_mel_tensor_shard_source(tensor_path)
     target_parameters = target_parameters_for_mode(target_mode)
     input_channels = int(source["feature_shape"][0])
-    if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
+    if target_mode in (TARGET_MODE_PITCH_CONDITIONED_TIMBRE, TARGET_MODE_OSCILLATOR_MIX):
         input_channels += 1
 
     split = split_sample_indices(
@@ -2296,6 +2367,33 @@ def predict_normalized_vectors(model, mel_tensors, device=None):
     return predictions.cpu().numpy()
 
 
+def patch_from_model_vector(vector, parameters, freq=None):
+    values = {}
+    osc_total_level = None
+    osc_balance_value = None
+    for parameter, normalized in zip(parameters, vector):
+        value = float(np.clip(normalized, 0.0, 1.0))
+        if parameter.name == "osc_total_level":
+            osc_total_level = value * 2.0
+        elif parameter.name == "osc_balance":
+            osc_balance_value = value
+        else:
+            values[parameter.name] = denormalize_parameter_value(parameter, value)
+
+    if osc_total_level is not None or osc_balance_value is not None:
+        if osc_total_level is None or osc_balance_value is None:
+            raise ValueError("oscillator mix predictions require total level and balance")
+        values["osc1_level"] = float(np.clip(osc_total_level * (1.0 - osc_balance_value), 0.0, 1.0))
+        values["osc2_level"] = float(np.clip(osc_total_level * osc_balance_value, 0.0, 1.0))
+
+    if "freq" not in values:
+        if freq is None:
+            raise ValueError("freq is required to render pitch-conditioned predictions")
+        values["freq"] = float(freq)
+
+    return SynthConfig(**values).to_render_kwargs()
+
+
 def predict_patch_from_audio(
     model,
     audio,
@@ -2320,11 +2418,7 @@ def predict_patch_from_audio(
         )[0]
     )
     parameters = getattr(model, "parameters_schema", VECTOR_PARAMETERS)
-    patch = config_from_vector(vector, parameters=parameters).to_render_kwargs()
-    if "freq" not in getattr(model, "parameter_names", (parameter.name for parameter in VECTOR_PARAMETERS)):
-        if freq is None:
-            raise ValueError("freq is required to render pitch-conditioned predictions")
-        patch["freq"] = float(freq)
+    patch = patch_from_model_vector(vector, parameters, freq=freq)
     constrain_envelope_fits_length(patch)
     return patch
 

@@ -255,10 +255,24 @@ def worst_clip_diagnostics(results, top_n=10, include_full=False):
             diagnostic.update(
                 {
                     "parameter_errors": parameter_errors,
+                    "oscillator_mix_errors": result.get("oscillator_mix_errors"),
                     "target_patch": result["target_patch"],
                     "predicted_patch": result["predicted_patch"],
                 }
             )
+        elif "oscillator_mix_errors" in result:
+            diagnostic["oscillator_mix"] = {
+                "total_level_error": result["oscillator_mix_errors"]["total_level"][
+                    "absolute_error"
+                ],
+                "balance_error": result["oscillator_mix_errors"]["balance"][
+                    "absolute_error"
+                ],
+                "best_assignment_error": result["oscillator_mix_errors"][
+                    "best_assignment_error"
+                ],
+                "best_assignment": result["oscillator_mix_errors"]["best_assignment"],
+            }
         worst.append(diagnostic)
 
     return worst

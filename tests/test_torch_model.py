@@ -18,6 +18,7 @@ from minisynth.torch_model import (
     DEFAULT_MODEL_SIZE,
     DEFAULT_POOLING_MODE,
     DEFAULT_TARGET_MODE,
+    TARGET_MODE_OSCILLATOR_MIX,
     DEFAULT_WAVEFORM_MODE,
     MelSpectrogramInverseModel,
     build_cnn_encoder,
@@ -36,6 +37,7 @@ from minisynth.torch_model import (
     pooling_shape,
     prepare_model_arrays,
     predict_patch_from_audio,
+    patch_from_model_vector,
     save_torch_checkpoint,
     split_tensor_dataset,
     split_tensor_dataset_with_benchmark,
@@ -242,6 +244,51 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertEqual(prepared["targets"].shape[1], len(VECTOR_PARAMETERS) - 1)
         self.assertNotIn("freq", [parameter.name for parameter in prepared["parameters"]])
         self.assertTrue(np.all(prepared["features"][:, 1, :, :] >= 0.1))
+
+    def test_prepare_model_arrays_can_use_oscillator_mix_targets(self):
+        features = np.zeros((1, 1, DEFAULT_MEL_BINS, 8), dtype=np.float32)
+        targets = np.full((1, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32)
+        names = [parameter.name for parameter in VECTOR_PARAMETERS]
+        targets[0, names.index("osc1_wave")] = 0.5
+        targets[0, names.index("osc1_level")] = 0.25
+        targets[0, names.index("osc2_wave")] = 0.0
+        targets[0, names.index("osc2_level")] = 0.75
+        targets[0, names.index("osc2_detune")] = 0.25
+
+        prepared = prepare_model_arrays(
+            features,
+            targets,
+            target_mode=TARGET_MODE_OSCILLATOR_MIX,
+        )
+        parameter_names = [parameter.name for parameter in prepared["parameters"]]
+
+        self.assertEqual(prepared["features"].shape, (1, 2, DEFAULT_MEL_BINS, 8))
+        self.assertIn("osc_total_level", parameter_names)
+        self.assertIn("osc_balance", parameter_names)
+        self.assertNotIn("freq", parameter_names)
+        self.assertNotIn("osc1_level", parameter_names)
+        self.assertNotIn("osc2_level", parameter_names)
+        self.assertAlmostEqual(
+            prepared["targets"][0, parameter_names.index("osc_total_level")],
+            0.5,
+        )
+        self.assertAlmostEqual(
+            prepared["targets"][0, parameter_names.index("osc_balance")],
+            0.25,
+        )
+
+    def test_patch_from_model_vector_reconstructs_oscillator_mix_levels(self):
+        parameters = target_parameters_for_mode(TARGET_MODE_OSCILLATOR_MIX)
+        values = {parameter.name: 0.5 for parameter in parameters}
+        values["osc_total_level"] = 0.5
+        values["osc_balance"] = 0.25
+        vector = [values[parameter.name] for parameter in parameters]
+
+        patch = patch_from_model_vector(vector, parameters, freq=440.0)
+
+        self.assertEqual(patch["freq"], 440.0)
+        self.assertAlmostEqual(patch["osc1_level"], 0.75)
+        self.assertAlmostEqual(patch["osc2_level"], 0.25)
 
     def test_parameter_mae_by_name_reports_each_target(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)

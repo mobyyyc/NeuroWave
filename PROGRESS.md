@@ -199,7 +199,7 @@ Evidence from local reports:
 - [x] Implement the `v3.0` model-design step: pitch-conditioned, group-balanced, multi-head continuous prediction.
 - [x] Train and evaluate `v3.0` against `v10`, `v2.0`, `v2.1`, and `v9`.
 - [x] Scale the v3 setup to `v3.1` on 500k synthetic examples.
-- [ ] Implement `v3.2` oscillator-mix target improvements so oscillator levels are learned
+- [x] Implement `v3.2` oscillator-mix target improvements so oscillator levels are learned
   by canonical waveform/level contribution rather than arbitrary oscillator slot identity.
 
 Current v3 findings:
@@ -217,12 +217,19 @@ Current v3 findings:
   a loud sine in oscillator 2 should not be treated as a fundamentally different target
   from the same saw/sine level contributions swapped between slots.
 
+Completed v3.2 setup before training:
+
+- Added oscillator-mix diagnostics before training: total level, balance, per-wave level
+  contribution, slot-swapped/best-assignment error, and worst clips grouped by
+  oscillator-mix failure.
+- Added the `oscillator_mix` target mode used by the simplified future-facing training
+  CLI. It uses pitch context, canonicalizes oscillator slot ordering, replaces raw
+  `osc1_level`/`osc2_level` targets with `osc_total_level` and `osc_balance`, and
+  reconstructs ordinary renderable levels during prediction.
+
 Next recommended task:
 
-- Add oscillator-mix diagnostics before changing training targets: total level,
-  balance, per-wave level contribution, slot-swapped/best-assignment error, and worst
-  clips grouped by oscillator-mix failure. This gives v3.2 a precise before/after
-  comparison against v3.1.
+- Train `v3.2_oscmix` on the 500k tensor dataset and compare it against `v3.1`.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 

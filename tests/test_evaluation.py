@@ -296,6 +296,7 @@ class TestPredictionEvaluation(unittest.TestCase):
         self.assertIn('"failed_count": 0', report_text)
         self.assertIn('"diagnostics"', report_text)
         self.assertIn('"prediction_distribution"', report_text)
+        self.assertIn('"oscillator_mix"', report_text)
         self.assertIn('"largest_parameter_errors"', report_text)
 
     def test_evaluate_dataset_torch_cli_supports_pitch_conditioned_model(self):
