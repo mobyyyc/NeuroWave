@@ -201,6 +201,7 @@ Evidence from local reports:
 - [x] Scale the v3 setup to `v3.1` on 500k synthetic examples.
 - [x] Implement `v3.2` oscillator-mix target improvements so oscillator levels are learned
   by canonical waveform/level contribution rather than arbitrary oscillator slot identity.
+- [x] Implement the `v3.3` main/detuned oscillator target setup before training.
 
 Current v3 findings:
 
@@ -227,9 +228,27 @@ Completed v3.2 setup before training:
   `osc1_level`/`osc2_level` targets with `osc_total_level` and `osc_balance`, and
   reconstructs ordinary renderable levels during prediction.
 
+v3.2 training/evaluation finding:
+
+- `v3.2_oscmix` improved parameter metrics and waveform accuracy, but fair d8 evaluation
+  showed worse median rendered distance versus v3.1 while reducing worst-case failures.
+  The likely bottleneck is that canonical oscillator swapping conflicts with the synth's
+  `osc2_detune` convention.
+
+Completed v3.3 setup before training:
+
+- Added the `main_detuned_mix` target mode. It keeps pitch context, treats `osc1` as
+  the main/base-frequency oscillator, treats `osc2` as the detuned oscillator, predicts
+  `osc_total_level`, `detuned_balance`, and `detune_amount`, then reconstructs normal
+  render parameters after prediction.
+- Added main/detuned diagnostics for evaluation reports: main wave error, detuned wave
+  error, total-level error, detuned-balance error, and normalized detune error.
+- Updated the simplified training CLI defaults to `v3.3_main_detuned_mix`.
+
 Next recommended task:
 
-- Train `v3.2_oscmix` on the 500k tensor dataset and compare it against `v3.1`.
+- Train `v3.3_main_detuned_mix` on the current 500k tensor dataset and compare it
+  against `v3.1_500ksamples` and `v3.2_oscmix` on the fixed d8 1000-clip evaluation.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 

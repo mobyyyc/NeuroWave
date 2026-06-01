@@ -21,7 +21,9 @@ from minisynth.evaluation import (
 )
 from minisynth.io import load_patch
 from minisynth.oscillator_mix import (
+    main_detuned_error_report,
     oscillator_mix_error_report,
+    summarize_main_detuned_errors,
     summarize_oscillator_mix_errors,
 )
 from minisynth.reporting import (
@@ -141,6 +143,10 @@ def main() -> int:
                 target_patch,
                 result["patch"],
             )
+            clip_result["main_detuned_errors"] = main_detuned_error_report(
+                target_patch,
+                result["patch"],
+            )
         except ValueError as error:
             clip_result["error"] = str(error)
             if patch is not None:
@@ -151,6 +157,10 @@ def main() -> int:
                         patch,
                     )
                     clip_result["oscillator_mix_errors"] = oscillator_mix_error_report(
+                        target_patch,
+                        patch,
+                    )
+                    clip_result["main_detuned_errors"] = main_detuned_error_report(
                         target_patch,
                         patch,
                     )
@@ -177,6 +187,7 @@ def main() -> int:
                 patch_prediction_distribution(successful_results)
             ),
             "oscillator_mix": summarize_oscillator_mix_errors(successful_results),
+            "main_detuned": summarize_main_detuned_errors(successful_results),
             "worst_clips": worst_clip_diagnostics(
                 successful_results,
                 top_n=args.diagnostics_top_n,

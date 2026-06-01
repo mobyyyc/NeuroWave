@@ -140,7 +140,7 @@ def denormalize_parameter_value(parameter, normalized):
 
 
 def categorical_values(parameter):
-    if parameter.name in ("osc1_wave", "osc2_wave"):
+    if parameter.name in ("osc1_wave", "osc2_wave", "main_wave", "detuned_wave"):
         return BASE_WAVES
 
     raise ValueError(f"No categorical values configured for {parameter.name}")

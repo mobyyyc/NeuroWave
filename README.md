@@ -72,7 +72,7 @@ python scripts/smoke_render.py
 
 Datasets are named `dN`. Historical models used long descriptive IDs, but new
 models use short change-focused IDs such as `v3.0_restructure`,
-`v3.1_500ksamples`, and `v3.2_oscmix`. Keep dataset IDs and model IDs separate.
+`v3.1_500ksamples`, `v3.2_oscmix`, and `v3.3_main_detuned_mix`. Keep dataset IDs and model IDs separate.
 
 Generate the first tiny local dataset:
 
@@ -115,13 +115,13 @@ Template for future models:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id v3.2_oscmix \
+  --model-id v3.3_main_detuned_mix \
   --tensor-data data/generated/dN/features \
   --epochs 50 \
   --batch-size 64 \
   --device cuda \
-  --model-output models/v3.2_oscmix.pt \
-  --metrics-output runs/training/v3.2_oscmix_metrics.json
+  --model-output models/v3.3_main_detuned_mix.pt \
+  --metrics-output runs/training/v3.3_main_detuned_mix_metrics.json
 ```
 
 Training output:
@@ -134,7 +134,9 @@ Training output:
 
 The current best proven model family is the v3 pitch-conditioned grouped-head setup. It keeps exact synthetic pitch as context, uses separate heads for duration, oscillator, filter, and ADSR controls, and trains with group-balanced loss so one parameter group cannot hide another.
 
-`v3.1` scaled that setup to 500k synthetic examples and became the current best checkpoint. The next planned improvement is `v3.2`, focused on oscillator-mix representation. The two oscillator slots are partly exchangeable: a quiet saw in oscillator 1 plus a loud sine in oscillator 2 can be equivalent, or nearly equivalent, to the same saw/sine level contributions assigned to the opposite slots. Future v3.2 work should therefore canonicalize oscillator targets or predict total oscillator level plus balance/per-wave level contribution, so the model learns the audible mix instead of arbitrary slot identity.
+`v3.1` scaled that setup to 500k synthetic examples. `v3.2` added oscillator-mix targets and proved that fixed oscillator slots create real target ambiguity, but the fair d8 evaluation showed worse median rendered distance because canonical slot swapping conflicts with `osc2_detune`.
+
+The next planned model is `v3.3_main_detuned_mix`. It keeps pitch conditioning and total-level/balance learning, but defines oscillator roles by producer logic: `osc1` is the main/base-frequency oscillator supplied by the known pitch context, and `osc2` is the detuned oscillator whose relative pitch is learned as `detune_amount`. This preserves detune meaning while still avoiding independent raw `osc1_level`/`osc2_level` regression.
 
 The v3 defaults are intentionally not exposed as routine CLI switches. If a future
 experiment needs a different architecture or loss, change the code deliberately and
@@ -147,11 +149,11 @@ Evaluate a current PyTorch checkpoint on a generated dataset:
 ```bash
 python scripts/evaluate_dataset_torch.py \
   --metadata data/generated/dN/metadata.jsonl \
-  --model models/v3.2_oscmix.pt \
+  --model models/v3.3_main_detuned_mix.pt \
   --count 1000 \
   --start-index 0 \
   --device cuda \
-  --output runs/evaluation/v3.2_oscmix_on_dN_eval.json
+  --output runs/evaluation/v3.3_main_detuned_mix_on_dN_eval.json
 ```
 
 Use a smaller count for quick checks:
@@ -159,9 +161,9 @@ Use a smaller count for quick checks:
 ```bash
 python scripts/evaluate_dataset_torch.py \
   --metadata data/generated/dN/metadata.jsonl \
-  --model models/v3.2_oscmix.pt \
+  --model models/v3.3_main_detuned_mix.pt \
   --count 200 \
-  --output runs/evaluation/v3.2_oscmix_smoke_eval.json
+  --output runs/evaluation/v3.3_main_detuned_mix_smoke_eval.json
 ```
 
 Evaluation reports are compact by default: they include weighted audio distance summaries,
@@ -187,8 +189,8 @@ Predict a patch JSON from one audio clip using a PyTorch checkpoint:
 ```bash
 python scripts/predict_patch_torch.py \
   data/generated/dN/audio/patch_000000_seed_0000.wav \
-  runs/pytorch_prediction/v3.2_oscmix_patch.json \
-  --model models/v3.2_oscmix.pt \
+  runs/pytorch_prediction/v3.3_main_detuned_mix_patch.json \
+  --model models/v3.3_main_detuned_mix.pt \
   --freq 440
 ```
 
@@ -197,9 +199,9 @@ Render and compare a PyTorch prediction against the target audio:
 ```bash
 python scripts/evaluate_prediction_torch.py \
   data/generated/dN/audio/patch_000000_seed_0000.wav \
-  --model models/v3.2_oscmix.pt \
+  --model models/v3.3_main_detuned_mix.pt \
   --freq 440 \
-  --output-dir runs/pytorch_prediction/v3.2_oscmix_patch_eval
+  --output-dir runs/pytorch_prediction/v3.3_main_detuned_mix_patch_eval
 ```
 
 ## Compare Reports

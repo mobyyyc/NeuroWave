@@ -256,6 +256,7 @@ def worst_clip_diagnostics(results, top_n=10, include_full=False):
                 {
                     "parameter_errors": parameter_errors,
                     "oscillator_mix_errors": result.get("oscillator_mix_errors"),
+                    "main_detuned_errors": result.get("main_detuned_errors"),
                     "target_patch": result["target_patch"],
                     "predicted_patch": result["predicted_patch"],
                 }
@@ -273,6 +274,18 @@ def worst_clip_diagnostics(results, top_n=10, include_full=False):
                 ],
                 "best_assignment": result["oscillator_mix_errors"]["best_assignment"],
             }
+            if "main_detuned_errors" in result:
+                diagnostic["main_detuned"] = {
+                    "total_level_error": result["main_detuned_errors"]["total_level"][
+                        "absolute_error"
+                    ],
+                    "detuned_balance_error": result["main_detuned_errors"][
+                        "detuned_balance"
+                    ]["absolute_error"],
+                    "normalized_detune_error": result["main_detuned_errors"]["detune"][
+                        "normalized_absolute_error"
+                    ],
+                }
         worst.append(diagnostic)
 
     return worst

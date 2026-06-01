@@ -58,6 +58,9 @@ Use this versioning rule:
 - `v3.2`: v3 model setup with oscillator-mix target or diagnostic changes. Use this for
   canonical oscillator representation work where levels are learned by audible waveform
   contribution rather than arbitrary oscillator slot identity.
+- `v3.3`: v3 model setup with main/detuned oscillator roles. Use this when the model
+  treats known pitch as the main oscillator frequency and learns the second oscillator
+  as relative detune plus mix balance.
 
 The suffix should describe only what changed or what the experiment proves. Do not encode
 the full architecture, loss, target mode, pooling mode, or training configuration in every
@@ -68,6 +71,7 @@ Recommended suffix examples:
 - `restructure`: architecture/target/loss restructure.
 - `500ksamples`: same setup trained on a 500k dataset.
 - `oscmix`: canonical oscillator-mix target or diagnostics.
+- `main_detuned_mix`: base-frequency oscillator plus relative detuned oscillator target.
 - `losscheck`: focused loss-function ablation.
 - `evalfix`: evaluation/reporting-only change.
 
@@ -80,6 +84,7 @@ Example recent and next capability model IDs:
 - `v3.0_restructure`
 - `v3.1_500ksamples`
 - `v3.2_oscmix`
+- `v3.3_main_detuned_mix`
 
 Existing long model IDs should stay unchanged in old reports and checkpoints. New model
 IDs should stay short and human-readable.
@@ -123,7 +128,7 @@ For the next oscillator-mix capability run:
 
 ```text
 Dataset: d10 or the current 500k dataset
-Model: v3.2_oscmix
+Model: v3.3_main_detuned_mix
 ```
 
 This means:
@@ -131,9 +136,9 @@ This means:
 - Dataset `d10` or the current 500k generated dataset.
 - PyTorch CNN model.
 - Pitch-conditioned timbre target mode.
-- Canonical oscillator-mix representation or diagnostics.
+- Main/detuned oscillator-mix representation and diagnostics.
 - Grouped continuous heads.
 - Group-balanced loss.
 - Large model capacity.
 - Time-frequency pooling.
-- 50,000 generated training examples.
+- 500,000 generated training examples.

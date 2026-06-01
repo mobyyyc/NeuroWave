@@ -138,6 +138,72 @@ def oscillator_mix_error_report(target_patch, predicted_patch):
     }
 
 
+def main_detuned_error_report(target_patch, predicted_patch):
+    target_total = oscillator_total_level(target_patch)
+    predicted_total = oscillator_total_level(predicted_patch)
+    target_balance = oscillator_balance(target_patch)
+    predicted_balance = oscillator_balance(predicted_patch)
+
+    return {
+        "main_wave_error": categorical_wave_error(
+            target_patch["osc1_wave"],
+            predicted_patch["osc1_wave"],
+        ),
+        "detuned_wave_error": categorical_wave_error(
+            target_patch["osc2_wave"],
+            predicted_patch["osc2_wave"],
+        ),
+        "total_level": {
+            "target": target_total,
+            "predicted": predicted_total,
+            "absolute_error": float(abs(target_total - predicted_total)),
+        },
+        "detuned_balance": {
+            "target": target_balance,
+            "predicted": predicted_balance,
+            "absolute_error": float(abs(target_balance - predicted_balance)),
+        },
+        "detune": {
+            "target": float(target_patch["osc2_detune"]),
+            "predicted": float(predicted_patch["osc2_detune"]),
+            "normalized_absolute_error": normalized_detune_error(
+                target_patch["osc2_detune"],
+                predicted_patch["osc2_detune"],
+            ),
+        },
+    }
+
+
+def summarize_main_detuned_errors(results):
+    reports = [
+        result["main_detuned_errors"]
+        for result in results
+        if "main_detuned_errors" in result
+    ]
+    if not reports:
+        return {}
+
+    count = len(reports)
+    return {
+        "count": count,
+        "mean_main_wave_error": float(
+            sum(report["main_wave_error"] for report in reports) / count
+        ),
+        "mean_detuned_wave_error": float(
+            sum(report["detuned_wave_error"] for report in reports) / count
+        ),
+        "mean_total_level_error": float(
+            sum(report["total_level"]["absolute_error"] for report in reports) / count
+        ),
+        "mean_detuned_balance_error": float(
+            sum(report["detuned_balance"]["absolute_error"] for report in reports) / count
+        ),
+        "mean_normalized_detune_error": float(
+            sum(report["detune"]["normalized_absolute_error"] for report in reports) / count
+        ),
+    }
+
+
 def summarize_oscillator_mix_errors(results):
     reports = [
         result["oscillator_mix_errors"]

@@ -20,7 +20,7 @@ from minisynth.torch_model import (
     POOLING_TIME_FREQUENCY,
     SCHEDULER_STEP,
     CHECKPOINT_BEST_VALIDATION,
-    TARGET_MODE_OSCILLATOR_MIX,
+    TARGET_MODE_MAIN_DETUNED_MIX,
     WAVEFORM_MODE_CLASSIFICATION,
     save_torch_checkpoint,
     train_inverse_model,
@@ -31,7 +31,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model-id",
-        default="v3.2_oscmix",
+        default="v3.3_main_detuned_mix",
         help="Model identifier to store in the training metrics.",
     )
     parser.add_argument(
@@ -98,12 +98,12 @@ def parse_args():
     )
     parser.add_argument(
         "--model-output",
-        default="models/v3.2_oscmix.pt",
+        default="models/v3.3_main_detuned_mix.pt",
         help="Path where the trained PyTorch checkpoint should be saved.",
     )
     parser.add_argument(
         "--metrics-output",
-        default="runs/training/v3.2_oscmix_metrics.json",
+        default="runs/training/v3.3_main_detuned_mix_metrics.json",
         help="Path where training metrics JSON should be saved.",
     )
     return parser.parse_args()
@@ -128,7 +128,7 @@ def main() -> int:
         pooling_mode=POOLING_TIME_FREQUENCY,
         head_mode=HEAD_MODE_GROUPED,
         waveform_mode=WAVEFORM_MODE_CLASSIFICATION,
-        target_mode=TARGET_MODE_OSCILLATOR_MIX,
+        target_mode=TARGET_MODE_MAIN_DETUNED_MIX,
         loss_preset=LOSS_PRESET_GROUP_BALANCED,
         random_state=args.random_state,
         device=args.device,

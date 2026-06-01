@@ -735,6 +735,41 @@ Acceptance criteria for `v3.2`:
 - The fixed d8 evaluation mean weighted distance moves below v3.1's roughly `32`, with
   no regression in median distance or waveform accuracy.
 
+Reassessment after `v3.2`:
+
+- `v3.2_oscmix` improved training quality strongly: test MAE reached about `0.0527`,
+  waveform accuracy reached about `0.969`, and oscillator grouped MAE improved versus
+  v3.1. This confirms oscillator slot ambiguity was a real model bottleneck.
+- The fair d8 rendered-audio comparison did not improve median distance:
+  `v3.2_oscmix` reduced worst-case failures but increased the 1000-clip median distance.
+- The likely cause is that canonical oscillator swapping is not fully compatible with
+  the current synth's detune convention. `osc2_detune` is relative to the main/base
+  oscillator, so swapping oscillator roles changes the meaning of the detune target.
+
+The next model series should therefore be `v3.3`, focused on main/detuned oscillator
+roles rather than fully slot-canonical oscillator roles. The preferred design is:
+
+- Treat the known pitch context as the main oscillator's base frequency.
+- Keep `osc1` as `main_wave`, the waveform heard at the supplied/base frequency.
+- Keep `osc2` as `detuned_wave`, the second waveform heard at a relative pitch offset.
+- Replace raw `osc1_level` and `osc2_level` with `osc_total_level` and
+  `detuned_balance`, then reconstruct slot levels for rendering.
+- Replace the output name `osc2_detune` with `detune_amount` so reports express the
+  learned target as relative pitch from the known main frequency.
+- Add main/detuned diagnostics: main wave error, detuned wave error, total-level error,
+  detuned-balance error, and normalized detune error.
+- Keep the proven v3 architecture unchanged: pitch-conditioned input, waveform
+  classification, large CNN, time-frequency pooling, grouped heads, group-balanced
+  loss, AdamW, early stopping, and best-validation checkpointing.
+
+Acceptance criteria for `v3.3`:
+
+- Training MAE stays near or below v3.2's roughly `0.0527`.
+- The fixed d8 1000-clip median weighted distance improves versus v3.2's roughly
+  `16.54`, with no major regression in mean distance.
+- Detune-heavy worst clips show lower normalized detune error or clearly improved
+  rendered distance.
+
 ### Milestone I: Real Audio Prototype
 
 - Add audio preprocessing.

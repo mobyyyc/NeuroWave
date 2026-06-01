@@ -43,6 +43,7 @@ DEFAULT_WAVEFORM_MODE = WAVEFORM_MODE_CLASSIFICATION
 TARGET_MODE_FULL = "full"
 TARGET_MODE_PITCH_CONDITIONED_TIMBRE = "pitch_conditioned_timbre"
 TARGET_MODE_OSCILLATOR_MIX = "oscillator_mix"
+TARGET_MODE_MAIN_DETUNED_MIX = "main_detuned_mix"
 DEFAULT_TARGET_MODE = TARGET_MODE_FULL
 LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
@@ -86,6 +87,42 @@ OSC_BALANCE_PARAMETER = Parameter(
     "linear",
     "oscillator",
 )
+DETUNED_BALANCE_PARAMETER = Parameter(
+    "detuned_balance",
+    "float",
+    0.0,
+    1.0,
+    0.5,
+    "linear",
+    "oscillator",
+)
+MAIN_WAVE_PARAMETER = Parameter(
+    "main_wave",
+    "enum",
+    None,
+    None,
+    "saw",
+    "categorical",
+    "oscillator",
+)
+DETUNED_WAVE_PARAMETER = Parameter(
+    "detuned_wave",
+    "enum",
+    None,
+    None,
+    "saw",
+    "categorical",
+    "oscillator",
+)
+DETUNE_AMOUNT_PARAMETER = Parameter(
+    "detune_amount",
+    "float",
+    -1200.0,
+    1200.0,
+    7,
+    "linear",
+    "oscillator",
+)
 OSCILLATOR_MIX_PARAMETERS = tuple(
     parameter
     for parameter in VECTOR_PARAMETERS
@@ -95,6 +132,20 @@ OSCILLATOR_MIX_PARAMETERS = (
     OSCILLATOR_MIX_PARAMETERS[:2]
     + (OSC_TOTAL_LEVEL_PARAMETER, OSC_BALANCE_PARAMETER)
     + OSCILLATOR_MIX_PARAMETERS[2:]
+)
+MAIN_DETUNED_MIX_PARAMETERS = (
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "length"),
+    MAIN_WAVE_PARAMETER,
+    OSC_TOTAL_LEVEL_PARAMETER,
+    DETUNED_BALANCE_PARAMETER,
+    DETUNED_WAVE_PARAMETER,
+    DETUNE_AMOUNT_PARAMETER,
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "cutoff"),
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "resonance"),
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "attack"),
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "decay"),
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "sustain"),
+    next(parameter for parameter in VECTOR_PARAMETERS if parameter.name == "release"),
 )
 MODEL_SIZE_SPECS = {
     MODEL_SIZE_SMALL: {
@@ -120,9 +171,13 @@ PARAMETER_METRIC_GROUPS = {
         "osc1_level",
         "osc_total_level",
         "osc_balance",
+        "main_wave",
+        "detuned_wave",
+        "detuned_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
+        "detune_amount",
         "cutoff",
         "resonance",
         "attack",
@@ -136,9 +191,13 @@ PARAMETER_METRIC_GROUPS = {
         "osc1_level",
         "osc_total_level",
         "osc_balance",
+        "main_wave",
+        "detuned_wave",
+        "detuned_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
+        "detune_amount",
         "cutoff",
         "resonance",
         "attack",
@@ -151,9 +210,13 @@ PARAMETER_METRIC_GROUPS = {
         "osc1_level",
         "osc_total_level",
         "osc_balance",
+        "main_wave",
+        "detuned_wave",
+        "detuned_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
+        "detune_amount",
     ),
     "filter": ("cutoff", "resonance"),
     "adsr": ("attack", "decay", "sustain", "release"),
@@ -161,7 +224,15 @@ PARAMETER_METRIC_GROUPS = {
 CONTINUOUS_HEAD_GROUPS = {
     "duration": ("length",),
     "pitch": ("freq",),
-    "oscillator": ("osc1_level", "osc_total_level", "osc_balance", "osc2_level", "osc2_detune"),
+    "oscillator": (
+        "osc1_level",
+        "osc_total_level",
+        "osc_balance",
+        "detuned_balance",
+        "osc2_level",
+        "osc2_detune",
+        "detune_amount",
+    ),
     "filter": ("cutoff", "resonance"),
     "adsr": ("attack", "decay", "sustain", "release"),
 }
@@ -173,9 +244,13 @@ GROUP_BALANCED_LOSS_GROUPS = {
         "osc1_level",
         "osc_total_level",
         "osc_balance",
+        "main_wave",
+        "detuned_wave",
+        "detuned_balance",
         "osc2_wave",
         "osc2_level",
         "osc2_detune",
+        "detune_amount",
     ),
     "filter": ("cutoff", "resonance"),
     "adsr": ("attack", "decay", "sustain", "release"),
@@ -215,7 +290,11 @@ HYBRID_PARAMETER_WEIGHTS = {
 def parameters_from_names(names):
     by_name = {
         parameter.name: parameter
-        for parameter in tuple(VECTOR_PARAMETERS) + tuple(OSCILLATOR_MIX_PARAMETERS)
+        for parameter in (
+            tuple(VECTOR_PARAMETERS)
+            + tuple(OSCILLATOR_MIX_PARAMETERS)
+            + tuple(MAIN_DETUNED_MIX_PARAMETERS)
+        )
     }
     return tuple(by_name[name] for name in names)
 
@@ -227,6 +306,8 @@ def target_parameters_for_mode(target_mode=DEFAULT_TARGET_MODE):
         return tuple(parameter for parameter in VECTOR_PARAMETERS if parameter.name != "freq")
     if target_mode == TARGET_MODE_OSCILLATOR_MIX:
         return OSCILLATOR_MIX_PARAMETERS
+    if target_mode == TARGET_MODE_MAIN_DETUNED_MIX:
+        return MAIN_DETUNED_MIX_PARAMETERS
 
     raise ValueError(f"Unsupported target mode: {target_mode}")
 
@@ -690,13 +771,42 @@ def oscillator_mix_targets(full_targets):
     return np.asarray(rows, dtype=np.float32)
 
 
+def main_detuned_mix_targets(full_targets):
+    source = np.asarray(full_targets, dtype=np.float32)
+    rows = []
+    for row in source:
+        patch = config_from_vector(row, parameters=VECTOR_PARAMETERS).to_render_kwargs()
+        values = []
+        for parameter in MAIN_DETUNED_MIX_PARAMETERS:
+            if parameter.name == "main_wave":
+                values.append(normalize_parameter_value(parameter, patch["osc1_wave"]))
+            elif parameter.name == "detuned_wave":
+                values.append(normalize_parameter_value(parameter, patch["osc2_wave"]))
+            elif parameter.name == "osc_total_level":
+                values.append(oscillator_total_level(patch) / 2.0)
+            elif parameter.name == "detuned_balance":
+                values.append(oscillator_balance(patch))
+            elif parameter.name == "detune_amount":
+                values.append(normalize_parameter_value(parameter, patch["osc2_detune"]))
+            else:
+                values.append(normalize_parameter_value(parameter, patch[parameter.name]))
+        rows.append(values)
+    return np.asarray(rows, dtype=np.float32)
+
+
 def prepare_model_arrays(features, targets, target_mode=DEFAULT_TARGET_MODE):
     parameters = target_parameters_for_mode(target_mode)
     x = np.asarray(features, dtype=np.float32)
-    if target_mode in (TARGET_MODE_PITCH_CONDITIONED_TIMBRE, TARGET_MODE_OSCILLATOR_MIX):
+    if target_mode in (
+        TARGET_MODE_PITCH_CONDITIONED_TIMBRE,
+        TARGET_MODE_OSCILLATOR_MIX,
+        TARGET_MODE_MAIN_DETUNED_MIX,
+    ):
         x = add_pitch_context_channel(x, targets)
     if target_mode == TARGET_MODE_OSCILLATOR_MIX:
         target_values = oscillator_mix_targets(targets)
+    elif target_mode == TARGET_MODE_MAIN_DETUNED_MIX:
+        target_values = main_detuned_mix_targets(targets)
     else:
         target_values = targets_for_parameters(targets, parameters)
 
@@ -1680,7 +1790,11 @@ def train_inverse_model_sharded(
     source = load_mel_tensor_shard_source(tensor_path)
     target_parameters = target_parameters_for_mode(target_mode)
     input_channels = int(source["feature_shape"][0])
-    if target_mode in (TARGET_MODE_PITCH_CONDITIONED_TIMBRE, TARGET_MODE_OSCILLATOR_MIX):
+    if target_mode in (
+        TARGET_MODE_PITCH_CONDITIONED_TIMBRE,
+        TARGET_MODE_OSCILLATOR_MIX,
+        TARGET_MODE_MAIN_DETUNED_MIX,
+    ):
         input_channels += 1
 
     split = split_sample_indices(
@@ -2371,20 +2485,33 @@ def patch_from_model_vector(vector, parameters, freq=None):
     values = {}
     osc_total_level = None
     osc_balance_value = None
+    detuned_balance_value = None
     for parameter, normalized in zip(parameters, vector):
         value = float(np.clip(normalized, 0.0, 1.0))
         if parameter.name == "osc_total_level":
             osc_total_level = value * 2.0
         elif parameter.name == "osc_balance":
             osc_balance_value = value
+        elif parameter.name == "detuned_balance":
+            detuned_balance_value = value
+        elif parameter.name == "main_wave":
+            values["osc1_wave"] = denormalize_parameter_value(parameter, value)
+        elif parameter.name == "detuned_wave":
+            values["osc2_wave"] = denormalize_parameter_value(parameter, value)
+        elif parameter.name == "detune_amount":
+            values["osc2_detune"] = denormalize_parameter_value(parameter, value)
         else:
             values[parameter.name] = denormalize_parameter_value(parameter, value)
 
-    if osc_total_level is not None or osc_balance_value is not None:
-        if osc_total_level is None or osc_balance_value is None:
-            raise ValueError("oscillator mix predictions require total level and balance")
-        values["osc1_level"] = float(np.clip(osc_total_level * (1.0 - osc_balance_value), 0.0, 1.0))
-        values["osc2_level"] = float(np.clip(osc_total_level * osc_balance_value, 0.0, 1.0))
+    balance_values = [
+        value for value in (osc_balance_value, detuned_balance_value) if value is not None
+    ]
+    if osc_total_level is not None or balance_values:
+        if osc_total_level is None or len(balance_values) != 1:
+            raise ValueError("oscillator mix predictions require total level and one balance")
+        balance = balance_values[0]
+        values["osc1_level"] = float(np.clip(osc_total_level * (1.0 - balance), 0.0, 1.0))
+        values["osc2_level"] = float(np.clip(osc_total_level * balance, 0.0, 1.0))
 
     if "freq" not in values:
         if freq is None:

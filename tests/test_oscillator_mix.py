@@ -1,9 +1,11 @@
 import unittest
 
 from minisynth.oscillator_mix import (
+    main_detuned_error_report,
     oscillator_balance,
     oscillator_level_by_wave,
     oscillator_mix_error_report,
+    summarize_main_detuned_errors,
     summarize_oscillator_mix_errors,
 )
 
@@ -83,6 +85,34 @@ class TestOscillatorMix(unittest.TestCase):
         self.assertEqual(summary["count"], 1)
         self.assertAlmostEqual(summary["mean_total_level_error"], 0.0)
         self.assertAlmostEqual(summary["per_wave_level_mae"]["saw"], 0.1)
+
+    def test_main_detuned_errors_preserve_base_and_relative_roles(self):
+        target = {
+            "osc1_wave": "saw",
+            "osc1_level": 0.75,
+            "osc2_wave": "sine",
+            "osc2_level": 0.25,
+            "osc2_detune": 120.0,
+        }
+        predicted = {
+            "osc1_wave": "saw",
+            "osc1_level": 0.5,
+            "osc2_wave": "triangle",
+            "osc2_level": 0.5,
+            "osc2_detune": 0.0,
+        }
+
+        report = main_detuned_error_report(target, predicted)
+        summary = summarize_main_detuned_errors(
+            [{"main_detuned_errors": report}]
+        )
+
+        self.assertEqual(report["main_wave_error"], 0.0)
+        self.assertGreater(report["detuned_wave_error"], 0.0)
+        self.assertAlmostEqual(report["detuned_balance"]["absolute_error"], 0.25)
+        self.assertAlmostEqual(report["detune"]["normalized_absolute_error"], 0.05)
+        self.assertEqual(summary["count"], 1)
+        self.assertAlmostEqual(summary["mean_detuned_balance_error"], 0.25)
 
 
 if __name__ == "__main__":
