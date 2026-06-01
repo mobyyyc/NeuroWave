@@ -280,7 +280,13 @@ python scripts/evaluate_dataset_torch.py \
   --output runs/evaluation/v4_pytorch_cnn_10kseeds_on_d3_eval.json
 ```
 
-Evaluation reports include weighted audio distance plus the component distances used to score predicted renders against target audio. They also include target patches, predicted patches, normalized per-parameter errors, and a `diagnostics.worst_clips` section ranked by weighted audio distance. Use `--diagnostics-top-n 20` when you want a larger worst-case review set.
+Evaluation reports are compact by default: they include weighted audio distance summaries,
+compact checkpoint metrics, prediction-distribution diagnostics, and a
+`diagnostics.worst_clips` section ranked by weighted audio distance with the largest
+parameter errors. Use `--diagnostics-top-n 20` for a larger worst-case review set,
+`--include-clips` for compact per-clip rows, or `--include-full-clips` when you need
+full target patches, predicted patches, and normalized per-parameter errors for
+debugging.
 
 ## Pitch And Length Strategy
 

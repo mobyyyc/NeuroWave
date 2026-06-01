@@ -48,6 +48,12 @@ def parse_args():
         default=0,
         help="Worker processes for dataset generation. Use 0 for conservative auto, 1 for serial.",
     )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=5000,
+        help="Number of samples to submit per multiprocessing chunk.",
+    )
     parser.add_argument("--output", help="Optional single patch JSON path.")
     return parser.parse_args()
 
@@ -75,6 +81,7 @@ def main() -> int:
             count=args.count,
             workers=args.workers,
             progress=args.count > 1,
+            chunk_size=args.chunk_size,
         )
 
         if args.count == 1:

@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from minisynth.constants import DEFAULT_SAMPLE_RATE
 from minisynth.evaluation import evaluate_patch_prediction
 from minisynth.io import save_patch
+from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
@@ -93,7 +94,7 @@ def main() -> int:
     report = {
         "target_audio": str(args.target),
         "model": str(args.model),
-        "model_metrics": checkpoint["metrics"],
+        "model_metrics": compact_model_metrics(checkpoint["metrics"]),
         "predicted_patch": str(patch_path),
         "predicted_audio": str(audio_path),
         "comparison": result["comparison"],

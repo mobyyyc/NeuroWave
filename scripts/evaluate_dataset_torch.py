@@ -20,6 +20,11 @@ from minisynth.evaluation import (
     worst_clip_diagnostics,
 )
 from minisynth.io import load_patch
+from minisynth.reporting import (
+    compact_clip_result,
+    compact_model_metrics,
+    compact_prediction_distribution,
+)
 from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
@@ -74,6 +79,21 @@ def parse_args():
         type=int,
         default=10,
         help="Number of worst clips to summarize with target/predicted parameter errors.",
+    )
+    parser.add_argument(
+        "--include-clips",
+        action="store_true",
+        help="Include every compact per-clip result in the report.",
+    )
+    parser.add_argument(
+        "--include-full-clips",
+        action="store_true",
+        help="Include full per-clip patches, comparisons, and parameter errors.",
+    )
+    parser.add_argument(
+        "--include-full-model-metrics",
+        action="store_true",
+        help="Embed the full checkpoint metrics instead of compact model metrics.",
     )
     return parser.parse_args()
 
@@ -149,7 +169,9 @@ def main() -> int:
     report = {
         "metadata_path": str(args.metadata),
         "model_path": str(args.model),
-        "model_metrics": checkpoint["metrics"],
+        "model_metrics": checkpoint["metrics"]
+        if args.include_full_model_metrics
+        else compact_model_metrics(checkpoint["metrics"]),
         "start_index": args.start_index,
         "count": args.count,
         "refine_iterations": args.refine_iterations,
@@ -158,14 +180,20 @@ def main() -> int:
             "failed_count": len(clip_results) - len(successful_results),
         },
         "diagnostics": {
-            "prediction_distribution": patch_prediction_distribution(successful_results),
+            "prediction_distribution": compact_prediction_distribution(
+                patch_prediction_distribution(successful_results)
+            ),
             "worst_clips": worst_clip_diagnostics(
                 successful_results,
                 top_n=args.diagnostics_top_n,
+                include_full=args.include_full_clips,
             ),
         },
-        "clips": clip_results,
     }
+    if args.include_full_clips:
+        report["clips"] = clip_results
+    elif args.include_clips:
+        report["clips"] = [compact_clip_result(result) for result in clip_results]
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

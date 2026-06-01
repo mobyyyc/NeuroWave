@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.ml import save_metrics_report
+from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_BENCHMARK_SIZE,
@@ -235,13 +236,14 @@ def main() -> int:
         device=args.device,
         progress=not args.quiet,
     )
+    compact_metrics = compact_model_metrics(result["metrics"])
     model_path = save_torch_checkpoint(
         result["model"],
         args.model_output,
-        metrics=result["metrics"],
+        metrics=compact_metrics,
     )
     output = {
-        **result["metrics"],
+        **compact_metrics,
         "model_path": str(model_path),
     }
     metrics_path = save_metrics_report(output, args.metrics_output)

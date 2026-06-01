@@ -218,7 +218,7 @@ def patch_prediction_distribution(results, parameters=None):
     return metrics
 
 
-def worst_clip_diagnostics(results, top_n=10):
+def worst_clip_diagnostics(results, top_n=10, include_full=False):
     if top_n < 1:
         return []
 
@@ -240,21 +240,25 @@ def worst_clip_diagnostics(results, top_n=10):
             key=lambda item: item[1]["normalized_error"],
             reverse=True,
         )
-        worst.append(
-            {
-                "index": result["index"],
-                "seed": result["seed"],
-                "audio_path": result["audio_path"],
-                "weighted_distance": result["comparison"]["weighted_distance"],
-                "comparison": result["comparison"],
-                "largest_parameter_errors": [
-                    {"parameter": name, **details}
-                    for name, details in ranked_errors[:5]
-                ],
-                "parameter_errors": parameter_errors,
-                "target_patch": result["target_patch"],
-                "predicted_patch": result["predicted_patch"],
-            }
-        )
+        diagnostic = {
+            "index": result["index"],
+            "seed": result["seed"],
+            "audio_path": result["audio_path"],
+            "weighted_distance": result["comparison"]["weighted_distance"],
+            "comparison": result["comparison"],
+            "largest_parameter_errors": [
+                {"parameter": name, **details}
+                for name, details in ranked_errors[:5]
+            ],
+        }
+        if include_full:
+            diagnostic.update(
+                {
+                    "parameter_errors": parameter_errors,
+                    "target_patch": result["target_patch"],
+                    "predicted_patch": result["predicted_patch"],
+                }
+            )
+        worst.append(diagnostic)
 
     return worst

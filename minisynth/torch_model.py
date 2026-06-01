@@ -1122,6 +1122,776 @@ def parameter_mse_torch(model, features, targets, device=None, batch_size=DEFAUL
     return float(total_squared_error / total_values)
 
 
+
+def tensor_shard_paths(path):
+    """Return sorted mel tensor shard paths for a directory or shard-like pattern."""
+    source = Path(path)
+    if source.is_dir():
+        shard_paths = sorted(source.glob("mel_tensors_part_*.npz"))
+        if not shard_paths:
+            raise ValueError(f"No mel_tensors_part_*.npz shards found in {source}")
+        return shard_paths
+    return []
+
+
+def is_sharded_tensor_path(path):
+    source = Path(path)
+    return source.is_dir()
+
+
+def _npz_scalar(data, name, default=None):
+    if name not in data.files:
+        return default
+    value = data[name]
+    if getattr(value, "shape", ()) == ():
+        return value.item()
+    return value
+
+
+def load_mel_tensor_shard_source(path):
+    """Inspect a directory of mel_tensors_part_*.npz shards without loading all features."""
+    shard_paths = tensor_shard_paths(path)
+    counts = []
+    metadata_path = ""
+    frames = DEFAULT_MEL_TENSOR_FRAMES
+    feature_shape = None
+    target_dim = None
+
+    for shard_index, shard_path in enumerate(shard_paths):
+        with np.load(shard_path) as data:
+            if "features" not in data.files or "targets" not in data.files:
+                raise ValueError(f"Shard missing features/targets: {shard_path}")
+            if "indices" in data.files:
+                count = int(len(data["indices"]))
+            else:
+                count = int(data["targets"].shape[0])
+            counts.append(count)
+
+            if shard_index == 0:
+                feature_shape = tuple(data["features"].shape[1:])
+                target_dim = int(data["targets"].shape[1])
+                if "metadata_path" in data.files:
+                    metadata_path = str(data["metadata_path"])
+                if "frames" in data.files:
+                    frames = int(data["frames"])
+
+    if target_dim != DEFAULT_OUTPUT_DIM:
+        raise ValueError(f"Expected {DEFAULT_OUTPUT_DIM} targets, got {target_dim}")
+    if not counts or sum(counts) < 2:
+        raise ValueError("at least 2 samples are required")
+
+    cumulative_counts = np.cumsum(np.asarray(counts, dtype=np.int64))
+    return {
+        "sharded": True,
+        "path": str(path),
+        "shard_paths": shard_paths,
+        "counts": counts,
+        "cumulative_counts": cumulative_counts,
+        "sample_count": int(cumulative_counts[-1]),
+        "feature_shape": feature_shape,
+        "target_dim": target_dim,
+        "metadata_path": metadata_path,
+        "frames": frames,
+    }
+
+
+def split_sample_indices(
+    sample_count,
+    test_size=DEFAULT_TEST_SIZE,
+    benchmark_size=DEFAULT_BENCHMARK_SIZE,
+    random_state=0,
+):
+    if test_size <= 0.0 or test_size >= 1.0:
+        raise ValueError("test_size must be between 0 and 1")
+    if benchmark_size < 0.0 or benchmark_size >= 1.0:
+        raise ValueError("benchmark_size must be in [0, 1)")
+    if test_size + benchmark_size >= 1.0:
+        raise ValueError("test_size + benchmark_size must leave training samples")
+
+    test_count = max(1, int(round(sample_count * test_size)))
+    benchmark_count = int(round(sample_count * benchmark_size))
+    train_count = sample_count - test_count - benchmark_count
+    if train_count < 1:
+        raise ValueError("split must leave at least 1 training sample")
+
+    rng = np.random.default_rng(random_state)
+    indices = rng.permutation(sample_count)
+    test_indices = indices[:test_count]
+    benchmark_indices = indices[test_count : test_count + benchmark_count]
+    train_indices = indices[test_count + benchmark_count :]
+    return {
+        "train_indices": train_indices,
+        "test_indices": test_indices,
+        "benchmark_indices": benchmark_indices,
+    }
+
+
+def _shard_index_for_position(cumulative_counts, position):
+    return int(np.searchsorted(cumulative_counts, int(position), side="right"))
+
+
+def _shard_start(cumulative_counts, shard_index):
+    if shard_index == 0:
+        return 0
+    return int(cumulative_counts[shard_index - 1])
+
+
+def _group_global_indices_by_shard(source, indices, shuffle=False, rng=None):
+    ordered_indices = np.asarray(indices, dtype=np.int64)
+    if shuffle:
+        ordered_indices = ordered_indices.copy()
+        rng.shuffle(ordered_indices)
+
+    groups = {}
+    cumulative = source["cumulative_counts"]
+    for global_index in ordered_indices:
+        shard_index = _shard_index_for_position(cumulative, global_index)
+        local_index = int(global_index) - _shard_start(cumulative, shard_index)
+        groups.setdefault(shard_index, []).append(local_index)
+
+    shard_order = list(groups.keys())
+    if shuffle:
+        rng.shuffle(shard_order)
+    return shard_order, groups
+
+
+def sharded_batch_count(source, sample_indices, batch_size=DEFAULT_BATCH_SIZE):
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
+    _, groups = _group_global_indices_by_shard(
+        source,
+        sample_indices,
+        shuffle=False,
+        rng=np.random.default_rng(0),
+    )
+    return int(sum(np.ceil(len(local_indices) / batch_size) for local_indices in groups.values()))
+
+
+def _load_tensor_shard_arrays(source, shard_index):
+    shard_path = source["shard_paths"][shard_index]
+    with np.load(shard_path) as data:
+        features = data["features"].astype(np.float32)
+        targets = data["targets"].astype(np.float32)
+
+    if features.ndim != 4:
+        raise ValueError(f"features must have shape (samples, channels, mel_bins, frames): {shard_path}")
+    if targets.ndim != 2:
+        raise ValueError(f"targets must have shape (samples, parameters): {shard_path}")
+    if len(features) != len(targets):
+        raise ValueError(f"features and targets must have the same number of samples: {shard_path}")
+    if targets.shape[1] != DEFAULT_OUTPUT_DIM:
+        raise ValueError(f"Expected {DEFAULT_OUTPUT_DIM} targets, got {targets.shape[1]}: {shard_path}")
+
+    return features, targets
+
+
+def iter_sharded_tensor_batches(
+    source,
+    sample_indices,
+    batch_size=DEFAULT_BATCH_SIZE,
+    target_mode=DEFAULT_TARGET_MODE,
+    shuffle=True,
+    random_state=0,
+):
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
+
+    rng = np.random.default_rng(random_state)
+    shard_order, groups = _group_global_indices_by_shard(
+        source,
+        sample_indices,
+        shuffle=shuffle,
+        rng=rng,
+    )
+
+    for shard_index in shard_order:
+        local_indices = np.asarray(groups[shard_index], dtype=np.int64)
+        if shuffle:
+            rng.shuffle(local_indices)
+
+        shard_features, shard_targets = _load_tensor_shard_arrays(source, shard_index)
+        selected_features = shard_features[local_indices]
+        selected_targets = shard_targets[local_indices]
+        prepared = prepare_model_arrays(
+            selected_features,
+            selected_targets,
+            target_mode=target_mode,
+        )
+
+        order = np.arange(len(local_indices))
+        if shuffle:
+            rng.shuffle(order)
+
+        for batch_start in range(0, len(order), batch_size):
+            batch_order = order[batch_start : batch_start + batch_size]
+            yield (
+                torch.as_tensor(prepared["features"][batch_order], dtype=torch.float32),
+                torch.as_tensor(prepared["targets"][batch_order], dtype=torch.float32),
+            )
+
+
+def sharded_sample_loss_torch(
+    model,
+    source,
+    sample_indices,
+    device=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    target_mode=DEFAULT_TARGET_MODE,
+    loss_weights=None,
+    loss_preset=DEFAULT_LOSS_PRESET,
+):
+    if device is None:
+        device = select_torch_device()
+
+    model = model.to(device)
+    model.eval()
+    loss_function = nn.MSELoss()
+    running_loss = 0.0
+    sample_count = 0
+
+    with torch.no_grad():
+        for batch_features, batch_targets in iter_sharded_tensor_batches(
+            source,
+            sample_indices,
+            batch_size=batch_size,
+            target_mode=target_mode,
+            shuffle=False,
+        ):
+            batch_features = batch_features.to(device)
+            batch_targets = batch_targets.to(device)
+            predictions = model(batch_features)
+            loss = inverse_model_loss(
+                model,
+                predictions,
+                batch_targets,
+                features=batch_features,
+                loss_function=loss_function,
+                loss_weights=loss_weights,
+                loss_preset=loss_preset,
+            )
+            running_loss += loss.item() * len(batch_features)
+            sample_count += len(batch_features)
+
+    return float(running_loss / sample_count)
+
+
+def sharded_parameter_mse_torch(
+    model,
+    source,
+    sample_indices,
+    device=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    target_mode=DEFAULT_TARGET_MODE,
+):
+    if device is None:
+        device = select_torch_device()
+
+    model = model.to(device)
+    model.eval()
+    total_squared_error = 0.0
+    total_values = 0
+
+    with torch.no_grad():
+        for batch_features, batch_targets in iter_sharded_tensor_batches(
+            source,
+            sample_indices,
+            batch_size=batch_size,
+            target_mode=target_mode,
+            shuffle=False,
+        ):
+            batch_features = batch_features.to(device)
+            batch_targets = batch_targets.to(device)
+            predictions = model(batch_features)
+            total_squared_error += torch.square(predictions - batch_targets).sum().item()
+            total_values += batch_targets.numel()
+
+    return float(total_squared_error / total_values)
+
+
+def sharded_parameter_metrics_torch(
+    model,
+    source,
+    sample_indices,
+    device=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    target_mode=DEFAULT_TARGET_MODE,
+    parameters=None,
+):
+    if device is None:
+        device = select_torch_device()
+    if parameters is None:
+        parameters = getattr(model, "parameters_schema", VECTOR_PARAMETERS)
+
+    model = model.to(device)
+    model.eval()
+
+    parameter_count = len(parameters)
+    total_samples = 0
+    total_absolute_error = 0.0
+    per_parameter_abs_sum = np.zeros(parameter_count, dtype=np.float64)
+    pred_sum = np.zeros(parameter_count, dtype=np.float64)
+    target_sum = np.zeros(parameter_count, dtype=np.float64)
+    pred_sq_sum = np.zeros(parameter_count, dtype=np.float64)
+    target_sq_sum = np.zeros(parameter_count, dtype=np.float64)
+    pred_min = np.full(parameter_count, np.inf, dtype=np.float64)
+    pred_max = np.full(parameter_count, -np.inf, dtype=np.float64)
+    target_min = np.full(parameter_count, np.inf, dtype=np.float64)
+    target_max = np.full(parameter_count, -np.inf, dtype=np.float64)
+    waveform_correct = {
+        parameter.name: 0
+        for parameter in parameters
+        if parameter.kind == "enum"
+    }
+    waveform_total = {
+        parameter.name: 0
+        for parameter in parameters
+        if parameter.kind == "enum"
+    }
+
+    with torch.no_grad():
+        for batch_features, batch_targets in iter_sharded_tensor_batches(
+            source,
+            sample_indices,
+            batch_size=batch_size,
+            target_mode=target_mode,
+            shuffle=False,
+        ):
+            batch_features = batch_features.to(device)
+            predictions = model(batch_features).cpu().numpy().astype(np.float32)
+            targets = batch_targets.numpy().astype(np.float32)
+            absolute_errors = np.abs(predictions - targets)
+
+            batch_size_actual = len(predictions)
+            total_samples += batch_size_actual
+            total_absolute_error += float(absolute_errors.sum())
+            per_parameter_abs_sum += absolute_errors.sum(axis=0)
+            pred_sum += predictions.sum(axis=0)
+            target_sum += targets.sum(axis=0)
+            pred_sq_sum += np.square(predictions).sum(axis=0)
+            target_sq_sum += np.square(targets).sum(axis=0)
+            pred_min = np.minimum(pred_min, predictions.min(axis=0))
+            pred_max = np.maximum(pred_max, predictions.max(axis=0))
+            target_min = np.minimum(target_min, targets.min(axis=0))
+            target_max = np.maximum(target_max, targets.max(axis=0))
+
+            for index, parameter in enumerate(parameters):
+                if parameter.kind != "enum":
+                    continue
+                predicted_classes = categorical_predictions(predictions[:, index], parameter)
+                expected_classes = categorical_predictions(targets[:, index], parameter)
+                waveform_correct[parameter.name] += int(np.sum(predicted_classes == expected_classes))
+                waveform_total[parameter.name] += int(len(expected_classes))
+
+    if total_samples < 1:
+        raise ValueError("sample_indices did not contain any rows")
+
+    per_parameter_mae_values = per_parameter_abs_sum / total_samples
+    per_parameter_mae = {
+        parameter.name: float(per_parameter_mae_values[index])
+        for index, parameter in enumerate(parameters)
+    }
+    continuous_indices = [
+        index
+        for index, parameter in enumerate(parameters)
+        if parameter.kind != "enum"
+    ]
+    if continuous_indices:
+        continuous_mae = float(
+            per_parameter_abs_sum[continuous_indices].sum()
+            / (total_samples * len(continuous_indices))
+        )
+    else:
+        continuous_mae = 0.0
+
+    parameter_indices = {
+        parameter.name: index
+        for index, parameter in enumerate(parameters)
+    }
+    grouped_mae = {}
+    for group_name, parameter_names in PARAMETER_METRIC_GROUPS.items():
+        indices = [
+            parameter_indices[name]
+            for name in parameter_names
+            if name in parameter_indices
+        ]
+        if not indices:
+            continue
+        grouped_mae[group_name] = float(
+            per_parameter_abs_sum[indices].sum() / (total_samples * len(indices))
+        )
+
+    pred_mean = pred_sum / total_samples
+    target_mean = target_sum / total_samples
+    pred_var = np.maximum(pred_sq_sum / total_samples - np.square(pred_mean), 0.0)
+    target_var = np.maximum(target_sq_sum / total_samples - np.square(target_mean), 0.0)
+    pred_std = np.sqrt(pred_var)
+    target_std = np.sqrt(target_var)
+    prediction_distribution = {}
+    for index, parameter in enumerate(parameters):
+        prediction_distribution[parameter.name] = {
+            "target_mean": float(target_mean[index]),
+            "predicted_mean": float(pred_mean[index]),
+            "mean_delta": float(pred_mean[index] - target_mean[index]),
+            "target_std": float(target_std[index]),
+            "predicted_std": float(pred_std[index]),
+            "std_ratio": float(pred_std[index] / target_std[index]) if target_std[index] > 0.0 else 0.0,
+            "target_min": float(target_min[index]),
+            "target_max": float(target_max[index]),
+            "predicted_min": float(pred_min[index]),
+            "predicted_max": float(pred_max[index]),
+        }
+
+    waveform_accuracy_by_parameter = {
+        name: float(waveform_correct[name] / waveform_total[name])
+        for name in waveform_correct
+        if waveform_total[name] > 0
+    }
+    waveform_acc = (
+        float(np.mean(list(waveform_accuracy_by_parameter.values())))
+        if waveform_accuracy_by_parameter
+        else 0.0
+    )
+
+    return {
+        "mae": float(total_absolute_error / (total_samples * parameter_count)),
+        "continuous_mae": continuous_mae,
+        "grouped_mae": grouped_mae,
+        "per_parameter_mae": per_parameter_mae,
+        "prediction_distribution": prediction_distribution,
+        "waveform_accuracy": waveform_acc,
+        "waveform_accuracy_by_name": waveform_accuracy_by_parameter,
+    }
+
+
+def train_inverse_model_sharded(
+    tensor_path=DEFAULT_TORCH_TENSOR_PATH,
+    model_id=DEFAULT_TORCH_MODEL_ID,
+    epochs=DEFAULT_EPOCHS,
+    batch_size=DEFAULT_BATCH_SIZE,
+    learning_rate=DEFAULT_LEARNING_RATE,
+    test_size=DEFAULT_TEST_SIZE,
+    benchmark_size=DEFAULT_BENCHMARK_SIZE,
+    waveform_mode=DEFAULT_WAVEFORM_MODE,
+    target_mode=DEFAULT_TARGET_MODE,
+    loss_preset=DEFAULT_LOSS_PRESET,
+    optimizer_name=DEFAULT_OPTIMIZER,
+    weight_decay=0.0,
+    scheduler_name=DEFAULT_SCHEDULER,
+    scheduler_step_size=10,
+    scheduler_gamma=0.5,
+    early_stopping_patience=0,
+    checkpoint_selection=DEFAULT_CHECKPOINT_SELECTION,
+    model_size=DEFAULT_MODEL_SIZE,
+    pooling_mode=DEFAULT_POOLING_MODE,
+    head_mode=DEFAULT_HEAD_MODE,
+    random_state=0,
+    device=None,
+    progress=False,
+):
+    if epochs < 1:
+        raise ValueError("epochs must be at least 1")
+    if learning_rate <= 0.0:
+        raise ValueError("learning_rate must be positive")
+    if weight_decay < 0.0:
+        raise ValueError("weight_decay must be non-negative")
+    if early_stopping_patience < 0:
+        raise ValueError("early_stopping_patience must be non-negative")
+    if checkpoint_selection not in (CHECKPOINT_FINAL, CHECKPOINT_BEST_VALIDATION):
+        raise ValueError(f"Unsupported checkpoint selection: {checkpoint_selection}")
+    if head_mode not in (HEAD_MODE_SHARED, HEAD_MODE_GROUPED):
+        raise ValueError(f"Unsupported head mode: {head_mode}")
+    if device is None:
+        device = select_torch_device()
+    else:
+        device = torch.device(device)
+
+    torch.manual_seed(random_state)
+    source = load_mel_tensor_shard_source(tensor_path)
+    target_parameters = target_parameters_for_mode(target_mode)
+    input_channels = int(source["feature_shape"][0])
+    if target_mode == TARGET_MODE_PITCH_CONDITIONED_TIMBRE:
+        input_channels += 1
+
+    split = split_sample_indices(
+        source["sample_count"],
+        test_size=test_size,
+        benchmark_size=benchmark_size,
+        random_state=random_state,
+    )
+    model = create_inverse_model(
+        output_dim=len(target_parameters),
+        waveform_mode=waveform_mode,
+        input_channels=input_channels,
+        parameters=target_parameters,
+        model_size=model_size,
+        pooling_mode=pooling_mode,
+        head_mode=head_mode,
+    ).to(device)
+    optimizer = create_optimizer(
+        model,
+        optimizer_name=optimizer_name,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+    )
+    scheduler = create_scheduler(
+        optimizer,
+        scheduler_name=scheduler_name,
+        step_size=scheduler_step_size,
+        gamma=scheduler_gamma,
+    )
+    loss_function = nn.MSELoss()
+    loss_weights = parameter_loss_weights(
+        target_parameters,
+        preset=loss_preset,
+    ).to(device)
+
+    epoch_losses = []
+    test_losses = []
+    learning_rates = []
+    best_epoch = 0
+    best_test_loss = float("inf")
+    best_state_dict = copy.deepcopy(model.state_dict())
+    epochs_without_improvement = 0
+    completed_epochs = 0
+    total_train_batches = sharded_batch_count(
+        source,
+        split["train_indices"],
+        batch_size=batch_size,
+    )
+
+    for epoch in range(epochs):
+        model.train()
+        running_loss = 0.0
+        sample_count = 0
+        if progress:
+            print(f"Epoch {epoch + 1}/{epochs} starting on {device.type}.")
+
+        for batch_index, (batch_features, batch_targets) in enumerate(
+            iter_sharded_tensor_batches(
+                source,
+                split["train_indices"],
+                batch_size=batch_size,
+                target_mode=target_mode,
+                shuffle=True,
+                random_state=random_state + epoch,
+            ),
+            start=1,
+        ):
+            batch_features = batch_features.to(device)
+            batch_targets = batch_targets.to(device)
+            optimizer.zero_grad()
+            predictions = model(batch_features)
+            loss = inverse_model_loss(
+                model,
+                predictions,
+                batch_targets,
+                features=batch_features,
+                loss_function=loss_function,
+                loss_weights=loss_weights,
+                loss_preset=loss_preset,
+            )
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * len(batch_features)
+            sample_count += len(batch_features)
+            if progress:
+                print(
+                    f"\r  Batch {batch_index}/{total_train_batches} - loss {loss.item():.6f}",
+                    end="",
+                    flush=True,
+                )
+
+        epoch_loss = float(running_loss / sample_count)
+        epoch_losses.append(epoch_loss)
+        completed_epochs = epoch + 1
+        test_epoch_loss = sharded_sample_loss_torch(
+            model,
+            source,
+            split["test_indices"],
+            device=device,
+            batch_size=batch_size,
+            target_mode=target_mode,
+            loss_weights=loss_weights,
+            loss_preset=loss_preset,
+        )
+        test_losses.append(test_epoch_loss)
+        learning_rates.append(float(optimizer.param_groups[0]["lr"]))
+        if test_epoch_loss < best_test_loss:
+            best_test_loss = test_epoch_loss
+            best_epoch = epoch + 1
+            best_state_dict = copy.deepcopy(model.state_dict())
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+        if scheduler is not None:
+            scheduler.step()
+        if progress:
+            print(
+                f"\nEpoch {epoch + 1} complete - "
+                f"train loss {epoch_loss:.6f}, test loss {test_epoch_loss:.6f}\n"
+            )
+        if early_stopping_patience and epochs_without_improvement >= early_stopping_patience:
+            if progress:
+                print(f"Early stopping after epoch {epoch + 1}.")
+            break
+
+    if checkpoint_selection == CHECKPOINT_BEST_VALIDATION:
+        model.load_state_dict(best_state_dict)
+
+    train_parameter_metrics = sharded_parameter_metrics_torch(
+        model,
+        source,
+        split["train_indices"],
+        device=device,
+        batch_size=batch_size,
+        target_mode=target_mode,
+        parameters=target_parameters,
+    )
+    test_parameter_metrics = sharded_parameter_metrics_torch(
+        model,
+        source,
+        split["test_indices"],
+        device=device,
+        batch_size=batch_size,
+        target_mode=target_mode,
+        parameters=target_parameters,
+    )
+
+    metrics = {
+        "model_id": model_id,
+        "model_type": "pytorch_cnn",
+        "waveform_mode": waveform_mode,
+        "target_mode": target_mode,
+        "model_size": model_size,
+        "pooling_mode": pooling_mode,
+        "head_mode": head_mode,
+        "loss_preset": loss_preset,
+        "loss_weights": {
+            parameter.name: float(weight)
+            for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
+        },
+        "loss_groups": loss_groups_for_parameters(target_parameters)
+        if loss_preset == LOSS_PRESET_GROUP_BALANCED
+        else {},
+        "tensor_path": str(tensor_path),
+        "tensor_sharded": True,
+        "tensor_shard_count": len(source["shard_paths"]),
+        "metadata_path": source["metadata_path"],
+        "num_samples": int(source["sample_count"]),
+        "num_features": [input_channels, int(source["feature_shape"][1]), int(source["feature_shape"][2])],
+        "num_targets": int(len(target_parameters)),
+        "target_parameters": [parameter.name for parameter in target_parameters],
+        "train_samples": int(len(split["train_indices"])),
+        "test_samples": int(len(split["test_indices"])),
+        "benchmark_samples": int(len(split["benchmark_indices"])),
+        "epochs": int(epochs),
+        "completed_epochs": int(completed_epochs),
+        "batch_size": int(batch_size),
+        "learning_rate": float(learning_rate),
+        "learning_rates": learning_rates,
+        "optimizer": optimizer_name,
+        "weight_decay": float(weight_decay),
+        "scheduler": scheduler_name,
+        "scheduler_step_size": int(scheduler_step_size),
+        "scheduler_gamma": float(scheduler_gamma),
+        "early_stopping_patience": int(early_stopping_patience),
+        "checkpoint_selection": checkpoint_selection,
+        "best_epoch": int(best_epoch),
+        "best_test_loss": float(best_test_loss),
+        "best_test_objective_loss": float(best_test_loss),
+        "test_size": float(test_size),
+        "benchmark_size": float(benchmark_size),
+        "device": device.type,
+        "train_loss": epoch_losses[-1],
+        "train_objective_loss": epoch_losses[-1],
+        "train_losses": epoch_losses,
+        "train_objective_losses": epoch_losses,
+        "test_losses": test_losses,
+        "test_objective_losses": test_losses,
+        "test_objective_loss": test_losses[-1],
+        "train_parameter_mse": sharded_parameter_mse_torch(
+            model,
+            source,
+            split["train_indices"],
+            device=device,
+            batch_size=batch_size,
+            target_mode=target_mode,
+        ),
+        "test_loss": sharded_parameter_mse_torch(
+            model,
+            source,
+            split["test_indices"],
+            device=device,
+            batch_size=batch_size,
+            target_mode=target_mode,
+        ),
+        "train_mae": train_parameter_metrics["mae"],
+        "test_mae": test_parameter_metrics["mae"],
+        "train_continuous_mae": train_parameter_metrics["continuous_mae"],
+        "test_continuous_mae": test_parameter_metrics["continuous_mae"],
+        "train_per_parameter_mae": train_parameter_metrics["per_parameter_mae"],
+        "test_per_parameter_mae": test_parameter_metrics["per_parameter_mae"],
+        "train_prediction_distribution": train_parameter_metrics["prediction_distribution"],
+        "test_prediction_distribution": test_parameter_metrics["prediction_distribution"],
+        "train_grouped_mae": train_parameter_metrics["grouped_mae"],
+        "test_grouped_mae": test_parameter_metrics["grouped_mae"],
+        "train_waveform_accuracy": train_parameter_metrics["waveform_accuracy"],
+        "test_waveform_accuracy": test_parameter_metrics["waveform_accuracy"],
+        "train_waveform_accuracy_by_name": train_parameter_metrics["waveform_accuracy_by_name"],
+        "test_waveform_accuracy_by_name": test_parameter_metrics["waveform_accuracy_by_name"],
+    }
+    metrics["test_parameter_mse"] = metrics["test_loss"]
+
+    if len(split["benchmark_indices"]) > 0:
+        benchmark_parameter_metrics = sharded_parameter_metrics_torch(
+            model,
+            source,
+            split["benchmark_indices"],
+            device=device,
+            batch_size=batch_size,
+            target_mode=target_mode,
+            parameters=target_parameters,
+        )
+        metrics.update(
+            {
+                "benchmark_objective_loss": sharded_sample_loss_torch(
+                    model,
+                    source,
+                    split["benchmark_indices"],
+                    device=device,
+                    batch_size=batch_size,
+                    target_mode=target_mode,
+                    loss_weights=loss_weights,
+                    loss_preset=loss_preset,
+                ),
+                "benchmark_loss": sharded_parameter_mse_torch(
+                    model,
+                    source,
+                    split["benchmark_indices"],
+                    device=device,
+                    batch_size=batch_size,
+                    target_mode=target_mode,
+                ),
+                "benchmark_mae": benchmark_parameter_metrics["mae"],
+                "benchmark_continuous_mae": benchmark_parameter_metrics["continuous_mae"],
+                "benchmark_per_parameter_mae": benchmark_parameter_metrics["per_parameter_mae"],
+                "benchmark_prediction_distribution": benchmark_parameter_metrics[
+                    "prediction_distribution"
+                ],
+                "benchmark_grouped_mae": benchmark_parameter_metrics["grouped_mae"],
+                "benchmark_waveform_accuracy": benchmark_parameter_metrics["waveform_accuracy"],
+                "benchmark_waveform_accuracy_by_name": benchmark_parameter_metrics[
+                    "waveform_accuracy_by_name"
+                ],
+            }
+        )
+        metrics["benchmark_parameter_mse"] = metrics["benchmark_loss"]
+
+    return {
+        "model": model,
+        "metrics": metrics,
+    }
+
 def train_inverse_model(
     tensor_path=DEFAULT_TORCH_TENSOR_PATH,
     model_id=DEFAULT_TORCH_MODEL_ID,
@@ -1147,6 +1917,33 @@ def train_inverse_model(
     device=None,
     progress=False,
 ):
+    if is_sharded_tensor_path(tensor_path):
+        return train_inverse_model_sharded(
+            tensor_path=tensor_path,
+            model_id=model_id,
+            epochs=epochs,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            test_size=test_size,
+            benchmark_size=benchmark_size,
+            waveform_mode=waveform_mode,
+            target_mode=target_mode,
+            loss_preset=loss_preset,
+            optimizer_name=optimizer_name,
+            weight_decay=weight_decay,
+            scheduler_name=scheduler_name,
+            scheduler_step_size=scheduler_step_size,
+            scheduler_gamma=scheduler_gamma,
+            early_stopping_patience=early_stopping_patience,
+            checkpoint_selection=checkpoint_selection,
+            model_size=model_size,
+            pooling_mode=pooling_mode,
+            head_mode=head_mode,
+            random_state=random_state,
+            device=device,
+            progress=progress,
+        )
+
     if epochs < 1:
         raise ValueError("epochs must be at least 1")
     if learning_rate <= 0.0:
@@ -1381,9 +2178,6 @@ def train_inverse_model(
         "test_waveform_accuracy": test_parameter_metrics["waveform_accuracy"],
         "train_waveform_accuracy_by_name": train_parameter_metrics["waveform_accuracy_by_name"],
         "test_waveform_accuracy_by_name": test_parameter_metrics["waveform_accuracy_by_name"],
-        "train_indices": split["train_indices"].astype(int).tolist(),
-        "test_indices": split["test_indices"].astype(int).tolist(),
-        "benchmark_indices": split["benchmark_indices"].astype(int).tolist(),
     }
     metrics["test_parameter_mse"] = metrics["test_loss"]
 

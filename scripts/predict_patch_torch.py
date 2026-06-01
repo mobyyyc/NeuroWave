@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from minisynth.io import save_patch
+from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
     DEFAULT_TORCH_MODEL_PATH,
     load_torch_checkpoint,
@@ -59,7 +60,7 @@ def main() -> int:
                 "audio": str(args.audio),
                 "model": str(args.model),
                 "output": str(args.output),
-                "model_metrics": checkpoint["metrics"],
+                "model_metrics": compact_model_metrics(checkpoint["metrics"]),
             },
             indent=2,
         )

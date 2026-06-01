@@ -132,6 +132,7 @@ def write_random_dataset_files(
     count=1,
     workers=1,
     progress=False,
+    chunk_size=5000,
 ):
     if count < 1:
         raise ValueError("count must be at least 1")
@@ -151,6 +152,7 @@ def write_random_dataset_files(
         count,
         workers=worker_count,
         progress=progress,
+        chunk_size=chunk_size,
     )
 
     write_metadata(records, metadata_destination)
@@ -158,7 +160,18 @@ def write_random_dataset_files(
     return records
 
 
-def generate_random_dataset_records(param_dir, audio_dir, seed, count, workers=1, progress=False):
+def generate_random_dataset_records(
+    param_dir,
+    audio_dir,
+    seed,
+    count,
+    workers=1,
+    progress=False,
+    chunk_size=5000,
+):
+    if chunk_size < 1:
+        raise ValueError("chunk_size must be at least 1")
+
     if workers == 1:
         records = []
         for index in range(count):
@@ -169,15 +182,25 @@ def generate_random_dataset_records(param_dir, audio_dir, seed, count, workers=1
             print()
         return records
 
-    tasks = [(index, seed, str(param_dir), str(audio_dir)) for index in range(count)]
     records = []
+
     try:
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(_generate_random_dataset_record_task, task) for task in tasks]
-            for future in concurrent.futures.as_completed(futures):
-                records.append(future.result())
-                if progress:
-                    print_progress("Generating audio", len(records), count, workers)
+            for chunk_start in range(0, count, chunk_size):
+                chunk_end = min(chunk_start + chunk_size, count)
+                tasks = [
+                    (index, seed, str(param_dir), str(audio_dir))
+                    for index in range(chunk_start, chunk_end)
+                ]
+                futures = [
+                    executor.submit(_generate_random_dataset_record_task, task)
+                    for task in tasks
+                ]
+
+                for future in concurrent.futures.as_completed(futures):
+                    records.append(future.result())
+                    if progress:
+                        print_progress("Generating audio", len(records), count, workers)
     except (OSError, PermissionError) as error:
         if progress:
             print(f"\nMultiprocessing unavailable ({error}); falling back to serial generation.")
@@ -188,6 +211,7 @@ def generate_random_dataset_records(param_dir, audio_dir, seed, count, workers=1
             count,
             workers=1,
             progress=progress,
+            chunk_size=chunk_size,
         )
 
     records.sort(key=lambda record: record["index"])
@@ -328,6 +352,7 @@ def load_mel_tensor_dataset(
     frames=DEFAULT_MEL_TENSOR_FRAMES,
     workers=1,
     progress=False,
+    chunk_size=5000,
 ):
     rows = load_metadata(metadata_path)
     if not rows:
@@ -339,6 +364,7 @@ def load_mel_tensor_dataset(
         frames=frames,
         workers=worker_count,
         progress=progress,
+        chunk_size=chunk_size,
     )
 
     return {
@@ -349,7 +375,17 @@ def load_mel_tensor_dataset(
     }
 
 
-def load_mel_tensor_records(rows, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAMES, workers=1, progress=False):
+def load_mel_tensor_records(
+    rows,
+    metadata_path,
+    frames=DEFAULT_MEL_TENSOR_FRAMES,
+    workers=1,
+    progress=False,
+    chunk_size=5000,
+):
+    if chunk_size < 1:
+        raise ValueError("chunk_size must be at least 1")
+
     if workers == 1:
         records = []
         for row in rows:
@@ -360,15 +396,26 @@ def load_mel_tensor_records(rows, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAME
             print()
         return records
 
-    tasks = [(row, str(metadata_path), frames) for row in rows]
     records = []
+    total = len(rows)
+
     try:
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(_mel_tensor_dataset_record_task, task) for task in tasks]
-            for future in concurrent.futures.as_completed(futures):
-                records.append(future.result())
-                if progress:
-                    print_progress("Exporting tensors", len(records), len(rows), workers)
+            for chunk_start in range(0, total, chunk_size):
+                chunk_end = min(chunk_start + chunk_size, total)
+                tasks = [
+                    (row, str(metadata_path), frames)
+                    for row in rows[chunk_start:chunk_end]
+                ]
+                futures = [
+                    executor.submit(_mel_tensor_dataset_record_task, task)
+                    for task in tasks
+                ]
+
+                for future in concurrent.futures.as_completed(futures):
+                    records.append(future.result())
+                    if progress:
+                        print_progress("Exporting tensors", len(records), total, workers)
     except (OSError, PermissionError) as error:
         if progress:
             print(f"\nMultiprocessing unavailable ({error}); falling back to serial export.")
@@ -378,6 +425,7 @@ def load_mel_tensor_records(rows, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAME
             frames=frames,
             workers=1,
             progress=progress,
+            chunk_size=chunk_size,
         )
 
     records.sort(key=lambda record: record["index"])
@@ -386,18 +434,123 @@ def load_mel_tensor_records(rows, metadata_path, frames=DEFAULT_MEL_TENSOR_FRAME
     return records
 
 
+def tensor_shard_path(output_path, shard_index):
+    path = Path(output_path)
+
+    if path.suffix.lower() == ".npz":
+        destination = path.parent
+        stem = path.stem
+    else:
+        destination = path
+        stem = "mel_tensors"
+
+    destination.mkdir(parents=True, exist_ok=True)
+    return destination / f"{stem}_part_{shard_index:03d}.npz"
+
+
+def save_mel_tensor_records(records, output_path, metadata_path, frames, shard_index=None, shard_start=None, shard_end=None, total_rows=None):
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    np.savez_compressed(
+        destination,
+        features=np.stack([record["feature"] for record in records]).astype(np.float32),
+        targets=np.asarray([record["target"] for record in records], dtype=np.float32),
+        indices=np.asarray([record["index"] for record in records], dtype=np.int64),
+        seeds=np.asarray([record["seed"] for record in records], dtype=np.int64),
+        metadata_path=str(metadata_path),
+        frames=np.asarray(frames, dtype=np.int64),
+        shard_index=np.asarray(-1 if shard_index is None else shard_index, dtype=np.int64),
+        shard_start=np.asarray(-1 if shard_start is None else shard_start, dtype=np.int64),
+        shard_end=np.asarray(-1 if shard_end is None else shard_end, dtype=np.int64),
+        total_rows=np.asarray(-1 if total_rows is None else total_rows, dtype=np.int64),
+    )
+    return destination
+
+
+def save_mel_tensor_dataset_sharded(
+    metadata_path=DEFAULT_METADATA_PATH,
+    output_path=DEFAULT_MEL_TENSOR_PATH,
+    frames=DEFAULT_MEL_TENSOR_FRAMES,
+    workers=1,
+    progress=False,
+    chunk_size=5000,
+    shard_size=50000,
+):
+    if shard_size < 1:
+        raise ValueError("shard_size must be at least 1")
+
+    rows = load_metadata(metadata_path)
+    if not rows:
+        raise ValueError("metadata did not contain any training rows")
+
+    worker_count = resolve_worker_count(workers)
+    saved_paths = []
+    total = len(rows)
+
+    for shard_index, shard_start in enumerate(range(0, total, shard_size)):
+        shard_end = min(shard_start + shard_size, total)
+        shard_rows = rows[shard_start:shard_end]
+        shard_output_path = tensor_shard_path(output_path, shard_index)
+
+        if progress:
+            print(
+                f"Exporting shard {shard_index + 1} "
+                f"rows {shard_start}-{shard_end - 1} -> {shard_output_path}",
+                flush=True,
+            )
+
+        records = load_mel_tensor_records(
+            shard_rows,
+            metadata_path,
+            frames=frames,
+            workers=worker_count,
+            progress=progress,
+            chunk_size=chunk_size,
+        )
+
+        saved_paths.append(
+            save_mel_tensor_records(
+                records,
+                shard_output_path,
+                metadata_path,
+                frames,
+                shard_index=shard_index,
+                shard_start=shard_start,
+                shard_end=shard_end,
+                total_rows=total,
+            )
+        )
+
+    return saved_paths
+
+
 def save_mel_tensor_dataset(
     metadata_path=DEFAULT_METADATA_PATH,
     output_path=DEFAULT_MEL_TENSOR_PATH,
     frames=DEFAULT_MEL_TENSOR_FRAMES,
     workers=1,
     progress=False,
+    chunk_size=5000,
+    shard_size=0,
 ):
+    if shard_size and shard_size > 0:
+        return save_mel_tensor_dataset_sharded(
+            metadata_path=metadata_path,
+            output_path=output_path,
+            frames=frames,
+            workers=workers,
+            progress=progress,
+            chunk_size=chunk_size,
+            shard_size=shard_size,
+        )
+
     dataset = load_mel_tensor_dataset(
         metadata_path,
         frames=frames,
         workers=workers,
         progress=progress,
+        chunk_size=chunk_size,
     )
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)

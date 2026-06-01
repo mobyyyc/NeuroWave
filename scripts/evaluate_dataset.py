@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from minisynth.dataset import DEFAULT_METADATA_PATH, load_metadata, resolve_metadata_path
 from minisynth.evaluation import evaluate_audio_prediction, summarize_weighted_distances
 from minisynth.ml import DEFAULT_MODEL_PATH, load_model_checkpoint
+from minisynth.reporting import compact_clip_result, compact_model_metrics
 
 
 DEFAULT_OUTPUT = Path("runs/evaluation/dataset_eval.json")
@@ -53,6 +54,16 @@ def parse_args():
         type=int,
         default=0,
         help="Optional local search iterations after each ML prediction.",
+    )
+    parser.add_argument(
+        "--include-clips",
+        action="store_true",
+        help="Include every compact per-clip result in the report.",
+    )
+    parser.add_argument(
+        "--include-full-clips",
+        action="store_true",
+        help="Include full per-clip comparisons.",
     )
     return parser.parse_args()
 
@@ -99,6 +110,7 @@ def main() -> int:
     report = {
         "metadata_path": str(args.metadata),
         "model_path": str(args.model),
+        "model_metrics": compact_model_metrics(checkpoint.get("metrics", {})),
         "start_index": args.start_index,
         "count": args.count,
         "refine_iterations": args.refine_iterations,
@@ -106,8 +118,11 @@ def main() -> int:
             **summarize_weighted_distances(successful_results),
             "failed_count": len(clip_results) - len(successful_results),
         },
-        "clips": clip_results,
     }
+    if args.include_full_clips:
+        report["clips"] = clip_results
+    elif args.include_clips:
+        report["clips"] = [compact_clip_result(result) for result in clip_results]
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

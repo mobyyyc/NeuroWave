@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 from minisynth.dataset import audio_feature_vector, load_training_dataset
 from minisynth.randomize import constrain_envelope_fits_length
+from minisynth.reporting import prune_long_metrics
 from minisynth.schema import SynthConfig
 
 
@@ -134,7 +135,7 @@ def save_metrics_report(metrics, path):
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     with destination.open("w", encoding="utf-8") as file:
-        json.dump(metrics, file, indent=2)
+        json.dump(prune_long_metrics(metrics), file, indent=2)
         file.write("\n")
 
     return destination
