@@ -202,6 +202,7 @@ Evidence from local reports:
 - [x] Implement `v3.2` oscillator-mix target improvements so oscillator levels are learned
   by canonical waveform/level contribution rather than arbitrary oscillator slot identity.
 - [x] Implement the `v3.3` main/detuned oscillator target setup before training.
+- [x] Implement the `v3.4` audibility-aware loss setup before training.
 
 Current v3 findings:
 
@@ -245,10 +246,25 @@ Completed v3.3 setup before training:
   error, total-level error, detuned-balance error, and normalized detune error.
 - Updated the simplified training CLI defaults to `v3.3_main_detuned_mix`.
 
+v3.3 training/evaluation finding:
+
+- `v3.3_main_detuned_mix` became the current best rendered-audio setup on the fixed d8
+  1000-clip evaluation, improving mean and median weighted distance versus v3.1 and v3.2.
+  It still has rare severe outliers from audible oscillator mistakes, especially wrong
+  wave/detune on loud detuned oscillators and total-level overshoot on quiet targets.
+
+Completed v3.4 setup before training:
+
+- Added the `audible` loss preset. It keeps the group-balanced structure, but weights
+  main-wave loss by main oscillator audibility, detuned-wave and detune loss by detuned
+  oscillator audibility, detuned-balance loss by total oscillator audibility, and
+  total-level overshoot more strongly for quiet targets.
+- Updated the simplified training CLI defaults to `v3.4_audible_loss`.
+
 Next recommended task:
 
-- Train `v3.3_main_detuned_mix` on the current 500k tensor dataset and compare it
-  against `v3.1_500ksamples` and `v3.2_oscmix` on the fixed d8 1000-clip evaluation.
+- Train `v3.4_audible_loss` on the current 500k tensor dataset and compare it against
+  `v3.3_main_detuned_mix` on the fixed d8 1000-clip evaluation.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 

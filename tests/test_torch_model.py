@@ -29,6 +29,8 @@ from minisynth.torch_model import (
     dataset_loss_torch,
     expected_mel_tensor_shape,
     grouped_parameter_mae,
+    inverse_model_loss,
+    LOSS_PRESET_AUDIBLE,
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mae_by_name,
@@ -358,6 +360,45 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertAlmostEqual(patch["osc1_level"], 0.75)
         self.assertAlmostEqual(patch["osc2_level"], 0.25)
         self.assertAlmostEqual(patch["osc2_detune"], -600.0)
+
+    def test_audible_loss_weights_loud_detuned_wave_more_than_quiet(self):
+        parameters = target_parameters_for_mode(TARGET_MODE_MAIN_DETUNED_MIX)
+        model = create_inverse_model(
+            output_dim=len(parameters),
+            input_channels=2,
+            waveform_mode="classification",
+            parameters=parameters,
+        )
+        model.eval()
+        features = torch.zeros(2, 2, DEFAULT_MEL_BINS, 8)
+        targets = torch.full((2, len(parameters)), 0.5)
+        names = [parameter.name for parameter in parameters]
+        targets[:, names.index("osc_total_level")] = 0.5
+        targets[:, names.index("detuned_wave")] = torch.tensor([0.0, 1.0])
+
+        with torch.no_grad():
+            model.waveform_heads["detuned_wave"].bias.copy_(
+                torch.tensor([10.0, -10.0, -10.0, -10.0, -10.0])
+            )
+        targets[:, names.index("detuned_balance")] = torch.tensor([0.95, 0.05])
+        quiet_wrong_loss = inverse_model_loss(
+            model,
+            model(features),
+            targets,
+            features=features,
+            loss_preset=LOSS_PRESET_AUDIBLE,
+        )
+
+        targets[:, names.index("detuned_balance")] = torch.tensor([0.05, 0.95])
+        loud_wrong_loss = inverse_model_loss(
+            model,
+            model(features),
+            targets,
+            features=features,
+            loss_preset=LOSS_PRESET_AUDIBLE,
+        )
+
+        self.assertGreater(loud_wrong_loss.item(), quiet_wrong_loss.item())
 
     def test_parameter_mae_by_name_reports_each_target(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)

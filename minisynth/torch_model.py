@@ -49,6 +49,7 @@ LOSS_PRESET_FLAT = "flat"
 LOSS_PRESET_AUDIBILITY = "audibility"
 LOSS_PRESET_HYBRID = "hybrid"
 LOSS_PRESET_GROUP_BALANCED = "groupbalanced"
+LOSS_PRESET_AUDIBLE = "audible"
 DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
 OPTIMIZER_ADAM = "adam"
 OPTIMIZER_ADAMW = "adamw"
@@ -851,7 +852,7 @@ def parameter_loss_weights(parameters=None, preset=DEFAULT_LOSS_PRESET):
         if torch.sum(values) <= 0:
             raise ValueError("loss weights must include at least one positive value")
         return values * (len(values) / torch.sum(values))
-    if preset == LOSS_PRESET_GROUP_BALANCED:
+    if preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE):
         return torch.ones(len(parameters), dtype=torch.float32)
 
     raise ValueError(f"Unsupported loss preset: {preset}")
@@ -964,6 +965,111 @@ def group_balanced_loss(model, predictions, targets, features=None):
     return torch.stack(group_losses).mean()
 
 
+def _parameter_indices_by_name(parameters):
+    return {
+        parameter.name: index
+        for index, parameter in enumerate(parameters)
+    }
+
+
+def _continuous_positions_by_name(parameters):
+    return {
+        parameter.name: position
+        for position, parameter in enumerate(
+            parameter for parameter in parameters if parameter.kind != "enum"
+        )
+    }
+
+
+def _normalized_audibility_weights(levels, floor=0.25, scale=1.75):
+    weights = floor + scale * torch.clamp(levels, 0.0, 1.0)
+    return weights / torch.clamp(torch.mean(weights.detach()), min=1.0e-6)
+
+
+def _weighted_sample_mean(losses, weights):
+    return torch.mean(losses * weights.to(device=losses.device, dtype=losses.dtype))
+
+
+def audible_main_detuned_loss(model, predictions, targets, features=None):
+    required = {"main_wave", "detuned_wave", "osc_total_level", "detuned_balance", "detune_amount"}
+    parameter_indices = _parameter_indices_by_name(model.parameters_schema)
+    if not required.issubset(parameter_indices):
+        return group_balanced_loss(
+            model,
+            predictions,
+            targets,
+            features=features,
+        )
+    if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
+        if features is None:
+            raise ValueError("features are required for audible classification loss")
+        raw = model.raw_outputs(features)
+    else:
+        raw = None
+
+    continuous_positions = _continuous_positions_by_name(model.parameters_schema)
+    total_index = parameter_indices["osc_total_level"]
+    balance_index = parameter_indices["detuned_balance"]
+    total_level = torch.clamp(targets[:, total_index] * 2.0, 0.0, 2.0)
+    detuned_balance = torch.clamp(targets[:, balance_index], 0.0, 1.0)
+    main_level = torch.clamp(total_level * (1.0 - detuned_balance), 0.0, 1.0)
+    detuned_level = torch.clamp(total_level * detuned_balance, 0.0, 1.0)
+    total_audibility = _normalized_audibility_weights(torch.clamp(total_level / 2.0, 0.0, 1.0))
+    main_audibility = _normalized_audibility_weights(main_level)
+    detuned_audibility = _normalized_audibility_weights(detuned_level)
+    quiet_total_weight = _normalized_audibility_weights(1.0 - torch.clamp(targets[:, total_index], 0.0, 1.0))
+
+    group_losses = []
+    for group_parameters in GROUP_BALANCED_LOSS_GROUPS.values():
+        component_losses = []
+        for name in group_parameters:
+            if name not in parameter_indices:
+                continue
+
+            index = parameter_indices[name]
+            parameter = model.parameters_schema[index]
+            if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION and parameter.kind == "enum":
+                target_classes = categorical_target_classes(targets[:, index], parameter)
+                class_count = len(categorical_values(parameter))
+                sample_losses = nn.functional.cross_entropy(
+                    raw["waveforms"][parameter.name],
+                    target_classes,
+                    reduction="none",
+                ) / np.log(class_count)
+                if name == "main_wave":
+                    component_losses.append(_weighted_sample_mean(sample_losses, main_audibility))
+                elif name == "detuned_wave":
+                    component_losses.append(_weighted_sample_mean(sample_losses, detuned_audibility))
+                else:
+                    component_losses.append(torch.mean(sample_losses))
+            elif model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
+                position = continuous_positions[name]
+                errors = torch.square(raw["continuous"][:, position] - targets[:, index])
+                if name == "osc_total_level":
+                    overshoot = torch.clamp(raw["continuous"][:, position] - targets[:, index], min=0.0)
+                    component_losses.append(
+                        torch.mean(errors)
+                        + _weighted_sample_mean(torch.square(overshoot), quiet_total_weight)
+                    )
+                elif name == "detuned_balance":
+                    component_losses.append(_weighted_sample_mean(errors, total_audibility))
+                elif name == "detune_amount":
+                    component_losses.append(_weighted_sample_mean(errors, detuned_audibility))
+                else:
+                    component_losses.append(torch.mean(errors))
+            else:
+                errors = torch.square(predictions[:, index] - targets[:, index])
+                component_losses.append(torch.mean(errors))
+
+        if component_losses:
+            group_losses.append(torch.stack(component_losses).mean())
+
+    if not group_losses:
+        return torch.mean(torch.square(predictions - targets))
+
+    return torch.stack(group_losses).mean()
+
+
 def inverse_model_loss(
     model,
     predictions,
@@ -975,6 +1081,13 @@ def inverse_model_loss(
 ):
     if loss_preset == LOSS_PRESET_GROUP_BALANCED:
         return group_balanced_loss(
+            model,
+            predictions,
+            targets,
+            features=features,
+        )
+    if loss_preset == LOSS_PRESET_AUDIBLE:
+        return audible_main_detuned_loss(
             model,
             predictions,
             targets,
@@ -1956,7 +2069,7 @@ def train_inverse_model_sharded(
             for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
         },
         "loss_groups": loss_groups_for_parameters(target_parameters)
-        if loss_preset == LOSS_PRESET_GROUP_BALANCED
+        if loss_preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE)
         else {},
         "tensor_path": str(tensor_path),
         "tensor_sharded": True,
@@ -2299,7 +2412,7 @@ def train_inverse_model(
             for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
         },
         "loss_groups": loss_groups_for_parameters(target_parameters)
-        if loss_preset == LOSS_PRESET_GROUP_BALANCED
+        if loss_preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE)
         else {},
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],

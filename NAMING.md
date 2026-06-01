@@ -61,6 +61,9 @@ Use this versioning rule:
 - `v3.3`: v3 model setup with main/detuned oscillator roles. Use this when the model
   treats known pitch as the main oscillator frequency and learns the second oscillator
   as relative detune plus mix balance.
+- `v3.4`: v3.3 model setup with audibility-aware loss. Use this when the target
+  representation stays main/detuned but the objective weights oscillator mistakes by
+  audible importance.
 
 The suffix should describe only what changed or what the experiment proves. Do not encode
 the full architecture, loss, target mode, pooling mode, or training configuration in every
@@ -72,6 +75,8 @@ Recommended suffix examples:
 - `500ksamples`: same setup trained on a 500k dataset.
 - `oscmix`: canonical oscillator-mix target or diagnostics.
 - `main_detuned_mix`: base-frequency oscillator plus relative detuned oscillator target.
+- `audible_loss`: audibility-aware loss for waveform, detune, balance, and quiet-level
+  overshoot.
 - `losscheck`: focused loss-function ablation.
 - `evalfix`: evaluation/reporting-only change.
 
@@ -85,6 +90,7 @@ Example recent and next capability model IDs:
 - `v3.1_500ksamples`
 - `v3.2_oscmix`
 - `v3.3_main_detuned_mix`
+- `v3.4_audible_loss`
 
 Existing long model IDs should stay unchanged in old reports and checkpoints. New model
 IDs should stay short and human-readable.
@@ -128,7 +134,7 @@ For the next oscillator-mix capability run:
 
 ```text
 Dataset: d10 or the current 500k dataset
-Model: v3.3_main_detuned_mix
+Model: v3.4_audible_loss
 ```
 
 This means:
@@ -137,6 +143,7 @@ This means:
 - PyTorch CNN model.
 - Pitch-conditioned timbre target mode.
 - Main/detuned oscillator-mix representation and diagnostics.
+- Audibility-aware loss.
 - Grouped continuous heads.
 - Group-balanced loss.
 - Large model capacity.

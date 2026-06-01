@@ -13,7 +13,7 @@ from minisynth.ml import save_metrics_report
 from minisynth.reporting import compact_model_metrics
 from minisynth.torch_model import (
     DEFAULT_LEARNING_RATE,
-    LOSS_PRESET_GROUP_BALANCED,
+    LOSS_PRESET_AUDIBLE,
     HEAD_MODE_GROUPED,
     MODEL_SIZE_LARGE,
     OPTIMIZER_ADAMW,
@@ -31,7 +31,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--model-id",
-        default="v3.3_main_detuned_mix",
+        default="v3.4_audible_loss",
         help="Model identifier to store in the training metrics.",
     )
     parser.add_argument(
@@ -98,12 +98,12 @@ def parse_args():
     )
     parser.add_argument(
         "--model-output",
-        default="models/v3.3_main_detuned_mix.pt",
+        default="models/v3.4_audible_loss.pt",
         help="Path where the trained PyTorch checkpoint should be saved.",
     )
     parser.add_argument(
         "--metrics-output",
-        default="runs/training/v3.3_main_detuned_mix_metrics.json",
+        default="runs/training/v3.4_audible_loss_metrics.json",
         help="Path where training metrics JSON should be saved.",
     )
     return parser.parse_args()
@@ -129,7 +129,7 @@ def main() -> int:
         head_mode=HEAD_MODE_GROUPED,
         waveform_mode=WAVEFORM_MODE_CLASSIFICATION,
         target_mode=TARGET_MODE_MAIN_DETUNED_MIX,
-        loss_preset=LOSS_PRESET_GROUP_BALANCED,
+        loss_preset=LOSS_PRESET_AUDIBLE,
         random_state=args.random_state,
         device=args.device,
         progress=not args.quiet,

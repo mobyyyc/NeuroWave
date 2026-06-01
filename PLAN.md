@@ -770,6 +770,37 @@ Acceptance criteria for `v3.3`:
 - Detune-heavy worst clips show lower normalized detune error or clearly improved
   rendered distance.
 
+Reassessment after `v3.3`:
+
+- `v3.3_main_detuned_mix` improved the fixed d8 rendered-audio benchmark versus both
+  v3.1 and v3.2 on mean and median distance. This confirms the main/detuned target
+  representation is the right model setup.
+- v3.3 did not beat v3.2 on abstract parameter MAE, which confirms that raw MAE is no
+  longer the deciding metric for this phase.
+- Remaining failures are concentrated in audible oscillator mistakes: wrong noisy or
+  detuned waveform when the oscillator is loud, large detune errors when the detuned
+  oscillator is audible, and total-level overprediction on quiet targets.
+
+The next model series should therefore be `v3.4`, focused on audibility-aware loss while
+keeping the v3.3 target representation and architecture unchanged. The preferred design is:
+
+- Keep `main_detuned_mix` targets.
+- Keep the grouped-head large CNN architecture, pitch context, waveform classification,
+  AdamW, step scheduler, early stopping, and best-validation checkpointing.
+- Weight `main_wave` classification more when the main oscillator target level is high.
+- Weight `detuned_wave` classification and `detune_amount` regression more when the
+  detuned oscillator target level is high.
+- Weight `detuned_balance` by total oscillator audibility.
+- Penalize oscillator total-level overshoot more when the target total level is quiet, to
+  reduce rare loud hallucination outliers.
+
+Acceptance criteria for `v3.4`:
+
+- The fixed d8 1000-clip mean weighted distance improves versus v3.3's roughly `30.38`.
+- The fixed d8 1000-clip median stays at or below v3.3's roughly `10.48`.
+- The worst-case max distance improves versus v3.3's roughly `1056.85`, or worst-clip
+  diagnostics show the remaining max failure is outside oscillator audibility handling.
+
 ### Milestone I: Real Audio Prototype
 
 - Add audio preprocessing.
