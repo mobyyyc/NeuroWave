@@ -64,6 +64,8 @@ Use this versioning rule:
 - `v3.4`: v3.3 model setup with audibility-aware loss. Use this when the target
   representation stays main/detuned but the objective weights oscillator mistakes by
   audible importance.
+- `v3.5`: v3.4 model setup with noise-aware detune loss. Use this when detune loss is
+  reduced for noise oscillators and audible noise waveform identity is emphasized.
 
 The suffix should describe only what changed or what the experiment proves. Do not encode
 the full architecture, loss, target mode, pooling mode, or training configuration in every
@@ -77,6 +79,8 @@ Recommended suffix examples:
 - `main_detuned_mix`: base-frequency oscillator plus relative detuned oscillator target.
 - `audible_loss`: audibility-aware loss for waveform, detune, balance, and quiet-level
   overshoot.
+- `noise_detune_loss`: audibility-aware loss plus reduced detune pressure for noise
+  oscillator targets.
 - `losscheck`: focused loss-function ablation.
 - `evalfix`: evaluation/reporting-only change.
 
@@ -91,6 +95,7 @@ Example recent and next capability model IDs:
 - `v3.2_oscmix`
 - `v3.3_main_detuned_mix`
 - `v3.4_audible_loss`
+- `v3.5_noise_detune_loss`
 
 Existing long model IDs should stay unchanged in old reports and checkpoints. New model
 IDs should stay short and human-readable.
@@ -134,7 +139,7 @@ For the next oscillator-mix capability run:
 
 ```text
 Dataset: d10 or the current 500k dataset
-Model: v3.4_audible_loss
+Model: v3.5_noise_detune_loss
 ```
 
 This means:
@@ -144,6 +149,7 @@ This means:
 - Pitch-conditioned timbre target mode.
 - Main/detuned oscillator-mix representation and diagnostics.
 - Audibility-aware loss.
+- Noise-aware detune loss.
 - Grouped continuous heads.
 - Group-balanced loss.
 - Large model capacity.

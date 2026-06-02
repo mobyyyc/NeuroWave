@@ -203,6 +203,7 @@ Evidence from local reports:
   by canonical waveform/level contribution rather than arbitrary oscillator slot identity.
 - [x] Implement the `v3.3` main/detuned oscillator target setup before training.
 - [x] Implement the `v3.4` audibility-aware loss setup before training.
+- [x] Implement the `v3.5` noise-aware detune loss setup before training.
 
 Current v3 findings:
 
@@ -261,10 +262,24 @@ Completed v3.4 setup before training:
   total-level overshoot more strongly for quiet targets.
 - Updated the simplified training CLI defaults to `v3.4_audible_loss`.
 
+v3.4 training/evaluation finding:
+
+- `v3.4_audible_loss` became the best rendered-audio model so far on the fixed d8
+  1000-clip evaluation. Remaining worst clips are still concentrated around audible
+  noise waveform mistakes and large detune errors on noise oscillators, where detune is
+  not a meaningful pitched offset.
+
+Completed v3.5 setup before training:
+
+- Added the `noise_detune` loss preset. It keeps the v3.4 audibility-aware objective,
+  suppresses `detune_amount` loss when the detuned target wave is noise, and boosts
+  audible noise waveform classification.
+- Updated the simplified training CLI defaults to `v3.5_noise_detune_loss`.
+
 Next recommended task:
 
-- Train `v3.4_audible_loss` on the current 500k tensor dataset and compare it against
-  `v3.3_main_detuned_mix` on the fixed d8 1000-clip evaluation.
+- Train `v3.5_noise_detune_loss` on the current 500k tensor dataset and compare it against
+  `v3.4_audible_loss` on the fixed d8 1000-clip evaluation.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 

@@ -801,6 +801,36 @@ Acceptance criteria for `v3.4`:
 - The worst-case max distance improves versus v3.3's roughly `1056.85`, or worst-clip
   diagnostics show the remaining max failure is outside oscillator audibility handling.
 
+Reassessment after `v3.4`:
+
+- `v3.4_audible_loss` became the best rendered-audio model so far on the fixed d8
+  1000-clip evaluation, improving mean and median weighted distance versus v3.3.
+- The remaining worst clips still show noise-specific oscillator failures: audible noise
+  waves are sometimes predicted as pitched waves, and large `detune_amount` errors remain
+  when the target detuned wave is noise.
+- For a noise oscillator, detune is not a meaningful pitched offset in the same way it is
+  for sine, triangle, saw, or square. Training hard on noise detune can therefore inject
+  label noise into the oscillator objective.
+
+The next model series should therefore be `v3.5`, focused on noise-aware detune loss
+while keeping v3.4's target representation, architecture, and audibility-aware objective.
+The preferred design is:
+
+- Keep `main_detuned_mix` targets.
+- Keep audibility-aware group balancing.
+- Suppress or heavily reduce `detune_amount` loss when the detuned oscillator target wave
+  is noise.
+- Boost audible noise waveform classification so the model learns noise identity instead
+  of chasing meaningless noise detune labels.
+
+Acceptance criteria for `v3.5`:
+
+- Fixed d8 1000-clip mean and median stay at least as good as v3.4's roughly `27.60` mean
+  and `9.71` median.
+- Worst clips involving target noise oscillators improve in weighted distance or show
+  lower noise waveform error.
+- High-detune pitched oscillator clips do not regress versus v3.4.
+
 ### Milestone I: Real Audio Prototype
 
 - Add audio preprocessing.

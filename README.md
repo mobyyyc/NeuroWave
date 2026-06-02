@@ -72,8 +72,8 @@ python scripts/smoke_render.py
 
 Datasets are named `dN`. Historical models used long descriptive IDs, but new
 models use short change-focused IDs such as `v3.0_restructure`,
-`v3.1_500ksamples`, `v3.2_oscmix`, `v3.3_main_detuned_mix`, and
-`v3.4_audible_loss`. Keep dataset IDs and model IDs separate.
+`v3.1_500ksamples`, `v3.2_oscmix`, `v3.3_main_detuned_mix`,
+`v3.4_audible_loss`, and `v3.5_noise_detune_loss`. Keep dataset IDs and model IDs separate.
 
 Generate the first tiny local dataset:
 
@@ -116,13 +116,13 @@ Template for future models:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id v3.4_audible_loss \
+  --model-id v3.5_noise_detune_loss \
   --tensor-data data/generated/dN/features \
   --epochs 50 \
   --batch-size 128 \
   --device cuda \
-  --model-output models/v3.4_audible_loss.pt \
-  --metrics-output runs/training/v3.4_audible_loss_metrics.json
+  --model-output models/v3.5_noise_detune_loss.pt \
+  --metrics-output runs/training/v3.5_noise_detune_loss_metrics.json
 ```
 
 Training output:
@@ -139,7 +139,9 @@ The current best proven model family is the v3 pitch-conditioned grouped-head se
 
 `v3.3_main_detuned_mix` keeps pitch conditioning and total-level/balance learning, but defines oscillator roles by producer logic: `osc1` is the main/base-frequency oscillator supplied by the known pitch context, and `osc2` is the detuned oscillator whose relative pitch is learned as `detune_amount`. This preserves detune meaning while still avoiding independent raw `osc1_level`/`osc2_level` regression.
 
-The next planned model is `v3.4_audible_loss`. It keeps the v3.3 target and architecture, but changes the training objective so waveform, balance, and detune mistakes matter more when the affected oscillator is audible and matter less when it is nearly silent.
+`v3.4_audible_loss` keeps the v3.3 target and architecture, but changes the training objective so waveform, balance, and detune mistakes matter more when the affected oscillator is audible and matter less when it is nearly silent.
+
+The next planned model is `v3.5_noise_detune_loss`. It keeps v3.4's audibility-aware objective, but reduces detune loss when the detuned oscillator is noise because noise does not carry a meaningful pitched offset. It also boosts audible noise waveform classification so the model learns noise identity instead of chasing noise detune labels.
 
 The v3 defaults are intentionally not exposed as routine CLI switches. If a future
 experiment needs a different architecture or loss, change the code deliberately and
@@ -152,11 +154,11 @@ Evaluate a current PyTorch checkpoint on a generated dataset:
 ```bash
 python scripts/evaluate_dataset_torch.py \
   --metadata data/generated/dN/metadata.jsonl \
-  --model models/v3.4_audible_loss.pt \
+  --model models/v3.5_noise_detune_loss.pt \
   --count 1000 \
   --start-index 0 \
   --device cuda \
-  --output runs/evaluation/v3.4_audible_loss_on_dN_eval.json
+  --output runs/evaluation/v3.5_noise_detune_loss_on_dN_eval.json
 ```
 
 Use a smaller count for quick checks:
@@ -164,9 +166,9 @@ Use a smaller count for quick checks:
 ```bash
 python scripts/evaluate_dataset_torch.py \
   --metadata data/generated/dN/metadata.jsonl \
-  --model models/v3.4_audible_loss.pt \
+  --model models/v3.5_noise_detune_loss.pt \
   --count 200 \
-  --output runs/evaluation/v3.4_audible_loss_smoke_eval.json
+  --output runs/evaluation/v3.5_noise_detune_loss_smoke_eval.json
 ```
 
 Evaluation reports are compact by default: they include weighted audio distance summaries,
@@ -192,8 +194,8 @@ Predict a patch JSON from one audio clip using a PyTorch checkpoint:
 ```bash
 python scripts/predict_patch_torch.py \
   data/generated/dN/audio/patch_000000_seed_0000.wav \
-  runs/pytorch_prediction/v3.4_audible_loss_patch.json \
-  --model models/v3.4_audible_loss.pt \
+  runs/pytorch_prediction/v3.5_noise_detune_loss_patch.json \
+  --model models/v3.5_noise_detune_loss.pt \
   --freq 440
 ```
 
@@ -202,9 +204,9 @@ Render and compare a PyTorch prediction against the target audio:
 ```bash
 python scripts/evaluate_prediction_torch.py \
   data/generated/dN/audio/patch_000000_seed_0000.wav \
-  --model models/v3.4_audible_loss.pt \
+  --model models/v3.5_noise_detune_loss.pt \
   --freq 440 \
-  --output-dir runs/pytorch_prediction/v3.4_audible_loss_patch_eval
+  --output-dir runs/pytorch_prediction/v3.5_noise_detune_loss_patch_eval
 ```
 
 ## Compare Reports

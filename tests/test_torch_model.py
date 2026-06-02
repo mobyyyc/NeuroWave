@@ -31,6 +31,7 @@ from minisynth.torch_model import (
     grouped_parameter_mae,
     inverse_model_loss,
     LOSS_PRESET_AUDIBLE,
+    LOSS_PRESET_NOISE_DETUNE,
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mae_by_name,
@@ -50,6 +51,9 @@ from minisynth.torch_model import (
     target_parameters_for_mode,
     waveform_accuracy_by_name,
     weighted_mse_loss,
+    _boost_noise_wave_weights,
+    _suppress_noise_detune_weights,
+    _target_is_noise_wave,
 )
 
 
@@ -399,6 +403,39 @@ class TestTorchInverseModel(unittest.TestCase):
         )
 
         self.assertGreater(loud_wrong_loss.item(), quiet_wrong_loss.item())
+
+    def test_noise_detune_weights_suppress_detune_for_noise_targets(self):
+        parameters = target_parameters_for_mode(TARGET_MODE_MAIN_DETUNED_MIX)
+        names = [parameter.name for parameter in parameters]
+        targets = torch.full((2, len(parameters)), 0.5)
+        targets[:, names.index("detuned_wave")] = torch.tensor([1.0, 0.0])
+        parameter_indices = {name: index for index, name in enumerate(names)}
+
+        noise_mask = _target_is_noise_wave(
+            targets,
+            parameter_indices,
+            parameters,
+            "detuned_wave",
+        )
+        weights = _suppress_noise_detune_weights(
+            torch.ones(2),
+            noise_mask,
+        )
+
+        self.assertTrue(noise_mask.tolist()[0])
+        self.assertFalse(noise_mask.tolist()[1])
+        self.assertEqual(weights[0].item(), 0.0)
+        self.assertGreater(weights[1].item(), 1.0)
+
+    def test_noise_detune_weights_boost_noise_wave_classification(self):
+        base_weights = torch.ones(2)
+        boosted = _boost_noise_wave_weights(
+            base_weights,
+            torch.tensor([True, False]),
+        )
+
+        self.assertGreater(boosted[0].item(), boosted[1].item())
+        self.assertAlmostEqual(float(torch.mean(boosted)), 1.0)
 
     def test_parameter_mae_by_name_reports_each_target(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)
