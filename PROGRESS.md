@@ -283,27 +283,174 @@ Next recommended task:
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 
-## Milestone I: Real Audio Prototype
+## Milestone I: Product Prototype - Windows Desktop App
 
-Goal: approximate clean single-note real audio clips.
+Goal: make NeuroWave usable by a producer without the terminal. The first platform is
+Windows x64 because the current model workflow, CUDA setup, and local development
+environment are already Windows-first.
 
-- [ ] Add target audio import script.
-- [ ] Add onset detection and trimming.
-- [ ] Add pitch estimation or manual pitch input.
-- [ ] Add real-clip prediction pipeline.
-- [ ] Export target/result comparison WAVs.
-- [ ] Export comparison feature plots or data.
-- [ ] Document known failure cases.
+Product decision:
+
+- [x] Choose first desktop platform: Windows.
+- [x] Keep training outside the first app; the app runs inference and rendering only.
+- [x] Use the current best checkpoint family as the app model source.
+- [x] Keep generated app outputs out of git.
+- [ ] Decide desktop shell after backend slice: Electron, Tauri, or local web app packaged later.
+
+Backend/app inference foundation:
+
+- [ ] Create `minisynth/app_inference.py`.
+- [ ] Move reusable logic from `scripts/playground_predict_wav.py` into the app inference module.
+- [ ] Add an app request dataclass or structured dict for `audio_path`, crop start/end, `freq_hz`, `model_path`, `output_dir`, and run ID.
+- [ ] Add an app response dataclass or structured dict for output paths, model metadata, warnings, and errors.
+- [ ] Add robust WAV loading for mono/stereo audio.
+- [ ] Add crop validation for start/end seconds.
+- [ ] Add crop extraction and cropped target WAV export.
+- [ ] Add frequency validation and note that pitch context is required.
+- [ ] Add prediction using the selected PyTorch checkpoint.
+- [ ] Add predicted patch JSON export.
+- [ ] Add predicted audio render/export.
+- [ ] Add target spectrogram artifact export.
+- [ ] Add predicted spectrogram artifact export.
+- [ ] Add summary JSON export.
+- [ ] Add tests for crop validation.
+- [ ] Add tests for stereo-to-mono handling.
+- [ ] Add tests for deterministic app output paths.
+- [ ] Add tests for app response shape.
+- [ ] Add tests for invalid model/audio/frequency errors.
+
+Local backend service:
+
+- [ ] Choose FastAPI or Flask for a local inference API.
+- [ ] Add `scripts/app_backend.py` or equivalent local server entry point.
+- [ ] Add `/health`.
+- [ ] Add `/predict`.
+- [ ] Add request validation.
+- [ ] Add JSON response serialization.
+- [ ] Add backend error handling for invalid audio, invalid crop, missing model, and inference failure.
+- [ ] Add backend smoke test using a tiny fixture or generated clip.
+- [ ] Document local backend startup command.
+
+Frontend prototype:
+
+- [ ] Choose frontend stack.
+- [ ] Create app directory without disrupting existing Python package names.
+- [ ] Add app shell layout.
+- [ ] Add drag/drop WAV import.
+- [ ] Add waveform display.
+- [ ] Add crop start/end handles.
+- [ ] Add crop zoom.
+- [ ] Add crop playback.
+- [ ] Add frequency input in Hz.
+- [ ] Add note-name helper such as A4 -> 440 Hz.
+- [ ] Add model path/default model selector.
+- [ ] Add Predict button.
+- [ ] Add loading/progress state.
+- [ ] Connect Predict action to backend.
+- [ ] Display predicted patch JSON.
+- [ ] Display rendered predicted WAV player.
+- [ ] Display target spectrogram.
+- [ ] Display predicted spectrogram.
+- [ ] Add A/B playback controls.
+- [ ] Add export predicted JSON button.
+- [ ] Add export predicted WAV button.
+- [ ] Add open run folder button.
+- [ ] Add error UI for unsupported audio, missing frequency, invalid crop, backend offline, and model failure.
+
+Desktop packaging:
+
+- [ ] Choose Windows desktop wrapper: Electron or Tauri.
+- [ ] Launch local Python backend from desktop app in development mode.
+- [ ] Add app setting for Python/backend path during development.
+- [ ] Add app setting for default model checkpoint.
+- [ ] Package a first Windows development build.
+- [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
+- [ ] Document Windows install/run notes.
+
+Product UX polish:
+
+- [ ] Add recent input files.
+- [ ] Add recent prediction runs.
+- [ ] Add app output folder setting.
+- [ ] Add model/version display.
+- [ ] Add CPU/CUDA runtime indicator.
+- [ ] Add warning when frequency is missing or likely wrong.
+- [ ] Add clear copy explaining best input: clean one-note clips.
+- [ ] Add limitations panel.
+- [ ] Add app screenshots for website use.
+
+Acceptance checklist:
+
+- [ ] A user can drag a WAV into the app.
+- [ ] A user can crop the one-note region visually.
+- [ ] A user can preview the crop.
+- [ ] A user can enter frequency and run prediction.
+- [ ] The app produces predicted JSON and predicted WAV.
+- [ ] The app displays target and predicted spectrograms.
+- [ ] The app can A/B play target crop and prediction.
+- [ ] The app saves a complete local run folder.
+- [ ] The app handles invalid inputs without crashing.
 - [ ] Commit Milestone I completion.
 
-## Milestone J: Interface And Workflow
+## Milestone J: Product Website
 
-Goal: make NeuroWave usable as a tool.
+Goal: publish NeuroWave as a product with a clear landing page, examples, and a Windows
+download or waitlist flow.
 
-- [ ] Define CLI command names.
-- [ ] Add CLI entry point.
-- [ ] Add `neurowave render`.
-- [ ] Add `neurowave random`.
+Website planning:
+
+- [ ] Choose website stack: Next.js, static HTML, or another lightweight framework.
+- [ ] Choose hosting target.
+- [ ] Define product positioning.
+- [ ] Define first call to action: download, waitlist, or contact.
+- [ ] Gather app screenshots.
+- [ ] Gather A/B audio examples.
+- [ ] Gather spectrogram comparison images.
+
+Website build:
+
+- [ ] Create website app or docs site directory.
+- [ ] Add Home page.
+- [ ] Add How It Works page.
+- [ ] Add Examples page.
+- [ ] Add Download page.
+- [ ] Add Changelog page.
+- [ ] Add responsive layout.
+- [ ] Add audio players for examples.
+- [ ] Add product screenshots.
+- [ ] Add model/version labels for examples.
+- [ ] Add known limitations copy.
+- [ ] Add Windows requirements copy.
+- [ ] Add privacy note explaining audio is processed locally in the desktop app.
+- [ ] Add contact or waitlist form/link.
+- [ ] Add basic SEO metadata.
+- [ ] Add website build/test command.
+- [ ] Deploy first website version.
+
+Website acceptance checklist:
+
+- [ ] First viewport clearly says what NeuroWave does.
+- [ ] Website shows at least one A/B audio example.
+- [ ] Website shows the drag/crop/predict app flow.
+- [ ] Website explains Windows-first availability.
+- [ ] Website provides a download or waitlist/contact path.
+- [ ] Commit Milestone J completion.
+
+## Milestone K: Product Hardening
+
+Goal: make NeuroWave reliable enough for repeated use outside the developer environment.
+
+- [ ] Add local app logs.
+- [ ] Add crash/error report files under app run directory.
+- [ ] Add backend request/response logging without storing unnecessary user audio copies.
+- [ ] Add app settings persistence.
+- [ ] Add model/checkpoint selection UI.
+- [ ] Add versioned app releases.
+- [ ] Add installer packaging.
+- [ ] Add Windows code-signing investigation.
+- [ ] Add packaged app smoke test.
+- [ ] Add release checklist.
+- [ ] Add update/changelog workflow.
 - [ ] Add `neurowave compare`.
 - [ ] Add `neurowave match`.
 - [ ] Add `neurowave predict`.

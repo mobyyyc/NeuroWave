@@ -133,6 +133,48 @@ in the filename.
 
 This keeps dataset identity, model identity, and experiment purpose separate.
 
+## Product Naming
+
+Desktop app releases should use app-version IDs, separate from model IDs:
+
+```text
+app0.1_windows_prototype
+app0.2_crop_predict
+app1.0_windows
+```
+
+App run folders should use a timestamp plus a short input stem:
+
+```text
+runs/app/YYYYMMDD_HHMMSS_<input_stem>/
+```
+
+Each app run folder should contain:
+
+```text
+target_crop.wav
+predicted_patch.json
+predicted.wav
+target_spectrogram.*
+predicted_spectrogram.*
+summary.json
+```
+
+Website releases should use website-version IDs only when needed:
+
+```text
+site0.1_landing
+site0.2_examples
+```
+
+Keep these separate:
+
+- Dataset IDs: `dN`
+- Model IDs: `vN_suffix`
+- App release IDs: `appN.N_suffix`
+- Website release IDs: `siteN.N_suffix`
+- App run folders: timestamped local run directories
+
 ## Recommended Current Commands
 
 For the next oscillator-mix capability run:

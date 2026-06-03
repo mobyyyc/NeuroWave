@@ -831,17 +831,185 @@ Acceptance criteria for `v3.5`:
   lower noise waveform error.
 - High-detune pitched oscillator clips do not regress versus v3.4.
 
-### Milestone I: Real Audio Prototype
+### Milestone I: Product Prototype - Windows Desktop App
 
-- Add audio preprocessing.
-- Match clean one-note real samples.
-- Export comparison reports.
+Goal: turn NeuroWave from a research CLI into a usable single-platform desktop application
+for producers. The first supported platform should be Windows because the current project
+workflow, CUDA training setup, local file paths, and user environment are already Windows
+first. macOS can come later after the app workflow is stable.
 
-### Milestone J: Interface And Workflow
+The first app should not train models inside the UI. It should run inference with a chosen
+checkpoint, render the predicted synth patch, and let the user compare target audio against
+the rendered prediction. Training remains a developer workflow until model quality and
+packaging are stable.
 
-- Consolidate scripts into stable CLI commands.
-- Add predictable command names for render, random, compare, match, train, and predict.
-- Consider a simple local UI after CLI commands stabilize.
+Recommended product architecture:
+
+- Desktop shell: Electron or Tauri.
+- Frontend: local web UI with drag/drop, waveform cropper, transport controls, patch display,
+  spectrogram display, and export actions.
+- Backend: Python local inference service launched by the desktop shell.
+- Model runtime: use the project `.venv` during development; package a dedicated Python
+  runtime and checkpoint later.
+- First platform: Windows x64.
+- First app name: NeuroWave.
+- First checkpoint: the current best v3 checkpoint, starting with `v3.5_noise_detune_loss`
+  unless a newer benchmark clearly replaces it.
+
+Core app workflow:
+
+1. User drags a WAV file into the app.
+2. App decodes the audio and shows the waveform.
+3. User crops a one-note region with draggable start/end handles.
+4. App previews the cropped region.
+5. User enters or confirms pitch/frequency. Later this can be assisted by pitch detection.
+6. App sends the cropped audio and frequency to the Python inference backend.
+7. Backend predicts a patch JSON using the selected PyTorch checkpoint.
+8. Backend renders the predicted patch to WAV.
+9. App shows:
+   - original cropped waveform,
+   - rendered predicted waveform,
+   - target spectrogram,
+   - predicted spectrogram,
+   - predicted synth parameters,
+   - model/checkpoint metadata.
+10. User can play A/B audio, save the predicted WAV, save the predicted JSON, and copy/export
+    the patch report.
+
+Minimum product features:
+
+- Drag/drop WAV import.
+- Audio decoding and mono preview.
+- Waveform cropper with zoom and draggable handles.
+- Crop playback.
+- Frequency input in Hz, plus note-name helper such as A4 -> 440 Hz.
+- Predict button with visible loading/progress state.
+- Predicted patch JSON display.
+- Rendered predicted WAV playback.
+- Target/predicted spectrogram display.
+- Export predicted WAV.
+- Export predicted JSON.
+- Save a local run folder under `playground/` or `runs/app/`.
+- Error states for unsupported audio, missing checkpoint, missing frequency, invalid crop,
+  backend crash, and CUDA/CPU runtime failure.
+
+Product-quality backend requirements:
+
+- Add a stable Python app API instead of wiring UI directly to scripts.
+- Accept an input WAV path or uploaded/cached WAV bytes.
+- Accept crop start/end seconds.
+- Accept frequency in Hz.
+- Convert stereo to mono deterministically.
+- Save the cropped target WAV.
+- Predict patch JSON with the selected checkpoint.
+- Render the predicted patch WAV.
+- Generate target and predicted spectrogram images or data arrays.
+- Return a compact JSON response with all output paths and metadata.
+- Keep generated app outputs out of git.
+
+Suggested local backend API:
+
+```text
+POST /predict
+  audio_path
+  crop_start_seconds
+  crop_end_seconds
+  freq_hz
+  model_path
+
+returns:
+  run_id
+  cropped_target_wav
+  predicted_patch_json
+  predicted_wav
+  target_spectrogram
+  predicted_spectrogram
+  model_metrics
+  warnings
+```
+
+Suggested implementation order:
+
+1. Extract reusable inference code from `scripts/playground_predict_wav.py` into a small
+   `minisynth.app_inference` module.
+2. Add crop-aware prediction/render helper tests.
+3. Add a FastAPI or Flask local backend with `/health` and `/predict`.
+4. Add a tiny local frontend prototype that can call `/health`.
+5. Add drag/drop import and waveform preview.
+6. Add crop selection and crop playback.
+7. Add frequency input and note-name helper.
+8. Connect the Predict action to `/predict`.
+9. Display predicted JSON and rendered WAV playback.
+10. Add target/predicted spectrogram display.
+11. Add export buttons for WAV, JSON, and run folder.
+12. Wrap the frontend/backend in a Windows desktop shell.
+13. Add a first packaging build that can run on the development machine.
+14. Add smoke tests for backend prediction and frontend app state.
+15. Add product documentation and screenshots.
+
+Acceptance criteria for the first desktop prototype:
+
+- A producer can drag in a WAV, crop a one-note region, provide frequency, run prediction,
+  and hear the rendered predicted audio without using the terminal.
+- The app writes a predicted JSON and WAV into a deterministic local run folder.
+- The app shows both target and predicted spectrograms.
+- The app handles missing or invalid inputs with clear UI errors.
+- The app can run with CPU fallback, even if CUDA is preferred when available.
+- The prototype uses the existing model checkpoint format and does not require retraining.
+
+### Milestone J: Product Website
+
+Goal: publish a website for NeuroWave that explains the product, shows examples, and gives
+users a place to download or request the desktop app.
+
+The website should be a simple product site first, not an online inference product. Browser
+inference can wait until model size, packaging, and rights around user audio are understood.
+
+Recommended website architecture:
+
+- Framework: Next.js or a simple static site.
+- Hosting target: Vercel or another static-friendly host.
+- First content:
+  - product name and one-sentence promise,
+  - short demo video or audio A/B examples,
+  - screenshots of drag/drop, crop, prediction, and comparison views,
+  - explanation that the first app is Windows desktop,
+  - model limitations,
+  - download/waitlist/contact section.
+
+Website pages:
+
+- Home: product value, screenshots, short demo, download/waitlist.
+- How It Works: audio clip -> crop -> model predicts synth params -> render and compare.
+- Examples: target clips, predicted clips, spectrogram comparisons, model version labels.
+- Download: Windows build, install notes, GPU/CPU notes, known limitations.
+- Changelog: model/app versions and benchmark highlights.
+
+Website acceptance criteria:
+
+- The first viewport clearly communicates NeuroWave as an audio-to-synth-parameter app.
+- The website includes at least one real A/B example.
+- It includes a Windows download or waitlist/contact flow.
+- It documents that results depend on clean one-note clips and correct pitch/frequency.
+- It links to model/app version notes so users understand limitations.
+
+### Milestone K: Product Hardening
+
+Goal: make the app reliable enough for repeated use outside the developer terminal.
+
+Tasks:
+
+- Add app logging.
+- Add crash/error reports saved locally.
+- Add model/checkpoint selection UI.
+- Add CPU/GPU runtime indicator.
+- Add app settings for default output folder and default model.
+- Add recent files/runs list.
+- Add run comparison history.
+- Add installer packaging.
+- Add signed Windows build if distribution requires it.
+- Add automated smoke test that imports an example WAV and verifies prediction outputs.
+- Add a simple release checklist.
 
 ## Important Technical Decisions
 
@@ -911,14 +1079,11 @@ Models trained on clean synthetic audio may fail on real recordings. Real-clip m
 
 ## Immediate Next Step
 
-The next implementation task should be Milestone A:
+The next implementation task should be the first product slice of Milestone I:
 
-1. Create a `minisynth/` package.
-2. Define a `SynthConfig` data structure.
-3. Define a parameter schema with normalization and denormalization.
-4. Move oscillator, filter, envelope, and render logic into modules.
-5. Convert `PATCHES["dark_saw"]` into `presets/dark_saw.json`.
-6. Add a script that renders any preset JSON to WAV.
-7. Add tests proving the config round trip and render path work.
-
-Do not start ML until the parameter schema and renderer are stable enough to generate reliable data.
+1. Extract the current external-WAV prediction flow into a reusable app inference module.
+2. Add crop start/end support to that module.
+3. Save a deterministic app run folder containing cropped target WAV, predicted JSON,
+   predicted WAV, summary JSON, and spectrogram artifacts.
+4. Add tests for crop validation, mono conversion, output paths, and prediction response shape.
+5. Only after the backend helper is stable, add a local desktop/web UI around it.

@@ -4,6 +4,11 @@ NeuroWave is a Python synthesizer project being built toward machine-learning-dr
 
 The current system renders known synth parameters into audio, generates synthetic datasets, trains inverse models from audio features, and evaluates predicted synth patches by rendering them back to audio.
 
+The next product direction is a Windows-first desktop app: drag in a clean one-note audio
+clip, crop the useful region, provide or confirm pitch, run the current PyTorch model,
+and compare the rendered prediction against the target with waveform, spectrogram, WAV,
+and JSON outputs.
+
 Architecture note: the repository and Python package still use the historical `MiniSynth` / `minisynth` names internally. Do not rename folders, imports, or package paths unless that migration is planned separately.
 
 ## Project Map
@@ -14,6 +19,7 @@ Architecture note: the repository and Python package still use the historical `M
 - `data/generated/`: local generated datasets. Ignored by git.
 - `models/`: local trained checkpoints. Ignored by git.
 - `runs/`: local training, prediction, and evaluation reports. Ignored by git.
+- `playground/`: local manual prediction experiments and app-style outputs. Ignored by git.
 - `PLAN.md`: long-term roadmap.
 - `PROGRESS.md`: daily task tracker.
 - `NAMING.md`: dataset, model, and report naming rules.
@@ -219,6 +225,25 @@ python scripts/compare_evaluation_reports.py \
   runs/evaluation/v3_pytorch_cnn_500seeds_on_d2_eval.json \
   --output runs/evaluation/v2_sklearn_mlp_500seeds_vs_v3_pytorch_cnn_500seeds_on_d2.json
 ```
+
+## Product Prototype Direction
+
+The first application target is Windows x64. The app should run local inference rather
+than training: users drag in a WAV, crop a one-note region, enter/confirm frequency, run
+prediction with a selected checkpoint, then listen to and export the rendered prediction.
+
+Planned output files for each app run:
+
+- cropped target WAV
+- predicted patch JSON
+- predicted rendered WAV
+- target spectrogram artifact
+- predicted spectrogram artifact
+- summary JSON with model/checkpoint metadata
+
+The website should come after the first usable desktop prototype and should publish the
+product story, screenshots, A/B examples, model limitations, and Windows download or
+waitlist flow.
 
 ## Legacy Scikit-Learn Baseline
 
