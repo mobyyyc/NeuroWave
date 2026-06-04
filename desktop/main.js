@@ -1,11 +1,17 @@
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("child_process");
+const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const BACKEND_HOST = "127.0.0.1";
-const BACKEND_PORT = Number(process.env.NEUROWAVE_BACKEND_PORT || "8765");
+const LOCAL_SETTINGS_PATH = path.join(__dirname, "settings.local.json");
+const DEFAULT_DEV_USER_DATA = path.join(ROOT, ".electron-user-data");
+const localSettings = loadLocalSettings();
+const backendSettings = localSettings.backend || {};
+const appSettings = localSettings.app || {};
+const BACKEND_HOST = backendSettings.host || "127.0.0.1";
+const BACKEND_PORT = Number(process.env.NEUROWAVE_BACKEND_PORT || backendSettings.port || "8765");
 const BACKEND_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 const HEALTH_URL = `${BACKEND_URL}/health`;
 
@@ -13,9 +19,28 @@ let mainWindow = null;
 let backendProcess = null;
 let backendStartedByShell = false;
 
+if (!app.isPackaged || process.env.NEUROWAVE_ELECTRON_USER_DATA) {
+  app.setPath("userData", process.env.NEUROWAVE_ELECTRON_USER_DATA || DEFAULT_DEV_USER_DATA);
+}
+
+function loadLocalSettings() {
+  if (!fs.existsSync(LOCAL_SETTINGS_PATH)) {
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(LOCAL_SETTINGS_PATH, "utf8"));
+  } catch (error) {
+    console.error(`Could not read ${LOCAL_SETTINGS_PATH}:`, error);
+    return {};
+  }
+}
+
 function defaultPythonPath() {
   if (process.env.NEUROWAVE_PYTHON) {
     return process.env.NEUROWAVE_PYTHON;
+  }
+  if (backendSettings.pythonPath) {
+    return path.resolve(ROOT, backendSettings.pythonPath);
   }
   if (process.platform === "win32") {
     return path.join(ROOT, ".venv", "Scripts", "python.exe");
@@ -60,8 +85,10 @@ async function startBackendIfNeeded() {
     BACKEND_HOST,
     "--port",
     String(BACKEND_PORT),
-    "--quiet",
   ];
+  if (backendSettings.quiet !== false) {
+    args.push("--quiet");
+  }
   backendProcess = spawn(python, args, {
     cwd: ROOT,
     windowsHide: true,
@@ -101,7 +128,13 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(ROOT, "app", "index.html"));
+  mainWindow.loadFile(path.join(ROOT, "app", "index.html"), {
+    query: {
+      backendUrl: BACKEND_URL,
+      modelPath: appSettings.modelPath || "models/v3.5_noise_detune_loss.pt",
+      outputDir: appSettings.outputDir || "runs/app",
+    },
+  });
 
   if (process.env.NEUROWAVE_ELECTRON_SMOKE) {
     mainWindow.webContents.once("did-finish-load", () => {

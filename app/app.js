@@ -53,6 +53,12 @@ const els = {
 };
 
 const ctx = els.canvas.getContext("2d");
+const SETTINGS_KEY = "neurowave.appSettings.v1";
+const SETTINGS_FIELDS = {
+  backendUrl: "http://127.0.0.1:8765",
+  modelPath: "models/v3.5_noise_detune_loss.pt",
+  outputDir: "runs/app",
+};
 
 function setStatus(text, kind = "idle") {
   els.backendStatus.textContent = text;
@@ -70,6 +76,46 @@ function artifactUrl(path) {
 function setArtifactStatus(text, kind = "idle") {
   els.artifactStatus.textContent = text;
   els.artifactStatus.className = `artifact-status status-${kind}`;
+}
+
+function readStoredSettings() {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function querySetting(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function desktopSetting(name) {
+  return window.neurowaveDesktop?.settings?.[name] || null;
+}
+
+function currentSettings() {
+  return {
+    backendUrl: els.backendUrl.value,
+    modelPath: els.modelPath.value,
+    outputDir: els.outputDir.value,
+  };
+}
+
+function saveSettings() {
+  window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings()));
+}
+
+function applySettings() {
+  const stored = readStoredSettings();
+  for (const [name, fallback] of Object.entries(SETTINGS_FIELDS)) {
+    const element = els[name];
+    const value = stored[name] || desktopSetting(name) || querySetting(name) || fallback;
+    if (element && value) {
+      element.value = value;
+    }
+  }
 }
 
 function ensureAudioContext() {
@@ -686,6 +732,9 @@ function setParameterSummary(patch, result) {
 
 function bindEvents() {
   els.checkBackend.addEventListener("click", checkBackend);
+  for (const element of [els.backendUrl, els.modelPath, els.outputDir]) {
+    element.addEventListener("change", saveSettings);
+  }
   els.dropZone.addEventListener("click", () => els.fileInput.click());
   els.dropZone.addEventListener("dragover", (event) => {
     event.preventDefault();
@@ -729,6 +778,7 @@ function bindEvents() {
 }
 
 function init() {
+  applySettings();
   bindEvents();
   resizeCanvas();
   setResultSummary({});

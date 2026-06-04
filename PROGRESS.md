@@ -378,8 +378,8 @@ Desktop packaging:
 
 - [x] Choose Windows desktop wrapper: Electron.
 - [x] Launch local Python backend from desktop app in development mode.
-- [ ] Add app setting for Python/backend path during development.
-- [ ] Add app setting for default model checkpoint.
+- [x] Add app setting for Python/backend path during development.
+- [x] Add app setting for default model checkpoint.
 - [ ] Package a first Windows development build.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [ ] Document Windows install/run notes.
@@ -389,7 +389,7 @@ Product UX polish:
 - [x] Hide developer/runtime fields behind Advanced by default.
 - [ ] Add recent input files.
 - [ ] Add recent prediction runs.
-- [ ] Add app output folder setting.
+- [x] Add app output folder setting.
 - [ ] Add model/version display.
 - [ ] Add CPU/CUDA runtime indicator.
 - [ ] Add warning when frequency is missing or likely wrong.

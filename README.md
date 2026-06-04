@@ -311,6 +311,12 @@ predict, inspect parameters, A/B audio, and save JSON/WAV. Backend URL, model
 path, raw audio path, output folder, and raw response JSON remain available only
 as advanced/developer controls during the prototype phase.
 
+Optional development settings can be copied from `desktop/settings.example.json`
+to `desktop/settings.local.json`. The local file is ignored by git and can set
+the Python executable, backend host/port, default model checkpoint, and default
+output folder. Advanced app fields also persist in browser/Electron local
+storage after editing.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:

@@ -29,12 +29,15 @@ npm run desktop
 
 The shell starts the Python backend automatically in development. It uses
 `.venv\Scripts\python.exe` on Windows unless `NEUROWAVE_PYTHON` is set.
+You can also copy `desktop/settings.example.json` to `desktop/settings.local.json`
+to set the development Python path, backend port, default model, and output folder.
 
 Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.
 - The default UI is producer-facing: drag, crop, confirm pitch, predict, view params, save.
 - Advanced contains developer/runtime fields such as backend URL, model path, raw audio path, and output directory.
+- Advanced backend/model/output values persist locally after editing.
 - The backend still needs a filesystem `audio_path`; Electron can fill this from a dropped file path when available.
 - A desktop wrapper can later provide the real dropped file path, or the backend can gain upload support.
 - After prediction, the frontend loads predicted JSON, WAV, and spectrogram artifacts
