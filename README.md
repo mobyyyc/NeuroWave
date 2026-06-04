@@ -306,6 +306,11 @@ The Electron shell loads `app/index.html` in a desktop window and starts
 `127.0.0.1:8765`. Set `NEUROWAVE_PYTHON` if you need to use a Python executable
 other than the project-local `.venv`.
 
+The default app surface is producer-facing: drag audio, crop, confirm pitch,
+predict, inspect parameters, A/B audio, and save JSON/WAV. Backend URL, model
+path, raw audio path, output folder, and raw response JSON remain available only
+as advanced/developer controls during the prototype phase.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:

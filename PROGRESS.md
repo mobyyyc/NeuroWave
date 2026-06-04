@@ -370,6 +370,10 @@ implemented in the static prototype. The open-folder action is also allowlisted
 to run folders registered by successful predictions in the current backend
 process. Desktop packaging still needs a stronger native file handoff.
 
+User-mode note: the default app surface is now producer-facing. Backend URL,
+model checkpoint path, raw audio path, output directory, and raw response JSON
+are treated as advanced/developer controls instead of the primary workflow.
+
 Desktop packaging:
 
 - [x] Choose Windows desktop wrapper: Electron.
@@ -382,6 +386,7 @@ Desktop packaging:
 
 Product UX polish:
 
+- [x] Hide developer/runtime fields behind Advanced by default.
 - [ ] Add recent input files.
 - [ ] Add recent prediction runs.
 - [ ] Add app output folder setting.

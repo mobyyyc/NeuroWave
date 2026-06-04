@@ -450,7 +450,7 @@ function clearArtifacts() {
   els.predictedAudio.load();
   els.patchJson.textContent = "{}";
   drawStoredSpectrograms();
-  setArtifactStatus("No run loaded");
+  setArtifactStatus("No prediction yet");
 }
 
 async function fetchArtifact(path) {
@@ -499,6 +499,7 @@ async function loadPredictionArtifacts(result) {
   state.targetSpectrogram = targetSpectrogram;
   state.predictedSpectrogram = predictedSpectrogram;
   els.patchJson.textContent = JSON.stringify(patch, null, 2);
+  setParameterSummary(patch, result);
   drawStoredSpectrograms();
   setArtifactStatus("Artifacts loaded", "ok");
 }
@@ -637,23 +638,50 @@ function setResponse(payload) {
   els.responseJson.textContent = JSON.stringify(payload, null, 2);
 }
 
-function setResultSummary(result) {
-  const fields = [
-    ["Run", result.run_id],
-    ["Crop", `${formatSeconds(result.crop_start_seconds)} - ${formatSeconds(result.crop_end_seconds)}`],
-    ["Patch", result.predicted_patch_json],
-    ["WAV", result.predicted_wav],
-    ["Target Spec", result.target_spectrogram],
-    ["Pred Spec", result.predicted_spectrogram],
-  ];
+function displayParamValue(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(4);
+  }
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+  return String(value);
+}
+
+function setSummaryFields(fields) {
   els.resultSummary.innerHTML = "";
   for (const [label, value] of fields) {
     const dt = document.createElement("dt");
     const dd = document.createElement("dd");
     dt.textContent = label;
-    dd.textContent = value || "";
+    dd.textContent = displayParamValue(value);
     els.resultSummary.append(dt, dd);
   }
+}
+
+function setResultSummary(result) {
+  if (!result || !result.run_id) {
+    setSummaryFields([["State", "No prediction yet"]]);
+    return;
+  }
+  setSummaryFields([
+    ["State", "Prediction complete"],
+    ["Crop", `${formatSeconds(result.crop_start_seconds)} - ${formatSeconds(result.crop_end_seconds)}`],
+  ]);
+}
+
+function setParameterSummary(patch, result) {
+  setSummaryFields([
+    ["Freq", patch.freq],
+    ["Length", patch.length],
+    ["Osc 1", `${patch.osc1_wave} @ ${displayParamValue(patch.osc1_level)}`],
+    ["Osc 2", `${patch.osc2_wave} @ ${displayParamValue(patch.osc2_level)}`],
+    ["Detune", patch.osc2_detune],
+    ["Cutoff", patch.cutoff],
+    ["Res", patch.resonance],
+    ["ADSR", `${displayParamValue(patch.attack)} / ${displayParamValue(patch.decay)} / ${displayParamValue(patch.sustain)} / ${displayParamValue(patch.release)}`],
+    ["Crop", `${formatSeconds(result.crop_start_seconds)} - ${formatSeconds(result.crop_end_seconds)}`],
+  ]);
 }
 
 function bindEvents() {

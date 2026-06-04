@@ -11,26 +11,8 @@
       <aside class="panel controls-panel">
         <div class="brand-block">
           <h1>NeuroWave</h1>
-          <div id="backendStatus" class="status-pill status-idle">Backend</div>
+          <div id="backendStatus" class="status-pill status-idle">Ready</div>
         </div>
-
-        <section class="control-group">
-          <label for="backendUrl">Backend</label>
-          <div class="inline-control">
-            <input id="backendUrl" type="url" value="http://127.0.0.1:8765" />
-            <button id="checkBackend" type="button">Check</button>
-          </div>
-        </section>
-
-        <section class="control-group">
-          <label for="modelPath">Model</label>
-          <input id="modelPath" type="text" value="models/v3.5_noise_detune_loss.pt" />
-        </section>
-
-        <section class="control-group">
-          <label for="backendAudioPath">Audio Path</label>
-          <input id="backendAudioPath" type="text" placeholder="playground/testpluck.wav" />
-        </section>
 
         <section class="control-grid">
           <div>
@@ -67,14 +49,39 @@
         </section>
 
         <section class="control-group">
-          <label for="outputDir">Output</label>
-          <input id="outputDir" type="text" value="runs/app" />
+          <label>Preview</label>
+          <div class="button-row">
+            <button id="playCrop" type="button">Play</button>
+            <button id="stopPlayback" type="button">Stop</button>
+          </div>
         </section>
 
-        <div class="button-row">
-          <button id="playCrop" type="button">Play</button>
-          <button id="stopPlayback" type="button">Stop</button>
-        </div>
+        <details class="advanced-panel">
+          <summary>Advanced</summary>
+          <section class="control-group">
+            <label for="backendUrl">Backend</label>
+            <div class="inline-control">
+              <input id="backendUrl" type="url" value="http://127.0.0.1:8765" />
+              <button id="checkBackend" type="button">Check</button>
+            </div>
+          </section>
+
+          <section class="control-group">
+            <label for="modelPath">Model</label>
+            <input id="modelPath" type="text" value="models/v3.5_noise_detune_loss.pt" />
+          </section>
+
+          <section class="control-group">
+            <label for="backendAudioPath">Audio Path</label>
+            <input id="backendAudioPath" type="text" placeholder="playground/testpluck.wav" />
+          </section>
+
+          <section class="control-group">
+            <label for="outputDir">Output</label>
+            <input id="outputDir" type="text" value="runs/app" />
+          </section>
+        </details>
+
         <button id="predictButton" class="primary-button" type="button">Predict</button>
       </aside>
 
@@ -82,8 +89,8 @@
         <section id="dropZone" class="drop-zone">
           <input id="fileInput" type="file" accept="audio/*,.wav" />
           <div>
-            <strong id="fileName">Drop WAV</strong>
-            <span id="fileMeta">No file loaded</span>
+            <strong id="fileName">Drop audio</strong>
+            <span id="fileMeta">Choose a clean one-note clip</span>
           </div>
         </section>
 
@@ -93,7 +100,7 @@
 
         <section class="results-grid">
           <div class="panel result-panel">
-            <h2>Prediction</h2>
+            <h2>Parameters</h2>
             <dl id="resultSummary" class="result-summary"></dl>
           </div>
           <div class="panel result-panel">
@@ -114,11 +121,11 @@
               <button id="stopResultPlayback" type="button">Stop</button>
             </div>
             <div class="button-row three-buttons">
-              <button id="exportPatch" type="button">JSON</button>
-              <button id="exportWav" type="button">WAV</button>
+              <button id="exportPatch" type="button">Save JSON</button>
+              <button id="exportWav" type="button">Save WAV</button>
               <button id="openRunFolder" type="button">Folder</button>
             </div>
-            <div id="artifactStatus" class="artifact-status">No run loaded</div>
+            <div id="artifactStatus" class="artifact-status">No prediction yet</div>
           </div>
         </section>
 
@@ -140,7 +147,7 @@
               </div>
             </div>
           </div>
-          <div class="panel result-panel">
+          <div class="panel result-panel advanced-output">
             <h2>Response</h2>
             <pre id="responseJson">{}</pre>
           </div>

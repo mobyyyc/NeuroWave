@@ -137,6 +137,28 @@ label {
   margin-bottom: 16px;
 }
 
+.advanced-panel {
+  margin: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0 2px;
+}
+
+.advanced-panel summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.advanced-panel[open] summary {
+  margin-bottom: 14px;
+}
+
+.advanced-panel:not([open]) > :not(summary) {
+  display: none;
+}
+
 .control-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -251,7 +273,7 @@ label {
 .artifact-grid {
   min-height: 320px;
   display: grid;
-  grid-template-columns: minmax(220px, 0.55fr) minmax(260px, 1fr) minmax(240px, 0.9fr);
+  grid-template-columns: minmax(280px, 0.7fr) minmax(360px, 1fr);
   gap: 16px;
 }
 
@@ -283,6 +305,10 @@ label {
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.advanced-output {
+  display: none;
 }
 
 pre {
