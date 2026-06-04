@@ -294,6 +294,18 @@ in the current backend process.
 The prototype also supports crop zoom, predicted JSON/WAV browser downloads, and
 opening the current run folder through the local backend on Windows.
 
+Run the Electron desktop shell in development:
+
+```bash
+npm install
+npm run desktop
+```
+
+The Electron shell loads `app/index.html` in a desktop window and starts
+`scripts/app_backend.py` automatically if nothing is already listening on
+`127.0.0.1:8765`. Set `NEUROWAVE_PYTHON` if you need to use a Python executable
+other than the project-local `.venv`.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:

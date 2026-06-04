@@ -223,7 +223,9 @@ async function loadAudioFile(file) {
   els.cropStart.value = formatSeconds(state.cropStart);
   els.cropEnd.value = formatSeconds(state.cropEnd);
   updateZoomDisplay();
-  if (!els.backendAudioPath.value) {
+  if (file.path) {
+    els.backendAudioPath.value = file.path;
+  } else if (!els.backendAudioPath.value) {
     els.backendAudioPath.value = `playground/${file.name}`;
   }
   drawWaveform();

@@ -20,6 +20,16 @@ Open:
 http://127.0.0.1:5173
 ```
 
+Run the Electron desktop shell from the repo root:
+
+```powershell
+npm install
+npm run desktop
+```
+
+The shell starts the Python backend automatically in development. It uses
+`.venv\Scripts\python.exe` on Windows unless `NEUROWAVE_PYTHON` is set.
+
 Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.
@@ -30,3 +40,4 @@ Current prototype notes:
 - Crop zoom is frontend-only and does not change the crop seconds sent to the backend.
 - Export buttons download the registered predicted JSON/WAV artifacts through the backend.
 - The Folder button asks the backend to open the registered run directory on Windows.
+- In Electron, dropped files can provide a filesystem path for the backend Audio Path field.

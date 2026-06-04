@@ -1,0 +1,15 @@
+{
+  "name": "neurowave",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NeuroWave Windows desktop app prototype.",
+  "main": "desktop/main.js",
+  "scripts": {
+    "desktop": "electron .",
+    "desktop:debug": "set NEUROWAVE_ELECTRON_DEVTOOLS=1&& electron .",
+    "desktop:smoke": "set NEUROWAVE_ELECTRON_SMOKE=1&& electron ."
+  },
+  "devDependencies": {
+    "electron": "^42.3.3"
+  }
+}

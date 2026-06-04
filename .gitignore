@@ -14,6 +14,11 @@ __pycache__/
 # IDEs and Editors
 .vscode/
 
+# Node/Electron local artifacts
+node_modules/
+dist/
+out/
+
 # Generated audio and experiment outputs
 *.wav
 data/generated/

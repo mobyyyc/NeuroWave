@@ -295,7 +295,7 @@ Product decision:
 - [x] Keep training outside the first app; the app runs inference and rendering only.
 - [x] Use the current best checkpoint family as the app model source.
 - [x] Keep generated app outputs out of git.
-- [ ] Decide desktop shell after backend slice: Electron, Tauri, or local web app packaged later.
+- [x] Decide desktop shell after backend slice: Electron.
 
 Backend/app inference foundation:
 
@@ -372,8 +372,8 @@ process. Desktop packaging still needs a stronger native file handoff.
 
 Desktop packaging:
 
-- [ ] Choose Windows desktop wrapper: Electron or Tauri.
-- [ ] Launch local Python backend from desktop app in development mode.
+- [x] Choose Windows desktop wrapper: Electron.
+- [x] Launch local Python backend from desktop app in development mode.
 - [ ] Add app setting for Python/backend path during development.
 - [ ] Add app setting for default model checkpoint.
 - [ ] Package a first Windows development build.
