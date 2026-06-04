@@ -4,6 +4,7 @@ import argparse
 from dataclasses import asdict
 import json
 import mimetypes
+import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -31,6 +32,7 @@ ARTIFACT_RESULT_FIELDS = (
     "predicted_spectrogram",
     "summary",
 )
+RUN_FOLDER_RESULT_FIELDS = ("run_dir",)
 
 
 def health_response():
@@ -80,10 +82,28 @@ def artifact_paths_from_result(result):
     return paths
 
 
+def run_folder_paths_from_result(result):
+    if not isinstance(result, dict):
+        return []
+    paths = []
+    for field in RUN_FOLDER_RESULT_FIELDS:
+        value = result.get(field)
+        if isinstance(value, str) and value:
+            paths.append(Path(value))
+    return paths
+
+
 def resolve_artifact_request_path(raw_path):
     if not raw_path:
         raise ValueError("artifact path query parameter is required")
     return Path(raw_path).resolve()
+
+
+def open_folder(path):
+    if os.name == "nt":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return
+    raise RuntimeError("open folder is only supported on Windows in this prototype")
 
 
 def response_for_exception(error, include_tracebacks=False):
@@ -123,17 +143,24 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self):
-        if self.path != "/predict":
-            self._send_json(
-                error_response(f"unknown endpoint: {self.path}", HTTPStatus.NOT_FOUND),
-                status=HTTPStatus.NOT_FOUND,
-            )
+        parsed = urlparse(self.path)
+        if parsed.path == "/predict":
+            self._handle_predict()
             return
+        if parsed.path == "/open-folder":
+            self._handle_open_folder()
+            return
+        self._send_json(
+            error_response(f"unknown endpoint: {parsed.path}", HTTPStatus.NOT_FOUND),
+            status=HTTPStatus.NOT_FOUND,
+        )
 
+    def _handle_predict(self):
         try:
             payload = parse_json_body(self._read_request_body())
             result = self.server.predict_function(payload)
             self.server.register_artifacts(result)
+            self.server.register_run_folders(result)
             self._send_json(result)
         except Exception as error:
             status, response = response_for_exception(
@@ -141,6 +168,34 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
                 include_tracebacks=getattr(self.server, "debug_errors", False),
             )
             self._send_json(response, status=status)
+
+    def _handle_open_folder(self):
+        try:
+            payload = parse_json_body(self._read_request_body())
+            path = resolve_artifact_request_path(payload.get("path", ""))
+            if not self.server.is_registered_run_folder(path):
+                self._send_json(
+                    error_response("run folder is not available", HTTPStatus.FORBIDDEN),
+                    status=HTTPStatus.FORBIDDEN,
+                )
+                return
+            if not path.exists() or not path.is_dir():
+                self._send_json(
+                    error_response("run folder not found", HTTPStatus.NOT_FOUND),
+                    status=HTTPStatus.NOT_FOUND,
+                )
+                return
+            self.server.open_folder_function(str(path))
+            self._send_json({"status": "ok", "path": str(path)})
+        except Exception as error:
+            status, response = response_for_exception(
+                error,
+                include_tracebacks=getattr(self.server, "debug_errors", False),
+            )
+            self._send_json(
+                response,
+                status=status,
+            )
 
     def _read_request_body(self):
         raw_length = self.headers.get("Content-Length", "0")
@@ -228,14 +283,17 @@ class NeuroWaveBackendServer(ThreadingHTTPServer):
         server_address,
         handler_class=NeuroWaveBackendHandler,
         predict_function=predict_response,
+        open_folder_function=open_folder,
         quiet=False,
         debug_errors=False,
     ):
         super().__init__(server_address, handler_class)
         self.predict_function = predict_function
+        self.open_folder_function = open_folder_function
         self.quiet = quiet
         self.debug_errors = debug_errors
         self._artifact_paths = set()
+        self._run_folder_paths = set()
         self._artifact_lock = threading.Lock()
 
     def register_artifacts(self, result):
@@ -245,22 +303,36 @@ class NeuroWaveBackendServer(ThreadingHTTPServer):
         with self._artifact_lock:
             self._artifact_paths.update(paths)
 
+    def register_run_folders(self, result):
+        paths = {path.resolve() for path in run_folder_paths_from_result(result)}
+        if not paths:
+            return
+        with self._artifact_lock:
+            self._run_folder_paths.update(paths)
+
     def is_registered_artifact(self, path):
         resolved = Path(path).resolve()
         with self._artifact_lock:
             return resolved in self._artifact_paths
+
+    def is_registered_run_folder(self, path):
+        resolved = Path(path).resolve()
+        with self._artifact_lock:
+            return resolved in self._run_folder_paths
 
 
 def create_server(
     host=DEFAULT_HOST,
     port=DEFAULT_PORT,
     predict_function=predict_response,
+    open_folder_function=open_folder,
     quiet=False,
     debug_errors=False,
 ):
     return NeuroWaveBackendServer(
         (host, port),
         predict_function=predict_function,
+        open_folder_function=open_folder_function,
         quiet=quiet,
         debug_errors=debug_errors,
     )

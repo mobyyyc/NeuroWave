@@ -64,6 +64,12 @@ input {
   padding: 0 10px;
 }
 
+input[type="range"] {
+  height: 22px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 label {
   display: block;
   margin-bottom: 6px;
@@ -151,8 +157,25 @@ label {
   margin: 18px 0 8px;
 }
 
+.control-group .button-row {
+  margin-top: 8px;
+}
+
 .three-buttons {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.slider-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-control span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
 }
 
 .primary-button {

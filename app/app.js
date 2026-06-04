@@ -9,6 +9,8 @@ const state = {
   audioContext: null,
   targetSpectrogram: null,
   predictedSpectrogram: null,
+  zoomLevel: 1,
+  lastResult: null,
 };
 
 const els = {
@@ -21,6 +23,10 @@ const els = {
   freqHz: document.getElementById("freqHz"),
   cropStart: document.getElementById("cropStart"),
   cropEnd: document.getElementById("cropEnd"),
+  zoomLevel: document.getElementById("zoomLevel"),
+  zoomValue: document.getElementById("zoomValue"),
+  fitCropZoom: document.getElementById("fitCropZoom"),
+  resetZoom: document.getElementById("resetZoom"),
   outputDir: document.getElementById("outputDir"),
   playCrop: document.getElementById("playCrop"),
   stopPlayback: document.getElementById("stopPlayback"),
@@ -38,6 +44,9 @@ const els = {
   playTargetResult: document.getElementById("playTargetResult"),
   playPredictedResult: document.getElementById("playPredictedResult"),
   stopResultPlayback: document.getElementById("stopResultPlayback"),
+  exportPatch: document.getElementById("exportPatch"),
+  exportWav: document.getElementById("exportWav"),
+  openRunFolder: document.getElementById("openRunFolder"),
   patchJson: document.getElementById("patchJson"),
   targetSpectrogramCanvas: document.getElementById("targetSpectrogramCanvas"),
   predictedSpectrogramCanvas: document.getElementById("predictedSpectrogramCanvas"),
@@ -80,16 +89,45 @@ function resizeCanvas() {
   drawStoredSpectrograms();
 }
 
+function cropCenterSeconds() {
+  if (!state.duration) return 0;
+  const start = clamp(state.cropStart, 0, state.duration);
+  const end = clamp(state.cropEnd || state.duration, start, state.duration);
+  return clamp((start + end) / 2, 0, state.duration);
+}
+
+function visibleRange() {
+  if (!state.duration) return { start: 0, end: 0, duration: 0 };
+  const zoom = Math.max(1, Number(state.zoomLevel) || 1);
+  const visibleDuration = state.duration / zoom;
+  const center = cropCenterSeconds();
+  let start = center - visibleDuration / 2;
+  let end = center + visibleDuration / 2;
+  if (start < 0) {
+    end -= start;
+    start = 0;
+  }
+  if (end > state.duration) {
+    start -= end - state.duration;
+    end = state.duration;
+  }
+  start = clamp(start, 0, state.duration);
+  end = clamp(end, start, state.duration);
+  return { start, end, duration: Math.max(1e-9, end - start) };
+}
+
 function secondsToX(seconds) {
   const width = els.canvas.getBoundingClientRect().width;
-  if (!state.duration) return 0;
-  return (seconds / state.duration) * width;
+  const visible = visibleRange();
+  if (!state.duration || !visible.duration) return 0;
+  return ((seconds - visible.start) / visible.duration) * width;
 }
 
 function xToSeconds(x) {
   const width = els.canvas.getBoundingClientRect().width;
-  if (!state.duration || width <= 0) return 0;
-  return clamp((x / width) * state.duration, 0, state.duration);
+  const visible = visibleRange();
+  if (!state.duration || width <= 0 || !visible.duration) return 0;
+  return clamp(visible.start + (x / width) * visible.duration, visible.start, visible.end);
 }
 
 function clamp(value, min, max) {
@@ -121,14 +159,18 @@ function drawWaveform() {
   const width = Math.max(1, Math.floor(rect.width));
   const height = rect.height;
   const center = height / 2;
-  const samplesPerPixel = Math.max(1, Math.floor(data.length / width));
+  const visible = visibleRange();
+  const startSample = Math.max(0, Math.floor((visible.start / state.duration) * data.length));
+  const endSample = Math.min(data.length, Math.ceil((visible.end / state.duration) * data.length));
+  const visibleSamples = Math.max(1, endSample - startSample);
+  const samplesPerPixel = Math.max(1, Math.floor(visibleSamples / width));
 
   ctx.strokeStyle = "#8fd3ff";
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = 0; x < width; x += 1) {
-    const start = x * samplesPerPixel;
-    const end = Math.min(start + samplesPerPixel, data.length);
+    const start = Math.min(endSample, startSample + x * samplesPerPixel);
+    const end = Math.min(start + samplesPerPixel, endSample);
     let min = 1;
     let max = -1;
     for (let i = start; i < end; i += 1) {
@@ -174,11 +216,13 @@ async function loadAudioFile(file) {
   state.duration = decoded.duration;
   state.cropStart = 0;
   state.cropEnd = decoded.duration;
+  state.zoomLevel = 1;
 
   els.fileName.textContent = file.name;
   els.fileMeta.textContent = `${decoded.numberOfChannels} ch | ${decoded.sampleRate} Hz | ${formatSeconds(decoded.duration)} s`;
   els.cropStart.value = formatSeconds(state.cropStart);
   els.cropEnd.value = formatSeconds(state.cropEnd);
+  updateZoomDisplay();
   if (!els.backendAudioPath.value) {
     els.backendAudioPath.value = `playground/${file.name}`;
   }
@@ -188,6 +232,31 @@ async function loadAudioFile(file) {
 function updateCropInputs() {
   els.cropStart.value = formatSeconds(state.cropStart);
   els.cropEnd.value = formatSeconds(state.cropEnd);
+}
+
+function updateZoomDisplay() {
+  els.zoomLevel.value = String(state.zoomLevel);
+  els.zoomValue.textContent = `${Number(state.zoomLevel).toFixed(2)}x`;
+}
+
+function updateZoomFromInput() {
+  state.zoomLevel = clamp(Number(els.zoomLevel.value) || 1, 1, 40);
+  updateZoomDisplay();
+  drawWaveform();
+}
+
+function resetZoom() {
+  state.zoomLevel = 1;
+  updateZoomDisplay();
+  drawWaveform();
+}
+
+function fitZoomToCrop() {
+  if (!state.audioBuffer || !state.duration) return;
+  const cropDuration = Math.max(0.01, state.cropEnd - state.cropStart);
+  state.zoomLevel = clamp((state.duration / cropDuration) * 0.75, 1, 40);
+  updateZoomDisplay();
+  drawWaveform();
 }
 
 function updateCropFromInputs() {
@@ -370,6 +439,7 @@ function drawStoredSpectrograms() {
 }
 
 function clearArtifacts() {
+  state.lastResult = null;
   state.targetSpectrogram = null;
   state.predictedSpectrogram = null;
   els.targetAudio.removeAttribute("src");
@@ -431,6 +501,63 @@ async function loadPredictionArtifacts(result) {
   setArtifactStatus("Artifacts loaded", "ok");
 }
 
+function artifactFileName(path, fallback) {
+  const text = String(path || "");
+  const parts = text.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || fallback;
+}
+
+async function downloadArtifact(path, fallbackName) {
+  if (!path) throw new Error("No artifact path available");
+  const response = await fetchArtifact(path);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = artifactFileName(path, fallbackName);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportPatch() {
+  try {
+    await downloadArtifact(state.lastResult?.predicted_patch_json, "predicted_patch.json");
+    setArtifactStatus("Predicted JSON exported", "ok");
+  } catch (error) {
+    setArtifactStatus(error.message, "error");
+  }
+}
+
+async function exportWav() {
+  try {
+    await downloadArtifact(state.lastResult?.predicted_wav, "predicted.wav");
+    setArtifactStatus("Predicted WAV exported", "ok");
+  } catch (error) {
+    setArtifactStatus(error.message, "error");
+  }
+}
+
+async function openRunFolder() {
+  try {
+    const runDir = state.lastResult?.run_dir;
+    if (!runDir) throw new Error("No run folder available");
+    const response = await fetch(`${backendBaseUrl()}/open-folder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: runDir }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error?.message || `HTTP ${response.status}`);
+    }
+    setArtifactStatus("Run folder opened", "ok");
+  } catch (error) {
+    setArtifactStatus(error.message, "error");
+  }
+}
+
 async function checkBackend() {
   const backend = backendBaseUrl();
   setStatus("Checking", "busy");
@@ -486,6 +613,7 @@ async function runPredict() {
       throw new Error(responsePayload.error?.message || `HTTP ${response.status}`);
     }
     setStatus("Online", "ok");
+    state.lastResult = responsePayload;
     setResponse(responsePayload);
     setResultSummary(responsePayload);
     try {
@@ -548,6 +676,9 @@ function bindEvents() {
   });
   els.cropStart.addEventListener("change", updateCropFromInputs);
   els.cropEnd.addEventListener("change", updateCropFromInputs);
+  els.zoomLevel.addEventListener("input", updateZoomFromInput);
+  els.fitCropZoom.addEventListener("click", fitZoomToCrop);
+  els.resetZoom.addEventListener("click", resetZoom);
   els.noteName.addEventListener("change", applyNoteInput);
   els.playCrop.addEventListener("click", playCrop);
   els.stopPlayback.addEventListener("click", () => {
@@ -557,6 +688,9 @@ function bindEvents() {
   els.playTargetResult.addEventListener("click", () => playResultAudio("target"));
   els.playPredictedResult.addEventListener("click", () => playResultAudio("predicted"));
   els.stopResultPlayback.addEventListener("click", stopResultPlayback);
+  els.exportPatch.addEventListener("click", exportPatch);
+  els.exportWav.addEventListener("click", exportWav);
+  els.openRunFolder.addEventListener("click", openRunFolder);
   els.predictButton.addEventListener("click", runPredict);
   els.canvas.addEventListener("mousedown", beginCropDrag);
   window.addEventListener("mousemove", moveCropDrag);
@@ -569,6 +703,7 @@ function init() {
   resizeCanvas();
   setResultSummary({});
   clearArtifacts();
+  updateZoomDisplay();
   applyNoteInput();
 }
 

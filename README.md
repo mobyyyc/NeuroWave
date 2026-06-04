@@ -291,6 +291,9 @@ target spectrogram, and predicted spectrogram through the local backend artifact
 endpoint. The endpoint only serves artifacts registered by successful predictions
 in the current backend process.
 
+The prototype also supports crop zoom, predicted JSON/WAV browser downloads, and
+opening the current run folder through the local backend on Windows.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:

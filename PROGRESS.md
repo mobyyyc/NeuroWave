@@ -340,7 +340,7 @@ Frontend prototype:
 - [x] Add drag/drop WAV import.
 - [x] Add waveform display.
 - [x] Add crop start/end handles.
-- [ ] Add crop zoom.
+- [x] Add crop zoom.
 - [x] Add crop playback.
 - [x] Add frequency input in Hz.
 - [x] Add note-name helper such as A4 -> 440 Hz.
@@ -353,9 +353,9 @@ Frontend prototype:
 - [x] Display target spectrogram.
 - [x] Display predicted spectrogram.
 - [x] Add A/B playback controls.
-- [ ] Add export predicted JSON button.
-- [ ] Add export predicted WAV button.
-- [ ] Add open run folder button.
+- [x] Add export predicted JSON button.
+- [x] Add export predicted WAV button.
+- [x] Add open run folder button.
 - [x] Add error UI for unsupported audio, missing frequency, invalid crop, backend offline, and model failure.
 
 Scaling note: the current static app fetches prediction artifacts through a local
@@ -364,6 +364,11 @@ predictions in the current backend process. When the desktop wrapper is chosen,
 replace or wrap this with a stronger app-shell file handoff so reloads, recent
 runs, and packaged builds can reopen older run folders without weakening local
 file access controls.
+
+Foundation note: crop zoom, browser downloads, and `POST /open-folder` are now
+implemented in the static prototype. The open-folder action is also allowlisted
+to run folders registered by successful predictions in the current backend
+process. Desktop packaging still needs a stronger native file handoff.
 
 Desktop packaging:
 

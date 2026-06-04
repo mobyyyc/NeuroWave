@@ -27,3 +27,6 @@ Current prototype notes:
 - A desktop wrapper can later provide the real dropped file path, or the backend can gain upload support.
 - After prediction, the frontend loads predicted JSON, WAV, and spectrogram artifacts
   through the backend's current-process artifact allowlist.
+- Crop zoom is frontend-only and does not change the crop seconds sent to the backend.
+- Export buttons download the registered predicted JSON/WAV artifacts through the backend.
+- The Folder button asks the backend to open the registered run directory on Windows.

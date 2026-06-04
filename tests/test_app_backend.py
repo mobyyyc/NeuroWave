@@ -23,11 +23,12 @@ app_backend = load_app_backend_module()
 
 
 class RunningBackend:
-    def __init__(self, predict_function):
+    def __init__(self, predict_function, open_folder_function=None):
         self.server = app_backend.create_server(
             host="127.0.0.1",
             port=0,
             predict_function=predict_function,
+            open_folder_function=open_folder_function or (lambda _path: None),
             quiet=True,
             debug_errors=False,
         )
@@ -135,6 +136,17 @@ class TestAppBackend(unittest.TestCase):
                 Path("runs/app/run/predicted_patch.json"),
             ],
         )
+
+    def test_run_folder_paths_from_result_reads_run_dir(self):
+        paths = app_backend.run_folder_paths_from_result(
+            {
+                "run_id": "run",
+                "run_dir": "runs/app/run",
+                "predicted_wav": "runs/app/run/predicted.wav",
+            }
+        )
+
+        self.assertEqual(paths, [Path("runs/app/run")])
 
     def test_health_endpoint(self):
         with RunningBackend(lambda _payload: {}) as backend:
@@ -293,6 +305,93 @@ class TestAppBackend(unittest.TestCase):
 
         self.assertEqual(error.code, 404)
         self.assertIn("artifact file not found", body["error"]["message"])
+
+    def test_open_folder_endpoint_opens_registered_run_folder(self):
+        opened = []
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp) / "run"
+            run_dir.mkdir()
+
+            def fake_predict(_payload):
+                return {
+                    "run_id": "folder_run",
+                    "run_dir": str(run_dir),
+                }
+
+            with RunningBackend(fake_predict, open_folder_function=opened.append) as backend:
+                post_json(
+                    f"{backend.base_url}/predict",
+                    {
+                        "audio_path": "input.wav",
+                        "model_path": "model.pt",
+                        "freq_hz": 440,
+                    },
+                )
+                status, payload = post_json(
+                    f"{backend.base_url}/open-folder",
+                    {
+                        "path": str(run_dir),
+                    },
+                )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(opened, [str(run_dir.resolve())])
+
+    def test_open_folder_endpoint_rejects_unregistered_folder(self):
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp) / "run"
+            run_dir.mkdir()
+
+            with RunningBackend(lambda _payload: {}) as backend:
+                with self.assertRaises(urllib.error.HTTPError) as context:
+                    post_json(
+                        f"{backend.base_url}/open-folder",
+                        {
+                            "path": str(run_dir),
+                        },
+                    )
+                error = context.exception
+                body = json.loads(error.read().decode("utf-8"))
+                error.close()
+
+        self.assertEqual(error.code, 403)
+        self.assertIn("run folder is not available", body["error"]["message"])
+
+    def test_open_folder_endpoint_returns_404_for_missing_registered_folder(self):
+        with TemporaryDirectory() as tmp:
+            run_dir = Path(tmp) / "run"
+            run_dir.mkdir()
+
+            def fake_predict(_payload):
+                return {
+                    "run_id": "missing_folder_run",
+                    "run_dir": str(run_dir),
+                }
+
+            with RunningBackend(fake_predict) as backend:
+                post_json(
+                    f"{backend.base_url}/predict",
+                    {
+                        "audio_path": "input.wav",
+                        "model_path": "model.pt",
+                        "freq_hz": 440,
+                    },
+                )
+                run_dir.rmdir()
+                with self.assertRaises(urllib.error.HTTPError) as context:
+                    post_json(
+                        f"{backend.base_url}/open-folder",
+                        {
+                            "path": str(run_dir),
+                        },
+                    )
+                error = context.exception
+                body = json.loads(error.read().decode("utf-8"))
+                error.close()
+
+        self.assertEqual(error.code, 404)
+        self.assertIn("run folder not found", body["error"]["message"])
 
 
 if __name__ == "__main__":
