@@ -3,13 +3,59 @@
   "version": "0.1.0",
   "private": true,
   "description": "NeuroWave Windows desktop app prototype.",
+  "author": "NeuroWave",
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
     "desktop:debug": "set NEUROWAVE_ELECTRON_DEVTOOLS=1&& electron .",
-    "desktop:smoke": "set NEUROWAVE_ELECTRON_SMOKE=1&& electron ."
+    "desktop:smoke": "set NEUROWAVE_ELECTRON_SMOKE=1&& electron .",
+    "package:win": "electron-builder --win portable --x64",
+    "package:win:dir": "electron-builder --win dir --x64"
+  },
+  "build": {
+    "appId": "com.neurowave.app",
+    "productName": "NeuroWave",
+    "asar": true,
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "neurowave-python/scripts"
+      },
+      {
+        "from": "minisynth",
+        "to": "neurowave-python/minisynth"
+      },
+      {
+        "from": "requirements.txt",
+        "to": "neurowave-python/requirements.txt"
+      },
+      {
+        "from": "requirements-cuda.txt",
+        "to": "neurowave-python/requirements-cuda.txt"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   },
   "devDependencies": {
-    "electron": "^42.3.3"
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1"
   }
 }

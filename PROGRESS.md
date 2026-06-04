@@ -380,9 +380,15 @@ Desktop packaging:
 - [x] Launch local Python backend from desktop app in development mode.
 - [x] Add app setting for Python/backend path during development.
 - [x] Add app setting for default model checkpoint.
-- [ ] Package a first Windows development build.
+- [x] Add Windows development package command and builder configuration.
+- [!] Package a first Windows development build. Blocked in the current Codex sandbox by
+  `spawn EPERM` when `electron-builder` tries to run `app-builder.exe`; run
+  `npm run package:win` in a normal Windows terminal to produce the ignored `dist\` artifact.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
-- [ ] Document Windows install/run notes.
+- [x] Document Windows development package notes.
+- [ ] Bundle or provision a stable Python runtime for non-developer machines.
+- [ ] Bundle or install the selected production model checkpoint.
+- [ ] Document final Windows install/run notes.
 
 Product UX polish:
 

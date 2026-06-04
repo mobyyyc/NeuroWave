@@ -4,9 +4,14 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 
-const ROOT = path.resolve(__dirname, "..");
-const LOCAL_SETTINGS_PATH = path.join(__dirname, "settings.local.json");
-const DEFAULT_DEV_USER_DATA = path.join(ROOT, ".electron-user-data");
+const APP_ROOT = path.resolve(__dirname, "..");
+const PACKAGED_BACKEND_ROOT = path.join(process.resourcesPath || APP_ROOT, "neurowave-python");
+const BACKEND_ROOT = app.isPackaged ? PACKAGED_BACKEND_ROOT : APP_ROOT;
+const SETTINGS_BASE = app.isPackaged ? path.dirname(process.execPath) : APP_ROOT;
+const LOCAL_SETTINGS_PATH = app.isPackaged
+  ? path.join(SETTINGS_BASE, "settings.local.json")
+  : path.join(__dirname, "settings.local.json");
+const DEFAULT_DEV_USER_DATA = path.join(APP_ROOT, ".electron-user-data");
 const localSettings = loadLocalSettings();
 const backendSettings = localSettings.backend || {};
 const appSettings = localSettings.app || {};
@@ -40,10 +45,10 @@ function defaultPythonPath() {
     return process.env.NEUROWAVE_PYTHON;
   }
   if (backendSettings.pythonPath) {
-    return path.resolve(ROOT, backendSettings.pythonPath);
+    return path.resolve(SETTINGS_BASE, backendSettings.pythonPath);
   }
-  if (process.platform === "win32") {
-    return path.join(ROOT, ".venv", "Scripts", "python.exe");
+  if (!app.isPackaged && process.platform === "win32") {
+    return path.join(APP_ROOT, ".venv", "Scripts", "python.exe");
   }
   return "python";
 }
@@ -80,7 +85,7 @@ async function startBackendIfNeeded() {
 
   const python = defaultPythonPath();
   const args = [
-    path.join(ROOT, "scripts", "app_backend.py"),
+    path.join(BACKEND_ROOT, "scripts", "app_backend.py"),
     "--host",
     BACKEND_HOST,
     "--port",
@@ -90,7 +95,7 @@ async function startBackendIfNeeded() {
     args.push("--quiet");
   }
   backendProcess = spawn(python, args, {
-    cwd: ROOT,
+    cwd: BACKEND_ROOT,
     windowsHide: true,
     stdio: process.env.NEUROWAVE_BACKEND_LOGS ? "inherit" : "ignore",
   });
@@ -128,7 +133,7 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(ROOT, "app", "index.html"), {
+  mainWindow.loadFile(path.join(APP_ROOT, "app", "index.html"), {
     query: {
       backendUrl: BACKEND_URL,
       modelPath: appSettings.modelPath || "models/v3.5_noise_detune_loss.pt",

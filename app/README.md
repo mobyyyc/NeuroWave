@@ -32,6 +32,19 @@ The shell starts the Python backend automatically in development. It uses
 You can also copy `desktop/settings.example.json` to `desktop/settings.local.json`
 to set the development Python path, backend port, default model, and output folder.
 
+Create the first Windows development package:
+
+```powershell
+npm run package:win
+```
+
+This writes an ignored portable `.exe` under `dist\`. The current package is a desktop
+wrapper for the app and backend source; it still expects Python dependencies and the
+model checkpoint to be available on the user's machine. A fully bundled consumer
+installer with embedded runtime/model belongs to the later product-hardening phase.
+For packaged testing, place a `settings.local.json` beside the `.exe` if you need to
+override the Python executable, model path, or output folder.
+
 Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.

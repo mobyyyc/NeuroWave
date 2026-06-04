@@ -317,6 +317,19 @@ the Python executable, backend host/port, default model checkpoint, and default
 output folder. Advanced app fields also persist in browser/Electron local
 storage after editing.
 
+Build the first Windows desktop development package:
+
+```bash
+npm run package:win
+```
+
+This creates an ignored portable `.exe` under `dist/`. It packages the Electron app
+shell and NeuroWave Python source resources, but it is not yet the final consumer
+installer: Python dependencies and the selected model checkpoint must still be
+available on the machine. In a packaged build, optional `settings.local.json` can be
+placed beside the `.exe` to override Python, backend port, default model path, and
+output folder.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:
