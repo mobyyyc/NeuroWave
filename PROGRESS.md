@@ -321,15 +321,16 @@ Backend/app inference foundation:
 
 Local backend service:
 
-- [ ] Choose FastAPI or Flask for a local inference API.
-- [ ] Add `scripts/app_backend.py` or equivalent local server entry point.
-- [ ] Add `/health`.
-- [ ] Add `/predict`.
-- [ ] Add request validation.
-- [ ] Add JSON response serialization.
-- [ ] Add backend error handling for invalid audio, invalid crop, missing model, and inference failure.
+- [x] Choose the first local inference API implementation. Decision: use a standard-library
+  HTTP JSON server now because FastAPI/Uvicorn are not current project dependencies.
+- [x] Add `scripts/app_backend.py` or equivalent local server entry point.
+- [x] Add `/health`.
+- [x] Add `/predict`.
+- [x] Add request validation.
+- [x] Add JSON response serialization.
+- [x] Add backend error handling for invalid audio, invalid crop, missing model, and inference failure.
 - [ ] Add backend smoke test using a tiny fixture or generated clip.
-- [ ] Document local backend startup command.
+- [x] Document local backend startup command.
 
 Frontend prototype:
 

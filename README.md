@@ -241,6 +241,35 @@ Planned output files for each app run:
 - predicted spectrogram artifact
 - summary JSON with model/checkpoint metadata
 
+Start the local app backend:
+
+```bash
+python scripts/app_backend.py --host 127.0.0.1 --port 8765
+```
+
+Check that it is alive:
+
+```bash
+python -c "import requests; print(requests.get('http://127.0.0.1:8765/health').json())"
+```
+
+Prediction endpoint:
+
+```text
+POST http://127.0.0.1:8765/predict
+Content-Type: application/json
+
+{
+  "audio_path": "playground/testpluck.wav",
+  "model_path": "models/v3.5_noise_detune_loss.pt",
+  "freq_hz": 440,
+  "crop_start_seconds": 0.0,
+  "crop_end_seconds": 0.4,
+  "output_dir": "runs/app",
+  "device": "cpu"
+}
+```
+
 The website should come after the first usable desktop prototype and should publish the
 product story, screenshots, A/B examples, model limitations, and Windows download or
 waitlist flow.

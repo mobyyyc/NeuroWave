@@ -933,7 +933,9 @@ Suggested implementation order:
 1. Extract reusable inference code from `scripts/playground_predict_wav.py` into a small
    `minisynth.app_inference` module.
 2. Add crop-aware prediction/render helper tests.
-3. Add a FastAPI or Flask local backend with `/health` and `/predict`.
+3. Add a local JSON backend with `/health` and `/predict`. The first implementation can
+   use Python's standard library to avoid adding unverified dependencies; FastAPI remains
+   an upgrade path if the app later needs OpenAPI docs, richer validation, or middleware.
 4. Add a tiny local frontend prototype that can call `/health`.
 5. Add drag/drop import and waveform preview.
 6. Add crop selection and crop playback.
