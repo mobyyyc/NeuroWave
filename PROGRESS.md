@@ -299,25 +299,25 @@ Product decision:
 
 Backend/app inference foundation:
 
-- [ ] Create `minisynth/app_inference.py`.
-- [ ] Move reusable logic from `scripts/playground_predict_wav.py` into the app inference module.
-- [ ] Add an app request dataclass or structured dict for `audio_path`, crop start/end, `freq_hz`, `model_path`, `output_dir`, and run ID.
-- [ ] Add an app response dataclass or structured dict for output paths, model metadata, warnings, and errors.
-- [ ] Add robust WAV loading for mono/stereo audio.
-- [ ] Add crop validation for start/end seconds.
-- [ ] Add crop extraction and cropped target WAV export.
-- [ ] Add frequency validation and note that pitch context is required.
-- [ ] Add prediction using the selected PyTorch checkpoint.
-- [ ] Add predicted patch JSON export.
-- [ ] Add predicted audio render/export.
-- [ ] Add target spectrogram artifact export.
-- [ ] Add predicted spectrogram artifact export.
-- [ ] Add summary JSON export.
-- [ ] Add tests for crop validation.
-- [ ] Add tests for stereo-to-mono handling.
-- [ ] Add tests for deterministic app output paths.
-- [ ] Add tests for app response shape.
-- [ ] Add tests for invalid model/audio/frequency errors.
+- [x] Create `minisynth/app_inference.py`.
+- [x] Move reusable logic from `scripts/playground_predict_wav.py` into the app inference module.
+- [x] Add an app request dataclass or structured dict for `audio_path`, crop start/end, `freq_hz`, `model_path`, `output_dir`, and run ID.
+- [x] Add an app response dataclass or structured dict for output paths, model metadata, warnings, and errors.
+- [x] Add robust WAV loading for mono/stereo audio.
+- [x] Add crop validation for start/end seconds.
+- [x] Add crop extraction and cropped target WAV export.
+- [x] Add frequency validation and note that pitch context is required.
+- [x] Add prediction using the selected PyTorch checkpoint.
+- [x] Add predicted patch JSON export.
+- [x] Add predicted audio render/export.
+- [x] Add target spectrogram artifact export.
+- [x] Add predicted spectrogram artifact export.
+- [x] Add summary JSON export.
+- [x] Add tests for crop validation.
+- [x] Add tests for stereo-to-mono handling.
+- [x] Add tests for deterministic app output paths.
+- [x] Add tests for app response shape.
+- [x] Add tests for invalid model/audio/frequency errors.
 
 Local backend service:
 
