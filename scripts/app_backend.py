@@ -123,7 +123,7 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status=HTTPStatus.OK):
         body = b"" if status == HTTPStatus.NO_CONTENT else json.dumps(payload).encode("utf-8")
         self.send_response(int(status))
-        self.send_header("Access-Control-Allow-Origin", "http://localhost")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Content-Type", "application/json")

@@ -334,20 +334,20 @@ Local backend service:
 
 Frontend prototype:
 
-- [ ] Choose frontend stack.
-- [ ] Create app directory without disrupting existing Python package names.
-- [ ] Add app shell layout.
-- [ ] Add drag/drop WAV import.
-- [ ] Add waveform display.
-- [ ] Add crop start/end handles.
+- [x] Choose frontend stack. Decision: start with dependency-free static HTML/CSS/JS.
+- [x] Create app directory without disrupting existing Python package names.
+- [x] Add app shell layout.
+- [x] Add drag/drop WAV import.
+- [x] Add waveform display.
+- [x] Add crop start/end handles.
 - [ ] Add crop zoom.
-- [ ] Add crop playback.
-- [ ] Add frequency input in Hz.
-- [ ] Add note-name helper such as A4 -> 440 Hz.
-- [ ] Add model path/default model selector.
-- [ ] Add Predict button.
-- [ ] Add loading/progress state.
-- [ ] Connect Predict action to backend.
+- [x] Add crop playback.
+- [x] Add frequency input in Hz.
+- [x] Add note-name helper such as A4 -> 440 Hz.
+- [x] Add model path/default model selector.
+- [x] Add Predict button.
+- [x] Add loading/progress state.
+- [x] Connect Predict action to backend.
 - [ ] Display predicted patch JSON.
 - [ ] Display rendered predicted WAV player.
 - [ ] Display target spectrogram.
@@ -356,7 +356,7 @@ Frontend prototype:
 - [ ] Add export predicted JSON button.
 - [ ] Add export predicted WAV button.
 - [ ] Add open run folder button.
-- [ ] Add error UI for unsupported audio, missing frequency, invalid crop, backend offline, and model failure.
+- [x] Add error UI for unsupported audio, missing frequency, invalid crop, backend offline, and model failure.
 
 Desktop packaging:
 

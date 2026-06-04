@@ -274,6 +274,18 @@ The website should come after the first usable desktop prototype and should publ
 product story, screenshots, A/B examples, model limitations, and Windows download or
 waitlist flow.
 
+Run the static frontend prototype:
+
+```bash
+python -m http.server 5173 --directory app
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5173
+```
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:
