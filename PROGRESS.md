@@ -348,15 +348,22 @@ Frontend prototype:
 - [x] Add Predict button.
 - [x] Add loading/progress state.
 - [x] Connect Predict action to backend.
-- [ ] Display predicted patch JSON.
-- [ ] Display rendered predicted WAV player.
-- [ ] Display target spectrogram.
-- [ ] Display predicted spectrogram.
-- [ ] Add A/B playback controls.
+- [x] Display predicted patch JSON.
+- [x] Display rendered predicted WAV player.
+- [x] Display target spectrogram.
+- [x] Display predicted spectrogram.
+- [x] Add A/B playback controls.
 - [ ] Add export predicted JSON button.
 - [ ] Add export predicted WAV button.
 - [ ] Add open run folder button.
 - [x] Add error UI for unsupported audio, missing frequency, invalid crop, backend offline, and model failure.
+
+Scaling note: the current static app fetches prediction artifacts through a local
+backend `/artifact` endpoint that only serves files registered by successful
+predictions in the current backend process. When the desktop wrapper is chosen,
+replace or wrap this with a stronger app-shell file handoff so reloads, recent
+runs, and packaged builds can reopen older run folders without weakening local
+file access controls.
 
 Desktop packaging:
 

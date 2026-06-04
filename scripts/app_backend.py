@@ -3,11 +3,14 @@
 import argparse
 from dataclasses import asdict
 import json
+import mimetypes
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import sys
+import threading
 import traceback
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -19,6 +22,15 @@ from minisynth.app_inference import AppInferenceRequest, run_app_inference
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
+MAX_ARTIFACT_BYTES = 100 * 1024 * 1024
+ARTIFACT_RESULT_FIELDS = (
+    "target_crop_wav",
+    "predicted_patch_json",
+    "predicted_wav",
+    "target_spectrogram",
+    "predicted_spectrogram",
+    "summary",
+)
 
 
 def health_response():
@@ -57,6 +69,23 @@ def predict_response(payload):
     return asdict(run_app_inference(request))
 
 
+def artifact_paths_from_result(result):
+    if not isinstance(result, dict):
+        return []
+    paths = []
+    for field in ARTIFACT_RESULT_FIELDS:
+        value = result.get(field)
+        if isinstance(value, str) and value:
+            paths.append(Path(value))
+    return paths
+
+
+def resolve_artifact_request_path(raw_path):
+    if not raw_path:
+        raise ValueError("artifact path query parameter is required")
+    return Path(raw_path).resolve()
+
+
 def response_for_exception(error, include_tracebacks=False):
     if isinstance(error, (ValueError, TypeError)):
         return HTTPStatus.BAD_REQUEST, error_response(error, HTTPStatus.BAD_REQUEST)
@@ -81,11 +110,15 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
         self._send_json({}, status=HTTPStatus.NO_CONTENT)
 
     def do_GET(self):
-        if self.path == "/health":
+        parsed = urlparse(self.path)
+        if parsed.path == "/health":
             self._send_json(health_response())
             return
+        if parsed.path == "/artifact":
+            self._send_artifact(parsed)
+            return
         self._send_json(
-            error_response(f"unknown endpoint: {self.path}", HTTPStatus.NOT_FOUND),
+            error_response(f"unknown endpoint: {parsed.path}", HTTPStatus.NOT_FOUND),
             status=HTTPStatus.NOT_FOUND,
         )
 
@@ -100,6 +133,7 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
         try:
             payload = parse_json_body(self._read_request_body())
             result = self.server.predict_function(payload)
+            self.server.register_artifacts(result)
             self._send_json(result)
         except Exception as error:
             status, response = response_for_exception(
@@ -132,6 +166,56 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
         if body:
             self.wfile.write(body)
 
+    def _send_artifact(self, parsed):
+        try:
+            query = parse_qs(parsed.query)
+            path_values = query.get("path", [])
+            path = resolve_artifact_request_path(path_values[0] if path_values else "")
+        except ValueError as error:
+            self._send_json(
+                error_response(error, HTTPStatus.BAD_REQUEST),
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        if not self.server.is_registered_artifact(path):
+            self._send_json(
+                error_response("artifact is not available", HTTPStatus.FORBIDDEN),
+                status=HTTPStatus.FORBIDDEN,
+            )
+            return
+        if not path.exists() or not path.is_file():
+            self._send_json(
+                error_response("artifact file not found", HTTPStatus.NOT_FOUND),
+                status=HTTPStatus.NOT_FOUND,
+            )
+            return
+
+        size = path.stat().st_size
+        if size > MAX_ARTIFACT_BYTES:
+            self._send_json(
+                error_response("artifact file is too large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE),
+                status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+            )
+            return
+
+        content_type, _encoding = mimetypes.guess_type(path.name)
+        if path.suffix.lower() == ".wav":
+            content_type = "audio/wav"
+        if path.suffix.lower() == ".json":
+            content_type = "application/json"
+
+        body = path.read_bytes()
+        self.send_response(int(HTTPStatus.OK))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
     def log_message(self, format, *args):
         if getattr(self.server, "quiet", False):
             return
@@ -151,6 +235,20 @@ class NeuroWaveBackendServer(ThreadingHTTPServer):
         self.predict_function = predict_function
         self.quiet = quiet
         self.debug_errors = debug_errors
+        self._artifact_paths = set()
+        self._artifact_lock = threading.Lock()
+
+    def register_artifacts(self, result):
+        paths = {path.resolve() for path in artifact_paths_from_result(result)}
+        if not paths:
+            return
+        with self._artifact_lock:
+            self._artifact_paths.update(paths)
+
+    def is_registered_artifact(self, path):
+        resolved = Path(path).resolve()
+        with self._artifact_lock:
+            return resolved in self._artifact_paths
 
 
 def create_server(

@@ -85,6 +85,45 @@
             <dl id="resultSummary" class="result-summary"></dl>
           </div>
           <div class="panel result-panel">
+            <h2>Audio</h2>
+            <div class="audio-stack">
+              <div class="audio-slot">
+                <label for="targetAudio">Target</label>
+                <audio id="targetAudio" controls></audio>
+              </div>
+              <div class="audio-slot">
+                <label for="predictedAudio">Prediction</label>
+                <audio id="predictedAudio" controls></audio>
+              </div>
+            </div>
+            <div class="button-row three-buttons">
+              <button id="playTargetResult" type="button">Target</button>
+              <button id="playPredictedResult" type="button">Prediction</button>
+              <button id="stopResultPlayback" type="button">Stop</button>
+            </div>
+            <div id="artifactStatus" class="artifact-status">No run loaded</div>
+          </div>
+        </section>
+
+        <section class="artifact-grid">
+          <div class="panel result-panel patch-panel">
+            <h2>Patch</h2>
+            <pre id="patchJson">{}</pre>
+          </div>
+          <div class="panel result-panel spectrogram-panel">
+            <h2>Spectrograms</h2>
+            <div class="spectrogram-grid">
+              <div class="spectrogram-slot">
+                <label for="targetSpectrogramCanvas">Target</label>
+                <canvas id="targetSpectrogramCanvas" width="640" height="220"></canvas>
+              </div>
+              <div class="spectrogram-slot">
+                <label for="predictedSpectrogramCanvas">Prediction</label>
+                <canvas id="predictedSpectrogramCanvas" width="640" height="220"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="panel result-panel">
             <h2>Response</h2>
             <pre id="responseJson">{}</pre>
           </div>

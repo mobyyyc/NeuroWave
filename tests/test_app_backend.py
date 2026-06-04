@@ -1,9 +1,11 @@
 import importlib.util
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import threading
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from minisynth.app_inference import AppInferenceResult
@@ -46,6 +48,11 @@ class RunningBackend:
 def get_json(url):
     with urllib.request.urlopen(url, timeout=5) as response:
         return response.status, json.loads(response.read().decode("utf-8"))
+
+
+def get_bytes(url):
+    with urllib.request.urlopen(url, timeout=5) as response:
+        return response.status, dict(response.headers), response.read()
 
 
 def post_json(url, payload):
@@ -110,6 +117,24 @@ class TestAppBackend(unittest.TestCase):
         self.assertEqual(captured["request"].audio_path, "input.wav")
         self.assertEqual(captured["request"].freq_hz, 440)
         self.assertEqual(response["run_id"], "run")
+
+    def test_artifact_paths_from_result_reads_known_output_fields(self):
+        paths = app_backend.artifact_paths_from_result(
+            {
+                "run_id": "run",
+                "target_crop_wav": "runs/app/run/target_crop.wav",
+                "predicted_patch_json": "runs/app/run/predicted_patch.json",
+                "ignored": "runs/app/run/other.txt",
+            }
+        )
+
+        self.assertEqual(
+            paths,
+            [
+                Path("runs/app/run/target_crop.wav"),
+                Path("runs/app/run/predicted_patch.json"),
+            ],
+        )
 
     def test_health_endpoint(self):
         with RunningBackend(lambda _payload: {}) as backend:
@@ -188,6 +213,86 @@ class TestAppBackend(unittest.TestCase):
 
         self.assertEqual(error.code, 404)
         self.assertIn("missing model", body["error"]["message"])
+
+    def test_artifact_endpoint_serves_registered_prediction_file(self):
+        with TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "predicted_patch.json"
+            artifact.write_text('{"osc1_wave": "saw"}\n', encoding="utf-8")
+
+            def fake_predict(_payload):
+                return {
+                    "run_id": "artifact_run",
+                    "predicted_patch_json": str(artifact),
+                }
+
+            with RunningBackend(fake_predict) as backend:
+                post_json(
+                    f"{backend.base_url}/predict",
+                    {
+                        "audio_path": "input.wav",
+                        "model_path": "model.pt",
+                        "freq_hz": 440,
+                    },
+                )
+                encoded_path = urllib.parse.quote(str(artifact), safe="")
+                status, headers, body = get_bytes(f"{backend.base_url}/artifact?path={encoded_path}")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assertEqual(json.loads(body.decode("utf-8")), {"osc1_wave": "saw"})
+
+    def test_artifact_endpoint_rejects_unregistered_file(self):
+        with TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "private.json"
+            artifact.write_text("{}", encoding="utf-8")
+
+            with RunningBackend(lambda _payload: {}) as backend:
+                encoded_path = urllib.parse.quote(str(artifact), safe="")
+                with self.assertRaises(urllib.error.HTTPError) as context:
+                    urllib.request.urlopen(
+                        f"{backend.base_url}/artifact?path={encoded_path}",
+                        timeout=5,
+                    )
+                error = context.exception
+                body = json.loads(error.read().decode("utf-8"))
+                error.close()
+
+        self.assertEqual(error.code, 403)
+        self.assertIn("artifact is not available", body["error"]["message"])
+
+    def test_artifact_endpoint_returns_404_for_missing_registered_file(self):
+        with TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "predicted.wav"
+            artifact.write_bytes(b"placeholder")
+
+            def fake_predict(_payload):
+                return {
+                    "run_id": "missing_artifact_run",
+                    "predicted_wav": str(artifact),
+                }
+
+            with RunningBackend(fake_predict) as backend:
+                post_json(
+                    f"{backend.base_url}/predict",
+                    {
+                        "audio_path": "input.wav",
+                        "model_path": "model.pt",
+                        "freq_hz": 440,
+                    },
+                )
+                artifact.unlink()
+                encoded_path = urllib.parse.quote(str(artifact), safe="")
+                with self.assertRaises(urllib.error.HTTPError) as context:
+                    urllib.request.urlopen(
+                        f"{backend.base_url}/artifact?path={encoded_path}",
+                        timeout=5,
+                    )
+                error = context.exception
+                body = json.loads(error.read().decode("utf-8"))
+                error.close()
+
+        self.assertEqual(error.code, 404)
+        self.assertIn("artifact file not found", body["error"]["message"])
 
 
 if __name__ == "__main__":

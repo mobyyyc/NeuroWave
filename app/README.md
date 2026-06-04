@@ -25,3 +25,5 @@ Current prototype notes:
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.
 - The backend still needs a filesystem `audio_path`, so use the Audio Path field for prediction.
 - A desktop wrapper can later provide the real dropped file path, or the backend can gain upload support.
+- After prediction, the frontend loads predicted JSON, WAV, and spectrogram artifacts
+  through the backend's current-process artifact allowlist.

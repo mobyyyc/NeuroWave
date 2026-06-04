@@ -286,6 +286,11 @@ Then open:
 http://127.0.0.1:5173
 ```
 
+After a prediction, the frontend loads the generated patch JSON, predicted WAV,
+target spectrogram, and predicted spectrogram through the local backend artifact
+endpoint. The endpoint only serves artifacts registered by successful predictions
+in the current backend process.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:

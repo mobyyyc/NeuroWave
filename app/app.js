@@ -7,6 +7,8 @@ const state = {
   dragMode: null,
   playbackSource: null,
   audioContext: null,
+  targetSpectrogram: null,
+  predictedSpectrogram: null,
 };
 
 const els = {
@@ -30,6 +32,15 @@ const els = {
   canvas: document.getElementById("waveformCanvas"),
   resultSummary: document.getElementById("resultSummary"),
   responseJson: document.getElementById("responseJson"),
+  artifactStatus: document.getElementById("artifactStatus"),
+  targetAudio: document.getElementById("targetAudio"),
+  predictedAudio: document.getElementById("predictedAudio"),
+  playTargetResult: document.getElementById("playTargetResult"),
+  playPredictedResult: document.getElementById("playPredictedResult"),
+  stopResultPlayback: document.getElementById("stopResultPlayback"),
+  patchJson: document.getElementById("patchJson"),
+  targetSpectrogramCanvas: document.getElementById("targetSpectrogramCanvas"),
+  predictedSpectrogramCanvas: document.getElementById("predictedSpectrogramCanvas"),
 };
 
 const ctx = els.canvas.getContext("2d");
@@ -37,6 +48,19 @@ const ctx = els.canvas.getContext("2d");
 function setStatus(text, kind = "idle") {
   els.backendStatus.textContent = text;
   els.backendStatus.className = `status-pill status-${kind}`;
+}
+
+function backendBaseUrl() {
+  return els.backendUrl.value.replace(/\/$/, "");
+}
+
+function artifactUrl(path) {
+  return `${backendBaseUrl()}/artifact?path=${encodeURIComponent(path)}`;
+}
+
+function setArtifactStatus(text, kind = "idle") {
+  els.artifactStatus.textContent = text;
+  els.artifactStatus.className = `artifact-status status-${kind}`;
 }
 
 function ensureAudioContext() {
@@ -53,6 +77,7 @@ function resizeCanvas() {
   els.canvas.height = Math.max(1, Math.floor(rect.height * scale));
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   drawWaveform();
+  drawStoredSpectrograms();
 }
 
 function secondsToX(seconds) {
@@ -240,6 +265,7 @@ function stopPlayback() {
 function playCrop() {
   if (!state.audioBuffer) return;
   stopPlayback();
+  stopResultPlayback();
   const audioContext = ensureAudioContext();
   const source = audioContext.createBufferSource();
   source.buffer = state.audioBuffer;
@@ -249,6 +275,26 @@ function playCrop() {
   };
   state.playbackSource = source;
   source.start(0, state.cropStart, Math.max(0.01, state.cropEnd - state.cropStart));
+}
+
+function stopResultPlayback() {
+  for (const audio of [els.targetAudio, els.predictedAudio]) {
+    audio.pause();
+    audio.currentTime = 0;
+  }
+}
+
+function playResultAudio(kind) {
+  const audio = kind === "target" ? els.targetAudio : els.predictedAudio;
+  const other = kind === "target" ? els.predictedAudio : els.targetAudio;
+  if (!audio.src) return;
+  stopPlayback();
+  other.pause();
+  other.currentTime = 0;
+  audio.currentTime = 0;
+  audio.play().catch((error) => {
+    setArtifactStatus(error.message, "error");
+  });
 }
 
 function noteToFrequency(note) {
@@ -272,8 +318,121 @@ function applyNoteInput() {
   }
 }
 
+function clearSpectrogramCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scale = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.floor(rect.width * scale));
+  canvas.height = Math.max(1, Math.floor(rect.height * scale));
+  const specCtx = canvas.getContext("2d");
+  specCtx.setTransform(scale, 0, 0, scale, 0, 0);
+  specCtx.clearRect(0, 0, rect.width, rect.height);
+  specCtx.fillStyle = "#0e1010";
+  specCtx.fillRect(0, 0, rect.width, rect.height);
+}
+
+function spectrogramColor(value) {
+  const t = clamp(value, 0, 1);
+  const hue = 225 - t * 175;
+  const light = 14 + t * 62;
+  return `hsl(${hue} 78% ${light}%)`;
+}
+
+function drawSpectrogram(canvas, payload) {
+  clearSpectrogramCanvas(canvas);
+  if (!payload || !Array.isArray(payload.values) || payload.values.length === 0) return;
+
+  const values = payload.values;
+  const melCount = values.length;
+  const frameCount = Array.isArray(values[0]) ? values[0].length : 0;
+  if (frameCount <= 0) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const specCtx = canvas.getContext("2d");
+  const minDb = Number.isFinite(payload.min_db) ? payload.min_db : -80;
+  const maxDb = Number.isFinite(payload.max_db) ? payload.max_db : 0;
+  const dbRange = Math.max(1e-6, maxDb - minDb);
+
+  for (let x = 0; x < rect.width; x += 1) {
+    const frame = Math.min(frameCount - 1, Math.floor((x / rect.width) * frameCount));
+    for (let y = 0; y < rect.height; y += 1) {
+      const mel = Math.min(melCount - 1, melCount - 1 - Math.floor((y / rect.height) * melCount));
+      const db = Number(values[mel][frame]);
+      const normalized = Number.isFinite(db) ? (db - minDb) / dbRange : 0;
+      specCtx.fillStyle = spectrogramColor(normalized);
+      specCtx.fillRect(x, y, 1, 1);
+    }
+  }
+}
+
+function drawStoredSpectrograms() {
+  drawSpectrogram(els.targetSpectrogramCanvas, state.targetSpectrogram);
+  drawSpectrogram(els.predictedSpectrogramCanvas, state.predictedSpectrogram);
+}
+
+function clearArtifacts() {
+  state.targetSpectrogram = null;
+  state.predictedSpectrogram = null;
+  els.targetAudio.removeAttribute("src");
+  els.predictedAudio.removeAttribute("src");
+  els.targetAudio.load();
+  els.predictedAudio.load();
+  els.patchJson.textContent = "{}";
+  drawStoredSpectrograms();
+  setArtifactStatus("No run loaded");
+}
+
+async function fetchArtifact(path) {
+  const response = await fetch(artifactUrl(path));
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.error?.message || message;
+    } catch (_error) {
+      // Non-JSON artifact errors still get a useful HTTP fallback.
+    }
+    throw new Error(message);
+  }
+  return response;
+}
+
+async function fetchJsonArtifact(path) {
+  const response = await fetchArtifact(path);
+  return response.json();
+}
+
+async function loadPredictionArtifacts(result) {
+  const requiredPaths = [
+    "target_crop_wav",
+    "predicted_patch_json",
+    "predicted_wav",
+    "target_spectrogram",
+    "predicted_spectrogram",
+  ];
+  for (const key of requiredPaths) {
+    if (!result[key]) throw new Error(`Missing ${key}`);
+  }
+
+  els.targetAudio.src = artifactUrl(result.target_crop_wav);
+  els.predictedAudio.src = artifactUrl(result.predicted_wav);
+  els.targetAudio.load();
+  els.predictedAudio.load();
+
+  const [patch, targetSpectrogram, predictedSpectrogram] = await Promise.all([
+    fetchJsonArtifact(result.predicted_patch_json),
+    fetchJsonArtifact(result.target_spectrogram),
+    fetchJsonArtifact(result.predicted_spectrogram),
+  ]);
+
+  state.targetSpectrogram = targetSpectrogram;
+  state.predictedSpectrogram = predictedSpectrogram;
+  els.patchJson.textContent = JSON.stringify(patch, null, 2);
+  drawStoredSpectrograms();
+  setArtifactStatus("Artifacts loaded", "ok");
+}
+
 async function checkBackend() {
-  const backend = els.backendUrl.value.replace(/\/$/, "");
+  const backend = backendBaseUrl();
   setStatus("Checking", "busy");
   try {
     const response = await fetch(`${backend}/health`);
@@ -308,12 +467,14 @@ function validatePredictPayload(payload) {
 }
 
 async function runPredict() {
-  const backend = els.backendUrl.value.replace(/\/$/, "");
+  const backend = backendBaseUrl();
   const payload = predictPayload();
   try {
     validatePredictPayload(payload);
     els.predictButton.disabled = true;
     setStatus("Predicting", "busy");
+    clearArtifacts();
+    setArtifactStatus("Waiting for prediction", "busy");
     setResponse({ request: payload });
     const response = await fetch(`${backend}/predict`, {
       method: "POST",
@@ -327,8 +488,15 @@ async function runPredict() {
     setStatus("Online", "ok");
     setResponse(responsePayload);
     setResultSummary(responsePayload);
+    try {
+      await loadPredictionArtifacts(responsePayload);
+    } catch (artifactError) {
+      setArtifactStatus(artifactError.message, "error");
+      setResponse({ response: responsePayload, artifact_error: artifactError.message });
+    }
   } catch (error) {
     setStatus("Error", "error");
+    setArtifactStatus("Prediction failed", "error");
     setResponse({ error: error.message, request: payload });
   } finally {
     els.predictButton.disabled = false;
@@ -382,7 +550,13 @@ function bindEvents() {
   els.cropEnd.addEventListener("change", updateCropFromInputs);
   els.noteName.addEventListener("change", applyNoteInput);
   els.playCrop.addEventListener("click", playCrop);
-  els.stopPlayback.addEventListener("click", stopPlayback);
+  els.stopPlayback.addEventListener("click", () => {
+    stopPlayback();
+    stopResultPlayback();
+  });
+  els.playTargetResult.addEventListener("click", () => playResultAudio("target"));
+  els.playPredictedResult.addEventListener("click", () => playResultAudio("predicted"));
+  els.stopResultPlayback.addEventListener("click", stopResultPlayback);
   els.predictButton.addEventListener("click", runPredict);
   els.canvas.addEventListener("mousedown", beginCropDrag);
   window.addEventListener("mousemove", moveCropDrag);
@@ -394,6 +568,7 @@ function init() {
   bindEvents();
   resizeCanvas();
   setResultSummary({});
+  clearArtifacts();
   applyNoteInput();
 }
 

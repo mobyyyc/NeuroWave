@@ -151,6 +151,10 @@ label {
   margin: 18px 0 8px;
 }
 
+.three-buttons {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .primary-button {
   width: 100%;
   border-color: var(--accent);
@@ -163,7 +167,7 @@ label {
   min-width: 0;
   padding: 18px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -215,9 +219,16 @@ label {
 }
 
 .results-grid {
-  min-height: 260px;
+  min-height: 240px;
   display: grid;
-  grid-template-columns: minmax(260px, 0.55fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(260px, 0.85fr) minmax(320px, 1fr);
+  gap: 16px;
+}
+
+.artifact-grid {
+  min-height: 320px;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.55fr) minmax(260px, 1fr) minmax(240px, 0.9fr);
   gap: 16px;
 }
 
@@ -259,6 +270,65 @@ pre {
   font-size: 12px;
 }
 
+.audio-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.audio-slot label,
+.spectrogram-slot label {
+  color: var(--muted);
+}
+
+audio {
+  display: block;
+  width: 100%;
+  height: 36px;
+}
+
+.artifact-status {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.artifact-status.status-ok {
+  color: var(--accent-strong);
+}
+
+.artifact-status.status-busy {
+  color: var(--warn);
+}
+
+.artifact-status.status-error {
+  color: var(--error);
+}
+
+.patch-panel,
+.spectrogram-panel {
+  min-height: 320px;
+}
+
+.spectrogram-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.spectrogram-slot canvas {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border: 1px solid var(--line);
+  background: #0e1010;
+}
+
+@media (max-width: 1180px) {
+  .artifact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -269,6 +339,10 @@ pre {
   }
 
   .results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .artifact-grid {
     grid-template-columns: 1fr;
   }
 }
