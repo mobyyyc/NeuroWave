@@ -61,6 +61,9 @@ class TestAppInference(unittest.TestCase):
         with self.assertRaises(ValueError):
             crop_frame_range(100, 10, 0.0, 11.0)
 
+    def test_crop_frame_range_clamps_tiny_ui_rounding_overshoot(self):
+        self.assertEqual(crop_frame_range(100, 10, 0.0, 10.004), (0, 100, 0.0, 10.0))
+
     def test_crop_audio_returns_selected_region(self):
         audio = np.arange(10, dtype=np.float32)
         cropped, start, end = crop_audio(audio, 10, 0.2, 0.7)

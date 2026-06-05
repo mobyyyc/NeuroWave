@@ -28,6 +28,7 @@ PREDICTED_WAV_FILENAME = "predicted.wav"
 TARGET_SPECTROGRAM_FILENAME = "target_spectrogram.json"
 PREDICTED_SPECTROGRAM_FILENAME = "predicted_spectrogram.json"
 SUMMARY_FILENAME = "summary.json"
+UI_CROP_END_TOLERANCE_SECONDS = 0.005
 
 
 @dataclass(frozen=True)
@@ -131,6 +132,8 @@ def crop_frame_range(sample_count, sample_rate, start_seconds=0.0, end_seconds=N
         raise ValueError("crop start must be non-negative")
     if end <= start:
         raise ValueError("crop end must be greater than crop start")
+    if end > duration and end <= duration + UI_CROP_END_TOLERANCE_SECONDS:
+        end = duration
     if end > duration:
         raise ValueError("crop end exceeds audio duration")
 

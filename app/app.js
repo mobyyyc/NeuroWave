@@ -647,7 +647,10 @@ async function checkBackend() {
 }
 
 function predictPayload() {
-  const cropEnd = Number(els.cropEnd.value);
+  let cropEnd = Number(els.cropEnd.value);
+  if (state.duration && Number.isFinite(cropEnd)) {
+    cropEnd = Math.min(cropEnd, state.duration);
+  }
   return {
     audio_path: els.backendAudioPath.value,
     model_path: els.modelPath.value,
