@@ -3,7 +3,8 @@
     "pythonPath": ".venv/Scripts/python.exe",
     "host": "127.0.0.1",
     "port": 8765,
-    "quiet": true
+    "quiet": true,
+    "logPath": "neurowave-backend.log"
   },
   "app": {
     "modelPath": "models/v3.5_noise_detune_loss.pt",

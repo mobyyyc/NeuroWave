@@ -384,6 +384,9 @@ Desktop packaging:
 - [!] Package a first Windows development build. Blocked in the current Codex sandbox by
   `spawn EPERM` when `electron-builder` tries to run `app-builder.exe`; run
   `npm run package:win` in a normal Windows terminal to produce the ignored `dist\` artifact.
+- [x] Improve packaged development backend startup by auto-detecting nearby `.venv`,
+  using absolute default model/output paths, and writing a backend startup log beside
+  the packaged executable.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.

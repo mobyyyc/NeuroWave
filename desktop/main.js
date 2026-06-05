@@ -12,6 +12,7 @@ const LOCAL_SETTINGS_PATH = app.isPackaged
   ? path.join(SETTINGS_BASE, "settings.local.json")
   : path.join(__dirname, "settings.local.json");
 const DEFAULT_DEV_USER_DATA = path.join(APP_ROOT, ".electron-user-data");
+const DEFAULT_MODEL_NAME = "v3.5_noise_detune_loss.pt";
 const localSettings = loadLocalSettings();
 const backendSettings = localSettings.backend || {};
 const appSettings = localSettings.app || {};
@@ -50,7 +51,69 @@ function defaultPythonPath() {
   if (!app.isPackaged && process.platform === "win32") {
     return path.join(APP_ROOT, ".venv", "Scripts", "python.exe");
   }
+  if (process.platform === "win32") {
+    const venvPython = findFirstExistingPath(
+      candidateBaseDirs().map((baseDir) => path.join(baseDir, ".venv", "Scripts", "python.exe")),
+    );
+    if (venvPython) {
+      return venvPython;
+    }
+  }
   return "python";
+}
+
+function candidateBaseDirs() {
+  const dirs = [
+    SETTINGS_BASE,
+    path.resolve(SETTINGS_BASE, ".."),
+    path.resolve(SETTINGS_BASE, "..", ".."),
+    APP_ROOT,
+  ];
+  return Array.from(new Set(dirs));
+}
+
+function findFirstExistingPath(candidates) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) || "";
+}
+
+function resolveConfiguredPath(value) {
+  if (!value) {
+    return "";
+  }
+  return path.isAbsolute(value) ? value : path.resolve(SETTINGS_BASE, value);
+}
+
+function defaultModelPath() {
+  const configured = resolveConfiguredPath(appSettings.modelPath);
+  if (configured) {
+    return configured;
+  }
+  const existing = findFirstExistingPath(
+    candidateBaseDirs().map((baseDir) => path.join(baseDir, "models", DEFAULT_MODEL_NAME)),
+  );
+  if (existing) {
+    return existing;
+  }
+  return path.join(candidateBaseDirs()[0], "models", DEFAULT_MODEL_NAME);
+}
+
+function defaultOutputDir() {
+  const configured = resolveConfiguredPath(appSettings.outputDir);
+  if (configured) {
+    return configured;
+  }
+  const repoLikeBase = findFirstExistingPath(
+    candidateBaseDirs().map((baseDir) => path.join(baseDir, "models")),
+  );
+  return path.join(repoLikeBase ? path.dirname(repoLikeBase) : SETTINGS_BASE, "runs", "app");
+}
+
+function backendLogPath() {
+  const configured = resolveConfiguredPath(backendSettings.logPath);
+  if (configured) {
+    return configured;
+  }
+  return path.join(SETTINGS_BASE, "neurowave-backend.log");
 }
 
 function requestHealth(timeoutMs = 700) {
@@ -84,6 +147,11 @@ async function startBackendIfNeeded() {
   }
 
   const python = defaultPythonPath();
+  const backendLog = backendLogPath();
+  fs.mkdirSync(path.dirname(backendLog), { recursive: true });
+  const logStream = fs.createWriteStream(backendLog, { flags: "a" });
+  logStream.write(`\n[${new Date().toISOString()}] Starting backend with ${python}\n`);
+  logStream.write(`Backend root: ${BACKEND_ROOT}\n`);
   const args = [
     path.join(BACKEND_ROOT, "scripts", "app_backend.py"),
     "--host",
@@ -97,7 +165,7 @@ async function startBackendIfNeeded() {
   backendProcess = spawn(python, args, {
     cwd: BACKEND_ROOT,
     windowsHide: true,
-    stdio: process.env.NEUROWAVE_BACKEND_LOGS ? "inherit" : "ignore",
+    stdio: process.env.NEUROWAVE_BACKEND_LOGS ? "inherit" : ["ignore", logStream, logStream],
   });
   backendStartedByShell = true;
 
@@ -107,7 +175,7 @@ async function startBackendIfNeeded() {
   });
 
   if (!(await waitForBackend())) {
-    throw new Error(`NeuroWave backend did not start at ${BACKEND_URL}`);
+    throw new Error(`NeuroWave backend did not start at ${BACKEND_URL}. See ${backendLog}`);
   }
 }
 
@@ -136,8 +204,8 @@ function createWindow() {
   mainWindow.loadFile(path.join(APP_ROOT, "app", "index.html"), {
     query: {
       backendUrl: BACKEND_URL,
-      modelPath: appSettings.modelPath || "models/v3.5_noise_detune_loss.pt",
-      outputDir: appSettings.outputDir || "runs/app",
+      modelPath: defaultModelPath(),
+      outputDir: defaultOutputDir(),
     },
   });
 

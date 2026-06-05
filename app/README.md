@@ -45,6 +45,11 @@ installer with embedded runtime/model belongs to the later product-hardening pha
 For packaged testing, place a `settings.local.json` beside the `.exe` if you need to
 override the Python executable, model path, or output folder.
 
+Packaged development builds search common repo/package locations for
+`.venv\Scripts\python.exe` and `models\v3.5_noise_detune_loss.pt`. Backend startup
+logs are written to `neurowave-backend.log` beside the packaged executable unless
+`backend.logPath` overrides that location.
+
 Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.

@@ -330,6 +330,11 @@ available on the machine. In a packaged build, optional `settings.local.json` ca
 placed beside the `.exe` to override Python, backend port, default model path, and
 output folder.
 
+Packaged development builds search common repo/package locations for
+`.venv/Scripts/python.exe` and `models/v3.5_noise_detune_loss.pt`, then pass absolute
+model/output paths to the frontend. Backend startup logs are written to
+`neurowave-backend.log` beside the packaged executable by default.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:
