@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
@@ -21,6 +21,7 @@ const BACKEND_HOST = backendSettings.host || "127.0.0.1";
 const BACKEND_PORT = Number(process.env.NEUROWAVE_BACKEND_PORT || backendSettings.port || "8765");
 const BACKEND_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 const HEALTH_URL = `${BACKEND_URL}/health`;
+const MAX_IMPORTED_AUDIO_BYTES = 100 * 1024 * 1024;
 
 let mainWindow = null;
 let backendProcess = null;
@@ -115,6 +116,43 @@ function backendLogPath() {
     return configured;
   }
   return path.join(SETTINGS_BASE, "neurowave-backend.log");
+}
+
+function sanitizeFileName(name) {
+  const cleaned = String(name || "audio.wav")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/^_+/, "")
+    .slice(0, 80);
+  return cleaned || "audio.wav";
+}
+
+function appInputDir() {
+  const configured = resolveConfiguredPath(appSettings.inputDir);
+  return configured || path.join(SETTINGS_BASE, "app-inputs");
+}
+
+function registerIpcHandlers() {
+  ipcMain.handle("neurowave:import-audio", async (_event, payload) => {
+    const fileName = sanitizeFileName(payload?.name);
+    const bytes = payload?.bytes;
+    if (!(bytes instanceof ArrayBuffer)) {
+      throw new Error("Audio import requires file bytes");
+    }
+    if (bytes.byteLength <= 0) {
+      throw new Error("Audio import is empty");
+    }
+    if (bytes.byteLength > MAX_IMPORTED_AUDIO_BYTES) {
+      throw new Error("Audio import is larger than 100 MB");
+    }
+
+    const destinationDir = appInputDir();
+    fs.mkdirSync(destinationDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const destination = path.join(destinationDir, `${stamp}_${fileName}`);
+    fs.writeFileSync(destination, Buffer.from(bytes));
+    return destination;
+  });
 }
 
 function requestHealth(timeoutMs = 700) {
@@ -225,6 +263,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  registerIpcHandlers();
   try {
     await startBackendIfNeeded();
   } catch (error) {

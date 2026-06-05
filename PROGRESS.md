@@ -390,6 +390,8 @@ Desktop packaging:
 - [x] Fix packaged prediction setup by preferring desktop-supplied absolute defaults
   over stale stored frontend settings, resolving Electron dropped-file paths through
   the preload bridge, and logging prediction tracebacks to the backend log.
+- [x] Replace fragile packaged audio path usage with an Electron import handoff that
+  copies selected audio into an ignored app-controlled input folder before prediction.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.

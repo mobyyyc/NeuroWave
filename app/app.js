@@ -256,6 +256,9 @@ async function loadAudioFile(file) {
   const audioContext = ensureAudioContext();
   const buffer = await file.arrayBuffer();
   const decoded = await audioContext.decodeAudioData(buffer.slice(0));
+  const importedPath = window.neurowaveDesktop?.importAudioFile
+    ? await window.neurowaveDesktop.importAudioFile(file.name, buffer.slice(0))
+    : "";
 
   state.audioBuffer = decoded;
   state.audioFileName = file.name;
@@ -270,13 +273,16 @@ async function loadAudioFile(file) {
   els.cropEnd.value = formatSeconds(state.cropEnd);
   updateZoomDisplay();
   const desktopPath = window.neurowaveDesktop?.pathForFile?.(file);
-  if (desktopPath) {
+  if (importedPath) {
+    els.backendAudioPath.value = importedPath;
+  } else if (desktopPath) {
     els.backendAudioPath.value = desktopPath;
   } else if (file.path) {
     els.backendAudioPath.value = file.path;
   } else if (!els.backendAudioPath.value) {
     els.backendAudioPath.value = `playground/${file.name}`;
   }
+  setArtifactStatus(importedPath ? "Audio ready" : "Audio loaded");
   drawWaveform();
 }
 
@@ -676,7 +682,7 @@ async function runPredict() {
     }
   } catch (error) {
     setStatus("Error", "error");
-    setArtifactStatus("Prediction failed", "error");
+    setArtifactStatus(error.message || "Prediction failed", "error");
     setResponse({ error: error.message, request: payload });
   } finally {
     els.predictButton.disabled = false;

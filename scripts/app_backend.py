@@ -158,6 +158,19 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
     def _handle_predict(self):
         try:
             payload = parse_json_body(self._read_request_body())
+            if getattr(self.server, "debug_errors", False):
+                print(
+                    "Predict request:",
+                    {
+                        "audio_path": payload.get("audio_path"),
+                        "model_path": payload.get("model_path"),
+                        "output_dir": payload.get("output_dir"),
+                        "freq_hz": payload.get("freq_hz"),
+                        "crop_start_seconds": payload.get("crop_start_seconds"),
+                        "crop_end_seconds": payload.get("crop_end_seconds"),
+                    },
+                    file=sys.stderr,
+                )
             result = self.server.predict_function(payload)
             self.server.register_artifacts(result)
             self.server.register_run_folders(result)

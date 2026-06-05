@@ -20,6 +20,7 @@ dist/
 out/
 desktop/settings.local.json
 .electron-user-data/
+app-inputs/
 
 # Generated audio and experiment outputs
 *.wav

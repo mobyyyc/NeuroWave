@@ -337,6 +337,10 @@ model/output paths to the frontend. Backend startup logs are written to
 Electron Builder's outer portable executable directory for settings and logs, not the
 temporary extraction directory.
 
+In the Electron app, dropped or selected audio is copied into an ignored `app-inputs/`
+working folder before prediction. The Python backend receives that copied file path,
+which avoids fragile browser file-path behavior in packaged builds.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:
