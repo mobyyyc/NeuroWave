@@ -119,6 +119,12 @@ function backendLogPath() {
   return path.join(SETTINGS_BASE, "neurowave-backend.log");
 }
 
+function appendBackendLog(message) {
+  const destination = backendLogPath();
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.appendFileSync(destination, `${message}\n`, "utf8");
+}
+
 function sanitizeFileName(name) {
   const cleaned = String(name || "audio.wav")
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
@@ -188,10 +194,9 @@ async function startBackendIfNeeded() {
 
   const python = defaultPythonPath();
   const backendLog = backendLogPath();
-  fs.mkdirSync(path.dirname(backendLog), { recursive: true });
-  const logStream = fs.createWriteStream(backendLog, { flags: "a" });
-  logStream.write(`\n[${new Date().toISOString()}] Starting backend with ${python}\n`);
-  logStream.write(`Backend root: ${BACKEND_ROOT}\n`);
+  appendBackendLog("");
+  appendBackendLog(`[${new Date().toISOString()}] Starting backend with ${python}`);
+  appendBackendLog(`Backend root: ${BACKEND_ROOT}`);
   const args = [
     "-u",
     path.join(BACKEND_ROOT, "scripts", "app_backend.py"),
@@ -209,7 +214,7 @@ async function startBackendIfNeeded() {
   backendProcess = spawn(python, args, {
     cwd: BACKEND_ROOT,
     windowsHide: true,
-    stdio: process.env.NEUROWAVE_BACKEND_LOGS ? "inherit" : ["ignore", logStream, logStream],
+    stdio: process.env.NEUROWAVE_BACKEND_LOGS ? "inherit" : ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
       PYTHONUNBUFFERED: "1",
@@ -217,23 +222,32 @@ async function startBackendIfNeeded() {
   });
   backendStartedByShell = true;
 
+  if (!process.env.NEUROWAVE_BACKEND_LOGS) {
+    backendProcess.stdout.on("data", (chunk) => {
+      appendBackendLog(String(chunk).trimEnd());
+    });
+    backendProcess.stderr.on("data", (chunk) => {
+      appendBackendLog(String(chunk).trimEnd());
+    });
+  }
+
   backendProcess.on("error", (error) => {
-    logStream.write(`[${new Date().toISOString()}] Backend spawn error: ${error.message}\n`);
+    appendBackendLog(`[${new Date().toISOString()}] Backend spawn error: ${error.message}`);
   });
 
   backendProcess.on("exit", (code, signal) => {
-    logStream.write(
-      `[${new Date().toISOString()}] Backend exited code=${code ?? "null"} signal=${signal ?? "null"}\n`,
+    appendBackendLog(
+      `[${new Date().toISOString()}] Backend exited code=${code ?? "null"} signal=${signal ?? "null"}`,
     );
     backendProcess = null;
     backendStartedByShell = false;
   });
 
   if (!(await waitForBackend())) {
-    logStream.write(`[${new Date().toISOString()}] Backend health check timed out at ${BACKEND_URL}\n`);
+    appendBackendLog(`[${new Date().toISOString()}] Backend health check timed out at ${BACKEND_URL}`);
     throw new Error(`NeuroWave backend did not start at ${BACKEND_URL}. See ${backendLog}`);
   }
-  logStream.write(`[${new Date().toISOString()}] Backend health check passed at ${BACKEND_URL}\n`);
+  appendBackendLog(`[${new Date().toISOString()}] Backend health check passed at ${BACKEND_URL}`);
 }
 
 function stopBackend() {

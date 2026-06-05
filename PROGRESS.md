@@ -381,9 +381,7 @@ Desktop packaging:
 - [x] Add app setting for Python/backend path during development.
 - [x] Add app setting for default model checkpoint.
 - [x] Add Windows development package command and builder configuration.
-- [!] Package a first Windows development build. Blocked in the current Codex sandbox by
-  `spawn EPERM` when `electron-builder` tries to run `app-builder.exe`; run
-  `npm run package:win` in a normal Windows terminal to produce the ignored `dist\` artifact.
+- [x] Package a first Windows development build with `npm run package:win`.
 - [x] Improve packaged development backend startup by auto-detecting nearby `.venv`,
   using absolute default model/output paths, and writing a backend startup log beside
   the packaged executable.
@@ -396,6 +394,8 @@ Desktop packaging:
   `/predict`, and log Python startup success, timeout, spawn errors, and exits.
 - [x] Surface desktop backend startup errors and log path in the app UI when backend
   health checks fail.
+- [x] Verify the rebuilt unpacked and portable desktop apps start the backend and pass
+  `/health` while running.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
