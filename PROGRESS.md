@@ -392,6 +392,8 @@ Desktop packaging:
   the preload bridge, and logging prediction tracebacks to the backend log.
 - [x] Replace fragile packaged audio path usage with an Electron import handoff that
   copies selected audio into an ignored app-controlled input folder before prediction.
+- [x] Make backend health startup lightweight by lazy-loading the inference stack on
+  `/predict`, and log Python startup success, timeout, spawn errors, and exits.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.

@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from minisynth.app_inference import AppInferenceRequest, run_app_inference
+AppInferenceRequest = None
+run_app_inference = None
 
 
 DEFAULT_HOST = "127.0.0.1"
@@ -67,6 +68,16 @@ def parse_json_body(body):
 
 
 def predict_response(payload):
+    global AppInferenceRequest, run_app_inference
+    if AppInferenceRequest is None:
+        from minisynth.app_inference import AppInferenceRequest as loaded_request
+
+        AppInferenceRequest = loaded_request
+    if run_app_inference is None:
+        from minisynth.app_inference import run_app_inference as loaded_runner
+
+        run_app_inference = loaded_runner
+
     request = AppInferenceRequest(**payload)
     return asdict(run_app_inference(request))
 
@@ -374,7 +385,7 @@ def main() -> int:
         quiet=args.quiet,
         debug_errors=args.debug_errors,
     )
-    print(f"NeuroWave app backend listening on http://{args.host}:{args.port}")
+    print(f"NeuroWave app backend listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
