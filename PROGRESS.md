@@ -394,6 +394,8 @@ Desktop packaging:
   copies selected audio into an ignored app-controlled input folder before prediction.
 - [x] Make backend health startup lightweight by lazy-loading the inference stack on
   `/predict`, and log Python startup success, timeout, spawn errors, and exits.
+- [x] Surface desktop backend startup errors and log path in the app UI when backend
+  health checks fail.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.

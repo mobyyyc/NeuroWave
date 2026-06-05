@@ -95,6 +95,22 @@ function desktopSetting(name) {
   return window.neurowaveDesktop?.settings?.[name] || null;
 }
 
+function desktopBackendDiagnostic() {
+  const error = desktopSetting("backendStartupError");
+  const logPath = desktopSetting("backendLogPath");
+  if (!error && !logPath) {
+    return "";
+  }
+  const parts = [];
+  if (error) {
+    parts.push(error);
+  }
+  if (logPath) {
+    parts.push(`Log: ${logPath}`);
+  }
+  return parts.join("\n");
+}
+
 function currentSettings() {
   return {
     backendUrl: els.backendUrl.value,
@@ -626,7 +642,7 @@ async function checkBackend() {
     setStatus(payload.status === "ok" ? "Online" : "Backend", payload.status === "ok" ? "ok" : "error");
   } catch (error) {
     setStatus("Offline", "error");
-    setResponse({ error: error.message });
+    setResponse({ error: error.message, desktop_backend: desktopBackendDiagnostic() || undefined });
   }
 }
 
@@ -794,6 +810,11 @@ function init() {
   clearArtifacts();
   updateZoomDisplay();
   applyNoteInput();
+  const startupDiagnostic = desktopBackendDiagnostic();
+  if (startupDiagnostic) {
+    setStatus("Backend issue", "error");
+    setResponse({ desktop_backend: startupDiagnostic });
+  }
 }
 
 init();

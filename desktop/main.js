@@ -26,6 +26,7 @@ const MAX_IMPORTED_AUDIO_BYTES = 100 * 1024 * 1024;
 let mainWindow = null;
 let backendProcess = null;
 let backendStartedByShell = false;
+let backendStartupError = "";
 
 if (!app.isPackaged || process.env.NEUROWAVE_ELECTRON_USER_DATA) {
   app.setPath("userData", process.env.NEUROWAVE_ELECTRON_USER_DATA || DEFAULT_DEV_USER_DATA);
@@ -262,6 +263,8 @@ function createWindow() {
       backendUrl: BACKEND_URL,
       modelPath: defaultModelPath(),
       outputDir: defaultOutputDir(),
+      backendLogPath: backendLogPath(),
+      backendStartupError,
     },
   });
 
@@ -281,6 +284,7 @@ app.whenReady().then(async () => {
   try {
     await startBackendIfNeeded();
   } catch (error) {
+    backendStartupError = error.message || String(error);
     console.error(error);
   }
   createWindow();
