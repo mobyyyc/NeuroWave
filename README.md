@@ -333,7 +333,9 @@ output folder.
 Packaged development builds search common repo/package locations for
 `.venv/Scripts/python.exe` and `models/v3.5_noise_detune_loss.pt`, then pass absolute
 model/output paths to the frontend. Backend startup logs are written to
-`neurowave-backend.log` beside the packaged executable by default.
+`neurowave-backend.log` beside the packaged executable by default. Portable builds use
+Electron Builder's outer portable executable directory for settings and logs, not the
+temporary extraction directory.
 
 ## Legacy Scikit-Learn Baseline
 

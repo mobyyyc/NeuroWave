@@ -7,7 +7,8 @@ const path = require("path");
 const APP_ROOT = path.resolve(__dirname, "..");
 const PACKAGED_BACKEND_ROOT = path.join(process.resourcesPath || APP_ROOT, "neurowave-python");
 const BACKEND_ROOT = app.isPackaged ? PACKAGED_BACKEND_ROOT : APP_ROOT;
-const SETTINGS_BASE = app.isPackaged ? path.dirname(process.execPath) : APP_ROOT;
+const PACKAGE_BASE = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
+const SETTINGS_BASE = app.isPackaged ? PACKAGE_BASE : APP_ROOT;
 const LOCAL_SETTINGS_PATH = app.isPackaged
   ? path.join(SETTINGS_BASE, "settings.local.json")
   : path.join(__dirname, "settings.local.json");

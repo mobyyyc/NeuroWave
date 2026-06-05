@@ -46,9 +46,10 @@ For packaged testing, place a `settings.local.json` beside the `.exe` if you nee
 override the Python executable, model path, or output folder.
 
 Packaged development builds search common repo/package locations for
-`.venv\Scripts\python.exe` and `models\v3.5_noise_detune_loss.pt`. Backend startup
-logs are written to `neurowave-backend.log` beside the packaged executable unless
-`backend.logPath` overrides that location.
+`.venv\Scripts\python.exe` and `models\v3.5_noise_detune_loss.pt`. For portable
+builds, settings and backend startup logs are read/written beside the outer
+portable `.exe`, not the temporary extraction folder. The default log path is
+`neurowave-backend.log` unless `backend.logPath` overrides that location.
 
 Current prototype notes:
 
