@@ -387,6 +387,9 @@ Desktop packaging:
 - [x] Improve packaged development backend startup by auto-detecting nearby `.venv`,
   using absolute default model/output paths, and writing a backend startup log beside
   the packaged executable.
+- [x] Fix packaged prediction setup by preferring desktop-supplied absolute defaults
+  over stale stored frontend settings, resolving Electron dropped-file paths through
+  the preload bridge, and logging prediction tracebacks to the backend log.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.

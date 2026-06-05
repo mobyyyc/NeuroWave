@@ -163,6 +163,8 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
             self.server.register_run_folders(result)
             self._send_json(result)
         except Exception as error:
+            if getattr(self.server, "debug_errors", False):
+                traceback.print_exc(file=sys.stderr)
             status, response = response_for_exception(
                 error,
                 include_tracebacks=getattr(self.server, "debug_errors", False),

@@ -163,6 +163,9 @@ async function startBackendIfNeeded() {
   if (backendSettings.quiet !== false) {
     args.push("--quiet");
   }
+  if (backendSettings.debugErrors !== false) {
+    args.push("--debug-errors");
+  }
   backendProcess = spawn(python, args, {
     cwd: BACKEND_ROOT,
     windowsHide: true,

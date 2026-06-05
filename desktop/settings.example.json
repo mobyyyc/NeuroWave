@@ -4,6 +4,7 @@
     "host": "127.0.0.1",
     "port": 8765,
     "quiet": true,
+    "debugErrors": true,
     "logPath": "neurowave-backend.log"
   },
   "app": {

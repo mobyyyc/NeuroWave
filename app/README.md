@@ -57,8 +57,8 @@ Current prototype notes:
 - The default UI is producer-facing: drag, crop, confirm pitch, predict, view params, save.
 - Advanced contains developer/runtime fields such as backend URL, model path, raw audio path, and output directory.
 - Advanced backend/model/output values persist locally after editing.
-- The backend still needs a filesystem `audio_path`; Electron can fill this from a dropped file path when available.
-- A desktop wrapper can later provide the real dropped file path, or the backend can gain upload support.
+- The backend still needs a filesystem `audio_path`; Electron fills this from the
+  dropped file through the desktop preload bridge.
 - After prediction, the frontend loads predicted JSON, WAV, and spectrogram artifacts
   through the backend's current-process artifact allowlist.
 - Crop zoom is frontend-only and does not change the crop seconds sent to the backend.

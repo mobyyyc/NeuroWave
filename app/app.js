@@ -111,7 +111,7 @@ function applySettings() {
   const stored = readStoredSettings();
   for (const [name, fallback] of Object.entries(SETTINGS_FIELDS)) {
     const element = els[name];
-    const value = stored[name] || desktopSetting(name) || querySetting(name) || fallback;
+    const value = desktopSetting(name) || querySetting(name) || stored[name] || fallback;
     if (element && value) {
       element.value = value;
     }
@@ -269,7 +269,10 @@ async function loadAudioFile(file) {
   els.cropStart.value = formatSeconds(state.cropStart);
   els.cropEnd.value = formatSeconds(state.cropEnd);
   updateZoomDisplay();
-  if (file.path) {
+  const desktopPath = window.neurowaveDesktop?.pathForFile?.(file);
+  if (desktopPath) {
+    els.backendAudioPath.value = desktopPath;
+  } else if (file.path) {
     els.backendAudioPath.value = file.path;
   } else if (!els.backendAudioPath.value) {
     els.backendAudioPath.value = `playground/${file.name}`;
