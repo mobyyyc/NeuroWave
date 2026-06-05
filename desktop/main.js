@@ -9,6 +9,8 @@ const PACKAGED_BACKEND_ROOT = path.join(process.resourcesPath || APP_ROOT, "neur
 const BACKEND_ROOT = app.isPackaged ? PACKAGED_BACKEND_ROOT : APP_ROOT;
 const PACKAGE_BASE = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
 const SETTINGS_BASE = app.isPackaged ? PACKAGE_BASE : APP_ROOT;
+const WINDOWS_LOCAL_APP_DATA = process.env.LOCALAPPDATA || app.getPath("appData");
+const APP_DATA_ROOT = app.isPackaged ? path.join(WINDOWS_LOCAL_APP_DATA, "NeuroWave") : APP_ROOT;
 const LOCAL_SETTINGS_PATH = app.isPackaged
   ? path.join(SETTINGS_BASE, "settings.local.json")
   : path.join(__dirname, "settings.local.json");
@@ -105,6 +107,9 @@ function defaultOutputDir() {
   if (configured) {
     return configured;
   }
+  if (app.isPackaged) {
+    return path.join(APP_DATA_ROOT, "Runs");
+  }
   const repoLikeBase = findFirstExistingPath(
     candidateBaseDirs().map((baseDir) => path.join(baseDir, "models")),
   );
@@ -115,6 +120,9 @@ function backendLogPath() {
   const configured = resolveConfiguredPath(backendSettings.logPath);
   if (configured) {
     return configured;
+  }
+  if (app.isPackaged) {
+    return path.join(APP_DATA_ROOT, "Logs", "neurowave-backend.log");
   }
   return path.join(SETTINGS_BASE, "neurowave-backend.log");
 }
@@ -136,7 +144,13 @@ function sanitizeFileName(name) {
 
 function appInputDir() {
   const configured = resolveConfiguredPath(appSettings.inputDir);
-  return configured || path.join(SETTINGS_BASE, "app-inputs");
+  if (configured) {
+    return configured;
+  }
+  if (app.isPackaged) {
+    return path.join(APP_DATA_ROOT, "Inputs");
+  }
+  return path.join(SETTINGS_BASE, "app-inputs");
 }
 
 function registerIpcHandlers() {

@@ -47,9 +47,16 @@ override the Python executable, model path, or output folder.
 
 Packaged development builds search common repo/package locations for
 `.venv\Scripts\python.exe` and `models\v3.5_noise_detune_loss.pt`. For portable
-builds, settings and backend startup logs are read/written beside the outer
-portable `.exe`, not the temporary extraction folder. The default log path is
-`neurowave-backend.log` unless `backend.logPath` overrides that location.
+builds, optional `settings.local.json` is read beside the outer portable `.exe`,
+not the temporary extraction folder. Runtime app data is stored under
+`%LOCALAPPDATA%\NeuroWave\` by default:
+
+- imported audio: `Inputs\`
+- prediction runs: `Runs\`
+- backend logs: `Logs\`
+
+Use `backend.logPath`, `app.inputDir`, or `app.outputDir` in `settings.local.json`
+only when you need to override those defaults during development.
 
 Current prototype notes:
 
@@ -61,7 +68,7 @@ Current prototype notes:
 - Advanced contains developer/runtime fields such as backend URL, model path, raw audio path, and output directory.
 - Advanced backend/model/output values persist locally after editing.
 - The backend still needs a filesystem `audio_path`; Electron imports dropped/selected
-  audio into an app-controlled `app-inputs` folder and sends that copied path to Python.
+  audio into the app data input folder and sends that copied path to Python.
 - After prediction, the frontend loads predicted JSON, WAV, and spectrogram artifacts
   through the backend's current-process artifact allowlist.
 - Crop zoom is frontend-only and does not change the crop seconds sent to the backend.

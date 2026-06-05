@@ -331,15 +331,18 @@ placed beside the `.exe` to override Python, backend port, default model path, a
 output folder.
 
 Packaged development builds search common repo/package locations for
-`.venv/Scripts/python.exe` and `models/v3.5_noise_detune_loss.pt`, then pass absolute
-model/output paths to the frontend. Backend startup logs are written to
-`neurowave-backend.log` beside the packaged executable by default. Portable builds use
-Electron Builder's outer portable executable directory for settings and logs, not the
-temporary extraction directory.
+`.venv/Scripts/python.exe` and `models/v3.5_noise_detune_loss.pt`, then pass an
+absolute model path to the frontend. Runtime app data for packaged builds is stored
+under `%LOCALAPPDATA%/NeuroWave/` by default:
 
-In the Electron app, dropped or selected audio is copied into an ignored `app-inputs/`
-working folder before prediction. The Python backend receives that copied file path,
-which avoids fragile browser file-path behavior in packaged builds.
+- imported audio: `Inputs/`
+- prediction runs: `Runs/`
+- backend logs: `Logs/`
+
+In the Electron app, dropped or selected audio is copied into the app data input
+folder before prediction. The Python backend receives that copied file path, which
+avoids fragile browser file-path behavior in packaged builds. Optional
+`settings.local.json` beside the packaged `.exe` can still override these paths.
 
 ## Legacy Scikit-Learn Baseline
 

@@ -9,6 +9,7 @@
   },
   "app": {
     "modelPath": "models/v3.5_noise_detune_loss.pt",
+    "inputDir": "app-inputs",
     "outputDir": "runs/app"
   }
 }

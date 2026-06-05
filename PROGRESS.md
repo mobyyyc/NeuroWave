@@ -398,6 +398,8 @@ Desktop packaging:
   health checks fail.
 - [x] Verify the rebuilt unpacked and portable desktop apps start the backend and pass
   `/health` while running.
+- [x] Store packaged app inputs, prediction runs, and backend logs under
+  `%LOCALAPPDATA%\NeuroWave\` by default.
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
@@ -478,7 +480,7 @@ Website acceptance checklist:
 
 Goal: make NeuroWave reliable enough for repeated use outside the developer environment.
 
-- [ ] Add local app logs.
+- [x] Add local app logs.
 - [ ] Add crash/error report files under app run directory.
 - [ ] Add backend request/response logging without storing unnecessary user audio copies.
 - [ ] Add app settings persistence.
