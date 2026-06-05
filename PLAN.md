@@ -849,8 +849,8 @@ Recommended product architecture:
 - Frontend: local web UI with drag/drop, waveform cropper, transport controls, patch display,
   spectrogram display, and export actions.
 - Backend: Python local inference service launched by the desktop shell.
-- Model runtime: use the project `.venv` during development; package a dedicated Python
-  runtime and checkpoint later.
+- Model runtime: use the project `.venv` during development; bundle the selected checkpoint
+  into packaged builds when present; package a dedicated Python runtime later.
 - First platform: Windows x64.
 - First app name: NeuroWave.
 - First checkpoint: the current best v3 checkpoint, starting with `v3.5_noise_detune_loss`
@@ -889,7 +889,8 @@ Minimum product features:
 - Target/predicted spectrogram display.
 - Export predicted WAV.
 - Export predicted JSON.
-- Save a local run folder under `playground/` or `runs/app/`.
+- Save a local run folder under `runs/app/` in development and
+  `%LOCALAPPDATA%/NeuroWave/Runs/` in packaged Windows builds.
 - Error states for unsupported audio, missing checkpoint, missing frequency, invalid crop,
   backend crash, and CUDA/CPU runtime failure.
 
@@ -946,8 +947,10 @@ Suggested implementation order:
 11. Add export buttons for WAV, JSON, and run folder.
 12. Wrap the frontend/backend in a Windows desktop shell.
 13. Add a first packaging build that can run on the development machine.
-14. Add smoke tests for backend prediction and frontend app state.
-15. Add product documentation and screenshots.
+14. Bundle the selected model checkpoint into the packaged app resources without committing
+    the ignored `.pt` artifact.
+15. Add smoke tests for backend prediction and frontend app state.
+16. Add product documentation and screenshots.
 
 Acceptance criteria for the first desktop prototype:
 

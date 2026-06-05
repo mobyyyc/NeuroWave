@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone H - Model Capability And Target Quality.
+Current active phase: Milestone I - Product Prototype - Windows Desktop App.
 
 ## Completed Baseline
 
@@ -396,6 +396,8 @@ Desktop packaging:
   `/predict`, and log Python startup success, timeout, spawn errors, and exits.
 - [x] Surface desktop backend startup errors and log path in the app UI when backend
   health checks fail.
+- [x] Auto-refresh backend readiness at app launch so slow backend startup does not leave
+  the UI stuck in an early error state.
 - [x] Verify the rebuilt unpacked and portable desktop apps start the backend and pass
   `/health` while running.
 - [x] Store packaged app inputs, prediction runs, and backend logs under
@@ -403,20 +405,24 @@ Desktop packaging:
 - [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
-- [ ] Bundle or install the selected production model checkpoint.
+- [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
+  exists at package time.
 - [ ] Document final Windows install/run notes.
 
 Product UX polish:
 
 - [x] Hide developer/runtime fields behind Advanced by default.
+- [x] Add first-release readiness states for backend, model, audio, and crop validity.
 - [ ] Add recent input files.
 - [ ] Add recent prediction runs.
 - [x] Add app output folder setting.
-- [ ] Add model/version display.
+- [x] Add model/version display in prediction results.
 - [ ] Add CPU/CUDA runtime indicator.
 - [ ] Add warning when frequency is missing or likely wrong.
-- [ ] Add clear copy explaining best input: clean one-note clips.
+- [x] Add clear copy explaining best input: clean one-note clips.
 - [ ] Add limitations panel.
+- [x] Polish the first-release app shell with clean product styling, clear states, and
+  interactive hover/focus feedback.
 - [ ] Add app screenshots for website use.
 
 Acceptance checklist:
@@ -425,11 +431,11 @@ Acceptance checklist:
 - [ ] A user can crop the one-note region visually.
 - [ ] A user can preview the crop.
 - [ ] A user can enter frequency and run prediction.
-- [ ] The app produces predicted JSON and predicted WAV.
+- [x] The app produces predicted JSON and predicted WAV.
 - [ ] The app displays target and predicted spectrograms.
 - [ ] The app can A/B play target crop and prediction.
-- [ ] The app saves a complete local run folder.
-- [ ] The app handles invalid inputs without crashing.
+- [x] The app saves a complete local run folder.
+- [x] The app handles invalid inputs without crashing.
 - [ ] Commit Milestone I completion.
 
 ## Milestone J: Product Website
@@ -498,6 +504,25 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-06-05
+
+- Finalized the first-release desktop app UX foundation: readiness states for backend,
+  model, audio, and crop validity; safer Predict-button gating; backend startup polling;
+  model checkpoint bundling in packaged resources; model label in prediction results; and
+  polished product styling.
+  Commit: `Finalize desktop app UX`
+- Verified JavaScript parse checks, package JSON parsing, CSS variable definitions, the
+  full Python unit suite, and a direct app-inference smoke run against
+  `playground/testpluck.wav` that produced target crop, predicted patch, predicted WAV,
+  target spectrogram, predicted spectrogram, and summary artifacts under ignored
+  `runs/app_smoke/`.
+  Commit: `Finalize desktop app UX`
+- Packaging and in-app browser verification were not completed in this pass because
+  Electron Builder was blocked by the local approval/usage gate and the browser plugin
+  blocked both localhost and file URLs by policy. The packaged end-to-end WAV import,
+  crop, predict, render, and export checklist item remains open.
+  Commit: `Finalize desktop app UX`
 
 ### 2026-05-27
 

@@ -324,16 +324,19 @@ npm run package:win
 ```
 
 This creates an ignored portable `.exe` under `dist/`. It packages the Electron app
-shell and NeuroWave Python source resources, but it is not yet the final consumer
-installer: Python dependencies and the selected model checkpoint must still be
-available on the machine. In a packaged build, optional `settings.local.json` can be
-placed beside the `.exe` to override Python, backend port, default model path, and
-output folder.
+shell, NeuroWave Python source resources, and the selected local model checkpoint
+when `models/v3.5_noise_detune_loss.pt` exists at build time. It is not yet the
+final consumer installer because Python/Torch dependencies still need to be
+available on the machine. In a packaged build, optional `settings.local.json` can
+be placed beside the `.exe` to override Python, backend port, default model path,
+and output folder.
 
-Packaged development builds search common repo/package locations for
-`.venv/Scripts/python.exe` and `models/v3.5_noise_detune_loss.pt`, then pass an
-absolute model path to the frontend. Runtime app data for packaged builds is stored
-under `%LOCALAPPDATA%/NeuroWave/` by default:
+Packaged development builds first use a bundled
+`resources/models/v3.5_noise_detune_loss.pt` checkpoint when present. If the model
+is not bundled, the app searches common repo/package locations for
+`models/v3.5_noise_detune_loss.pt`, then passes an absolute model path to the
+frontend. Runtime app data for packaged builds is stored under
+`%LOCALAPPDATA%/NeuroWave/` by default:
 
 - imported audio: `Inputs/`
 - prediction runs: `Runs/`

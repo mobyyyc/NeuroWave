@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld("neurowaveDesktop", {
     outputDir: new URLSearchParams(window.location.search).get("outputDir"),
     backendLogPath: new URLSearchParams(window.location.search).get("backendLogPath"),
     backendStartupError: new URLSearchParams(window.location.search).get("backendStartupError"),
+    modelReady: new URLSearchParams(window.location.search).get("modelReady"),
   },
 });

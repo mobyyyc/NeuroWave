@@ -1,18 +1,26 @@
 :root {
   color-scheme: dark;
-  --bg: #151616;
-  --panel: #202322;
-  --panel-strong: #292d2b;
-  --line: #3a403d;
-  --text: #f0f3ef;
-  --muted: #aab3ad;
-  --accent: #38c172;
-  --accent-strong: #7ee3a1;
-  --warn: #f0b84b;
-  --error: #ff6b6b;
-  --wave: #8fd3ff;
-  --crop: rgba(56, 193, 114, 0.18);
-  --crop-line: #7ee3a1;
+  --bg: oklch(0.165 0.008 170);
+  --surface: oklch(0.205 0.009 170);
+  --surface-raised: oklch(0.245 0.011 170);
+  --surface-strong: oklch(0.29 0.012 170);
+  --line: oklch(0.36 0.014 170);
+  --line-strong: oklch(0.48 0.025 168);
+  --text: oklch(0.93 0.009 150);
+  --muted: oklch(0.72 0.018 155);
+  --muted-strong: oklch(0.82 0.018 155);
+  --accent: oklch(0.73 0.12 158);
+  --accent-strong: oklch(0.82 0.13 154);
+  --accent-soft: oklch(0.31 0.045 158);
+  --info: oklch(0.76 0.11 220);
+  --warn: oklch(0.79 0.12 82);
+  --error: oklch(0.69 0.16 28);
+  --wave: oklch(0.79 0.11 220);
+  --crop: color-mix(in oklch, var(--accent) 20%, transparent);
+  --crop-line: oklch(0.82 0.13 154);
+  --radius: 8px;
+  --fast: 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-soft: 0 18px 50px color-mix(in oklch, var(--bg) 70%, transparent);
 }
 
 * {
@@ -39,29 +47,58 @@ input {
 
 button {
   border: 1px solid var(--line);
-  background: var(--panel-strong);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
   color: var(--text);
   height: 38px;
   padding: 0 12px;
   cursor: pointer;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast),
+    color var(--fast),
+    transform var(--fast);
 }
 
 button:hover {
   border-color: var(--accent);
+  background: var(--surface-strong);
+}
+
+button:active {
+  transform: translateY(1px);
 }
 
 button:disabled {
-  color: #68716b;
+  border-color: var(--line);
+  background: color-mix(in oklch, var(--surface) 78%, var(--bg));
+  color: oklch(0.53 0.012 155);
   cursor: not-allowed;
+  transform: none;
 }
 
 input {
   width: 100%;
   height: 38px;
   border: 1px solid var(--line);
-  background: #121414;
+  border-radius: var(--radius);
+  background: oklch(0.145 0.008 170);
   color: var(--text);
   padding: 0 10px;
+  outline: none;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast),
+    box-shadow var(--fast);
+}
+
+input:hover {
+  border-color: var(--line-strong);
+}
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent);
 }
 
 input[type="range"] {
@@ -81,17 +118,23 @@ label {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 360px minmax(0, 1fr);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--surface) 70%, var(--bg)), var(--bg) 44%),
+    var(--bg);
 }
 
 .panel {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
 
 .controls-panel {
-  padding: 18px;
+  padding: 20px;
+  background: color-mix(in oklch, var(--surface) 86%, var(--bg));
   border-width: 0 1px 0 0;
+  border-radius: 0;
   overflow-y: auto;
 }
 
@@ -100,7 +143,7 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .brand-block h1 {
@@ -110,17 +153,19 @@ label {
 }
 
 .status-pill {
-  min-width: 86px;
+  min-width: 92px;
   border: 1px solid var(--line);
-  padding: 6px 8px;
+  border-radius: 999px;
+  padding: 6px 10px;
   color: var(--muted);
   text-align: center;
   font-size: 12px;
+  font-weight: 650;
 }
 
 .status-ok {
   border-color: var(--accent);
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .status-error {
@@ -131,6 +176,65 @@ label {
 .status-busy {
   border-color: var(--warn);
   color: var(--warn);
+}
+
+.readiness-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.readiness-item {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: oklch(0.175 0.008 170);
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.readiness-item strong {
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.readiness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.readiness-item.status-ok {
+  border-color: color-mix(in oklch, var(--accent) 45%, var(--line));
+}
+
+.readiness-item.status-ok .readiness-dot {
+  background: var(--accent);
+}
+
+.readiness-item.status-busy {
+  border-color: color-mix(in oklch, var(--warn) 42%, var(--line));
+}
+
+.readiness-item.status-busy .readiness-dot {
+  background: var(--warn);
+}
+
+.readiness-item.status-error {
+  border-color: color-mix(in oklch, var(--error) 45%, var(--line));
+}
+
+.readiness-item.status-error .readiness-dot {
+  background: var(--error);
 }
 
 .control-group {
@@ -149,6 +253,11 @@ label {
   cursor: pointer;
   font-size: 12px;
   text-transform: uppercase;
+  transition: color var(--fast);
+}
+
+.advanced-panel summary:hover {
+  color: var(--text);
 }
 
 .advanced-panel[open] summary {
@@ -203,14 +312,19 @@ label {
 .primary-button {
   width: 100%;
   border-color: var(--accent);
-  background: #1f3a2c;
-  color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent);
   font-weight: 700;
+}
+
+.primary-button:not(:disabled):hover {
+  background: color-mix(in oklch, var(--accent-soft) 80%, var(--accent));
+  color: var(--text);
 }
 
 .workspace {
   min-width: 0;
-  padding: 18px;
+  padding: 20px;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 16px;
@@ -219,17 +333,28 @@ label {
 .drop-zone {
   min-height: 90px;
   border: 1px dashed var(--line);
-  background: #111313;
+  border-radius: var(--radius);
+  background: oklch(0.155 0.008 170);
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px;
   cursor: pointer;
+  transition:
+    border-color var(--fast),
+    background-color var(--fast),
+    transform var(--fast);
+}
+
+.drop-zone:hover {
+  border-color: var(--line-strong);
+  background: oklch(0.18 0.01 170);
 }
 
 .drop-zone.dragging {
   border-color: var(--accent);
-  background: #142019;
+  background: color-mix(in oklch, var(--accent-soft) 62%, var(--surface));
+  transform: translateY(-1px);
 }
 
 .drop-zone input {
@@ -252,8 +377,11 @@ label {
 
 .waveform-section {
   border: 1px solid var(--line);
-  background: #0e1010;
+  border-radius: var(--radius);
+  background: oklch(0.13 0.007 170);
   min-height: 360px;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
 }
 
 #waveformCanvas {
@@ -281,6 +409,7 @@ label {
   min-width: 0;
   padding: 16px;
   overflow: auto;
+  background: color-mix(in oklch, var(--surface) 94%, var(--bg));
 }
 
 .result-panel h2 {
@@ -315,7 +444,7 @@ pre {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #d7e1da;
+  color: var(--muted-strong);
   font-size: 12px;
 }
 
@@ -333,6 +462,7 @@ audio {
   display: block;
   width: 100%;
   height: 36px;
+  color-scheme: dark;
 }
 
 .artifact-status {
@@ -369,7 +499,8 @@ audio {
   width: 100%;
   height: 120px;
   border: 1px solid var(--line);
-  background: #0e1010;
+  border-radius: var(--radius);
+  background: oklch(0.13 0.007 170);
 }
 
 @media (max-width: 1180px) {

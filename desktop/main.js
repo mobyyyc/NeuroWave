@@ -93,6 +93,12 @@ function defaultModelPath() {
   if (configured) {
     return configured;
   }
+  if (app.isPackaged) {
+    const bundled = path.join(process.resourcesPath, "models", DEFAULT_MODEL_NAME);
+    if (fs.existsSync(bundled)) {
+      return bundled;
+    }
+  }
   const existing = findFirstExistingPath(
     candidateBaseDirs().map((baseDir) => path.join(baseDir, "models", DEFAULT_MODEL_NAME)),
   );
@@ -271,6 +277,8 @@ function stopBackend() {
 }
 
 function createWindow() {
+  const modelPath = defaultModelPath();
+  const outputDir = defaultOutputDir();
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -289,10 +297,11 @@ function createWindow() {
   mainWindow.loadFile(path.join(APP_ROOT, "app", "index.html"), {
     query: {
       backendUrl: BACKEND_URL,
-      modelPath: defaultModelPath(),
-      outputDir: defaultOutputDir(),
+      modelPath,
+      outputDir,
       backendLogPath: backendLogPath(),
       backendStartupError,
+      modelReady: fs.existsSync(modelPath) ? "1" : "0",
     },
   });
 

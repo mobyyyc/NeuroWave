@@ -41,6 +41,10 @@
       {
         "from": "requirements-cuda.txt",
         "to": "neurowave-python/requirements-cuda.txt"
+      },
+      {
+        "from": "models/v3.5_noise_detune_loss.pt",
+        "to": "models/v3.5_noise_detune_loss.pt"
       }
     ],
     "win": {

@@ -12,6 +12,9 @@ const state = {
   playbackStartedAt: 0,
   playbackDuration: 0,
   audioContext: null,
+  backendReady: false,
+  modelReady: null,
+  predicting: false,
   targetSpectrogram: null,
   predictedSpectrogram: null,
   zoomLevel: 1,
@@ -20,6 +23,10 @@ const state = {
 
 const els = {
   backendStatus: document.getElementById("backendStatus"),
+  backendReady: document.getElementById("backendReady"),
+  modelReady: document.getElementById("modelReady"),
+  audioReady: document.getElementById("audioReady"),
+  cropReady: document.getElementById("cropReady"),
   backendUrl: document.getElementById("backendUrl"),
   checkBackend: document.getElementById("checkBackend"),
   modelPath: document.getElementById("modelPath"),
@@ -72,6 +79,13 @@ function setStatus(text, kind = "idle") {
   els.backendStatus.className = `status-pill status-${kind}`;
 }
 
+function setReadiness(element, kind, value) {
+  if (!element) return;
+  element.className = `readiness-item status-${kind}`;
+  const label = element.querySelector("strong");
+  if (label) label.textContent = value;
+}
+
 function backendBaseUrl() {
   return els.backendUrl.value.replace(/\/$/, "");
 }
@@ -105,7 +119,7 @@ function desktopSetting(name) {
 function desktopBackendDiagnostic() {
   const error = desktopSetting("backendStartupError");
   const logPath = desktopSetting("backendLogPath");
-  if (!error && !logPath) {
+  if (!error) {
     return "";
   }
   const parts = [];
@@ -116,6 +130,60 @@ function desktopBackendDiagnostic() {
     parts.push(`Log: ${logPath}`);
   }
   return parts.join("\n");
+}
+
+function desktopModelReady() {
+  const value = desktopSetting("modelReady");
+  if (value === "1") return true;
+  if (value === "0") return false;
+  return null;
+}
+
+function updateActionAvailability() {
+  const hasAudio = Boolean(state.audioBuffer);
+  const cropDuration = state.cropEnd - state.cropStart;
+  const cropValid = hasAudio && cropDuration > 0 && cropDuration <= cropLimitSeconds() + 1e-6;
+  const modelUsable = state.modelReady !== false;
+  els.predictButton.disabled = state.predicting || !state.backendReady || !modelUsable || !hasAudio || !cropValid;
+  els.predictButton.textContent = state.predicting ? "Predicting" : "Predict";
+}
+
+function updateModelReadiness() {
+  const packagedReady = desktopModelReady();
+  const packagedPath = desktopSetting("modelPath");
+  const currentPath = els.modelPath.value;
+  const isPackagedDefault = packagedPath && currentPath === packagedPath;
+  state.modelReady = isPackagedDefault ? packagedReady : null;
+
+  if (state.modelReady === true) {
+    setReadiness(els.modelReady, "ok", "Ready");
+  } else if (state.modelReady === false) {
+    setReadiness(els.modelReady, "error", "Missing");
+  } else if (currentPath) {
+    setReadiness(els.modelReady, "ok", "Selected");
+  } else {
+    state.modelReady = false;
+    setReadiness(els.modelReady, "error", "Missing");
+  }
+  updateActionAvailability();
+}
+
+function updateAudioCropReadiness() {
+  if (!state.audioBuffer) {
+    setReadiness(els.audioReady, "idle", "Waiting");
+    setReadiness(els.cropReady, "idle", "Waiting");
+    updateActionAvailability();
+    return;
+  }
+
+  const cropDuration = state.cropEnd - state.cropStart;
+  setReadiness(els.audioReady, "ok", "Ready");
+  if (cropDuration > 0 && cropDuration <= cropLimitSeconds() + 1e-6) {
+    setReadiness(els.cropReady, "ok", `${formatSeconds(cropDuration)}s`);
+  } else {
+    setReadiness(els.cropReady, "error", "Invalid");
+  }
+  updateActionAvailability();
 }
 
 function currentSettings() {
@@ -357,6 +425,7 @@ async function loadAudioFile(file) {
     els.backendAudioPath.value = `playground/${file.name}`;
   }
   setArtifactStatus(importedPath ? "Audio ready" : "Audio loaded");
+  updateAudioCropReadiness();
   drawWaveform();
 }
 
@@ -402,6 +471,7 @@ function updateCropFromInputs() {
   state.cropStart = cropped.start;
   state.cropEnd = cropped.end;
   updateCropInputs();
+  updateAudioCropReadiness();
   drawWaveform();
 }
 
@@ -450,6 +520,7 @@ function moveCropDrag(event) {
     state.cropEnd = nextStart + duration;
   }
   updateCropInputs();
+  updateAudioCropReadiness();
   drawWaveform();
 }
 
@@ -729,18 +800,47 @@ async function openRunFolder() {
   }
 }
 
-async function checkBackend() {
+async function checkBackend(options = {}) {
+  const reportOffline = options.reportOffline !== false;
   const backend = backendBaseUrl();
   setStatus("Checking", "busy");
+  setReadiness(els.backendReady, "busy", "Checking");
   try {
     const response = await fetch(`${backend}/health`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
-    setStatus(payload.status === "ok" ? "Online" : "Backend", payload.status === "ok" ? "ok" : "error");
+    const ready = payload.status === "ok";
+    state.backendReady = ready;
+    setStatus(ready ? "Online" : "Backend", ready ? "ok" : "error");
+    setReadiness(els.backendReady, ready ? "ok" : "error", ready ? "Ready" : "Error");
+    updateActionAvailability();
+    return ready;
   } catch (error) {
-    setStatus("Offline", "error");
-    setResponse({ error: error.message, desktop_backend: desktopBackendDiagnostic() || undefined });
+    state.backendReady = false;
+    if (reportOffline) {
+      setStatus("Offline", "error");
+      setReadiness(els.backendReady, "error", "Offline");
+      setResponse({ error: error.message, desktop_backend: desktopBackendDiagnostic() || undefined });
+    } else {
+      setStatus("Starting", "busy");
+      setReadiness(els.backendReady, "busy", "Starting");
+    }
+    updateActionAvailability();
+    return false;
   }
+}
+
+function startBackendHealthPolling() {
+  let attempts = 0;
+  const maxAttempts = 40;
+  const poll = async () => {
+    attempts += 1;
+    const ready = await checkBackend({ reportOffline: attempts > 8 });
+    if (!ready && attempts < maxAttempts) {
+      window.setTimeout(poll, 500);
+    }
+  };
+  poll();
 }
 
 function predictPayload() {
@@ -775,7 +875,8 @@ async function runPredict() {
   const payload = predictPayload();
   try {
     validatePredictPayload(payload);
-    els.predictButton.disabled = true;
+    state.predicting = true;
+    updateActionAvailability();
     setStatus("Predicting", "busy");
     clearArtifacts();
     setArtifactStatus("Waiting for prediction", "busy");
@@ -789,7 +890,9 @@ async function runPredict() {
     if (!response.ok) {
       throw new Error(responsePayload.error?.message || `HTTP ${response.status}`);
     }
+    state.backendReady = true;
     setStatus("Online", "ok");
+    setReadiness(els.backendReady, "ok", "Ready");
     state.lastResult = responsePayload;
     setResponse(responsePayload);
     setResultSummary(responsePayload);
@@ -804,7 +907,8 @@ async function runPredict() {
     setArtifactStatus(error.message || "Prediction failed", "error");
     setResponse({ error: error.message, request: payload });
   } finally {
-    els.predictButton.disabled = false;
+    state.predicting = false;
+    updateActionAvailability();
   }
 }
 
@@ -833,6 +937,12 @@ function setSummaryFields(fields) {
   }
 }
 
+function modelDisplayName(path) {
+  const text = String(path || "");
+  const name = text.split(/[\\/]/).filter(Boolean).pop() || "Unknown";
+  return name.replace(/\.pt$/i, "");
+}
+
 function setResultSummary(result) {
   if (!result || !result.run_id) {
     setSummaryFields([["State", "No prediction yet"]]);
@@ -854,6 +964,7 @@ function setParameterSummary(patch, result) {
     ["Cutoff", patch.cutoff],
     ["Res", patch.resonance],
     ["ADSR", `${displayParamValue(patch.attack)} / ${displayParamValue(patch.decay)} / ${displayParamValue(patch.sustain)} / ${displayParamValue(patch.release)}`],
+    ["Model", modelDisplayName(result.model)],
     ["Crop", `${formatSeconds(result.crop_start_seconds)} - ${formatSeconds(result.crop_end_seconds)}`],
   ]);
 }
@@ -863,6 +974,7 @@ function bindEvents() {
   for (const element of [els.backendUrl, els.modelPath, els.outputDir]) {
     element.addEventListener("change", saveSettings);
   }
+  els.modelPath.addEventListener("change", updateModelReadiness);
   els.dropZone.addEventListener("click", () => els.fileInput.click());
   els.dropZone.addEventListener("dragover", (event) => {
     event.preventDefault();
@@ -907,6 +1019,8 @@ function bindEvents() {
 
 function init() {
   applySettings();
+  updateModelReadiness();
+  updateAudioCropReadiness();
   bindEvents();
   resizeCanvas();
   setResultSummary({});
@@ -915,9 +1029,10 @@ function init() {
   applyNoteInput();
   const startupDiagnostic = desktopBackendDiagnostic();
   if (startupDiagnostic) {
-    setStatus("Backend issue", "error");
     setResponse({ desktop_backend: startupDiagnostic });
   }
+  startBackendHealthPolling();
+  updateActionAvailability();
 }
 
 init();
