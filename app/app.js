@@ -1,11 +1,16 @@
 const state = {
   audioBuffer: null,
   audioFileName: "",
+  sampleRate: 0,
   duration: 0,
   cropStart: 0,
   cropEnd: 0,
   dragMode: null,
   playbackSource: null,
+  playheadSeconds: null,
+  playheadAnimationFrame: null,
+  playbackStartedAt: 0,
+  playbackDuration: 0,
   audioContext: null,
   targetSpectrogram: null,
   predictedSpectrogram: null,
@@ -59,6 +64,8 @@ const SETTINGS_FIELDS = {
   modelPath: "models/v3.5_noise_detune_loss.pt",
   outputDir: "runs/app",
 };
+const MODEL_MEL_FRAMES = 256;
+const MODEL_HOP_LENGTH = 512;
 
 function setStatus(text, kind = "idle") {
   els.backendStatus.textContent = text;
@@ -200,6 +207,42 @@ function formatSeconds(value) {
   return Number(value || 0).toFixed(3);
 }
 
+function modelMaxCropSeconds(sampleRate = state.sampleRate) {
+  const rate = Number(sampleRate) || 44100;
+  return (MODEL_MEL_FRAMES * MODEL_HOP_LENGTH) / rate;
+}
+
+function cropLimitSeconds() {
+  if (!state.duration) return modelMaxCropSeconds();
+  return Math.min(state.duration, modelMaxCropSeconds());
+}
+
+function clampCropRange(start, end, anchor = "start") {
+  const minGap = Math.min(0.01, Math.max(0.001, state.duration / 100));
+  const maxDuration = cropLimitSeconds();
+  let nextStart = clamp(Number(start) || 0, 0, state.duration);
+  let nextEnd = clamp(Number(end) || 0, 0, state.duration);
+
+  if (nextEnd - nextStart > maxDuration) {
+    if (anchor === "end") {
+      nextStart = Math.max(0, nextEnd - maxDuration);
+    } else {
+      nextEnd = Math.min(state.duration, nextStart + maxDuration);
+    }
+  }
+  if (nextEnd <= nextStart) {
+    if (anchor === "end") {
+      nextStart = Math.max(0, nextEnd - minGap);
+    } else {
+      nextEnd = Math.min(state.duration, nextStart + minGap);
+    }
+  }
+  if (nextEnd - nextStart > maxDuration) {
+    nextEnd = Math.min(state.duration, nextStart + maxDuration);
+  }
+  return { start: nextStart, end: nextEnd };
+}
+
 function drawEmptyWaveform() {
   const rect = els.canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, rect.width, rect.height);
@@ -246,6 +289,7 @@ function drawWaveform() {
   ctx.stroke();
 
   drawCropOverlay(rect.width, rect.height);
+  drawPlayhead(rect.height);
 }
 
 function drawCropOverlay(width, height) {
@@ -268,6 +312,19 @@ function drawCropOverlay(width, height) {
   ctx.fillRect(endX - 4, 0, 8, height);
 }
 
+function drawPlayhead(height) {
+  if (state.playheadSeconds === null) return;
+  const visible = visibleRange();
+  if (state.playheadSeconds < visible.start || state.playheadSeconds > visible.end) return;
+  const x = secondsToX(state.playheadSeconds);
+  ctx.strokeStyle = "#f0b84b";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, 0);
+  ctx.lineTo(x, height);
+  ctx.stroke();
+}
+
 async function loadAudioFile(file) {
   const audioContext = ensureAudioContext();
   const buffer = await file.arrayBuffer();
@@ -278,13 +335,14 @@ async function loadAudioFile(file) {
 
   state.audioBuffer = decoded;
   state.audioFileName = file.name;
+  state.sampleRate = decoded.sampleRate;
   state.duration = decoded.duration;
   state.cropStart = 0;
-  state.cropEnd = decoded.duration;
+  state.cropEnd = cropLimitSeconds();
   state.zoomLevel = 1;
 
   els.fileName.textContent = file.name;
-  els.fileMeta.textContent = `${decoded.numberOfChannels} ch | ${decoded.sampleRate} Hz | ${formatSeconds(decoded.duration)} s`;
+  els.fileMeta.textContent = `${decoded.numberOfChannels} ch | ${decoded.sampleRate} Hz | ${formatSeconds(decoded.duration)} s | max ${formatSeconds(cropLimitSeconds())} s`;
   els.cropStart.value = formatSeconds(state.cropStart);
   els.cropEnd.value = formatSeconds(state.cropEnd);
   updateZoomDisplay();
@@ -339,8 +397,11 @@ function updateCropFromInputs() {
   if (end <= start) {
     return;
   }
-  state.cropStart = start;
-  state.cropEnd = end;
+  const anchor = document.activeElement === els.cropStart ? "end" : "start";
+  const cropped = clampCropRange(start, end, anchor);
+  state.cropStart = cropped.start;
+  state.cropEnd = cropped.end;
+  updateCropInputs();
   drawWaveform();
 }
 
@@ -372,14 +433,17 @@ function beginCropDrag(event) {
 function moveCropDrag(event) {
   if (!state.audioBuffer || !state.dragMode) return;
   const seconds = xToSeconds(canvasMouseX(event));
-  const minGap = Math.min(0.01, state.duration / 100);
 
   if (state.dragMode === "start") {
-    state.cropStart = clamp(seconds, 0, state.cropEnd - minGap);
+    const next = clampCropRange(seconds, state.cropEnd, "end");
+    state.cropStart = next.start;
+    state.cropEnd = next.end;
   } else if (state.dragMode === "end") {
-    state.cropEnd = clamp(seconds, state.cropStart + minGap, state.duration);
+    const next = clampCropRange(state.cropStart, seconds, "start");
+    state.cropStart = next.start;
+    state.cropEnd = next.end;
   } else if (state.dragMode === "region") {
-    const duration = state.dragDurationSeconds;
+    const duration = Math.min(state.dragDurationSeconds, cropLimitSeconds());
     let nextStart = seconds - state.dragOffsetSeconds;
     nextStart = clamp(nextStart, 0, state.duration - duration);
     state.cropStart = nextStart;
@@ -394,6 +458,10 @@ function endCropDrag() {
 }
 
 function stopPlayback() {
+  if (state.playheadAnimationFrame) {
+    cancelAnimationFrame(state.playheadAnimationFrame);
+    state.playheadAnimationFrame = null;
+  }
   if (state.playbackSource) {
     try {
       state.playbackSource.stop();
@@ -402,6 +470,22 @@ function stopPlayback() {
     }
     state.playbackSource = null;
   }
+  state.playheadSeconds = null;
+  drawWaveform();
+}
+
+function updatePlaybackPlayhead() {
+  if (!state.playbackSource || !state.audioContext) return;
+  const elapsed = state.audioContext.currentTime - state.playbackStartedAt;
+  if (elapsed >= state.playbackDuration) {
+    state.playheadSeconds = null;
+    state.playheadAnimationFrame = null;
+    drawWaveform();
+    return;
+  }
+  state.playheadSeconds = state.cropStart + elapsed;
+  drawWaveform();
+  state.playheadAnimationFrame = requestAnimationFrame(updatePlaybackPlayhead);
 }
 
 function playCrop() {
@@ -413,10 +497,23 @@ function playCrop() {
   source.buffer = state.audioBuffer;
   source.connect(audioContext.destination);
   source.onended = () => {
-    if (state.playbackSource === source) state.playbackSource = null;
+    if (state.playbackSource === source) {
+      state.playbackSource = null;
+      state.playheadSeconds = null;
+      if (state.playheadAnimationFrame) {
+        cancelAnimationFrame(state.playheadAnimationFrame);
+        state.playheadAnimationFrame = null;
+      }
+      drawWaveform();
+    }
   };
   state.playbackSource = source;
-  source.start(0, state.cropStart, Math.max(0.01, state.cropEnd - state.cropStart));
+  state.playbackDuration = Math.max(0.01, state.cropEnd - state.cropStart);
+  state.playbackStartedAt = audioContext.currentTime;
+  state.playheadSeconds = state.cropStart;
+  source.start(0, state.cropStart, state.playbackDuration);
+  drawWaveform();
+  state.playheadAnimationFrame = requestAnimationFrame(updatePlaybackPlayhead);
 }
 
 function stopResultPlayback() {
@@ -651,12 +748,15 @@ function predictPayload() {
   if (state.duration && Number.isFinite(cropEnd)) {
     cropEnd = Math.min(cropEnd, state.duration);
   }
+  const constrained = state.audioBuffer
+    ? clampCropRange(Number(els.cropStart.value), cropEnd, "start")
+    : { start: Number(els.cropStart.value), end: cropEnd };
   return {
     audio_path: els.backendAudioPath.value,
     model_path: els.modelPath.value,
     freq_hz: Number(els.freqHz.value),
-    crop_start_seconds: Number(els.cropStart.value),
-    crop_end_seconds: Number.isFinite(cropEnd) && cropEnd > 0 ? cropEnd : null,
+    crop_start_seconds: constrained.start,
+    crop_end_seconds: Number.isFinite(constrained.end) && constrained.end > 0 ? constrained.end : null,
     output_dir: els.outputDir.value,
     device: "cpu",
   };

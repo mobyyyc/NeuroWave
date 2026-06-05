@@ -342,6 +342,8 @@ Frontend prototype:
 - [x] Add crop start/end handles.
 - [x] Add crop zoom.
 - [x] Add crop playback.
+- [x] Cap crop selection to the current model input window.
+- [x] Add waveform playhead during crop playback.
 - [x] Add frequency input in Hz.
 - [x] Add note-name helper such as A4 -> 440 Hz.
 - [x] Add model path/default model selector.

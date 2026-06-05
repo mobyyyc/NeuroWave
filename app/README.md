@@ -55,6 +55,9 @@ Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.
 - The default UI is producer-facing: drag, crop, confirm pitch, predict, view params, save.
+- The crop region is capped to the current model window so users cannot select more audio
+  than the model input can represent.
+- Crop playback draws a vertical playhead over the waveform.
 - Advanced contains developer/runtime fields such as backend URL, model path, raw audio path, and output directory.
 - Advanced backend/model/output values persist locally after editing.
 - The backend still needs a filesystem `audio_path`; Electron imports dropped/selected
