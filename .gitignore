@@ -21,6 +21,8 @@ out/
 desktop/settings.local.json
 .electron-user-data/
 app-inputs/
+runtime/python/**
+!runtime/python/.gitkeep
 
 # Generated audio and experiment outputs
 *.wav

@@ -81,3 +81,6 @@ Current prototype notes:
 - Export buttons download the registered predicted JSON/WAV artifacts through the backend.
 - The Folder button asks the backend to open the registered run directory on Windows.
 - In Electron, dropped files can provide a filesystem path for the backend Audio Path field.
+
+For release packaging notes and the prepared Python runtime convention, see
+`../docs/WINDOWS_RELEASE.md`.

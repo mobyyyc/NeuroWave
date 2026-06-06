@@ -408,11 +408,12 @@ Desktop packaging:
 - [ ] Manually verify the packaged UI drag/drop, visual crop, preview, predict, export JSON,
   export WAV, and open-folder flow.
 - [x] Document Windows development package notes.
+- [x] Add a prepared Python runtime packaging hook under ignored `runtime/python/`.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
 - [x] Rebuild the standalone portable Windows `.exe` after first-release UX updates.
-- [ ] Document final Windows install/run notes.
+- [x] Document Windows release checklist and current install/run notes.
 
 Product UX polish:
 
@@ -501,7 +502,7 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Add installer packaging.
 - [ ] Add Windows code-signing investigation.
 - [ ] Add packaged app smoke test.
-- [ ] Add release checklist.
+- [x] Add release checklist.
 - [ ] Add update/changelog workflow.
 - [ ] Add `neurowave compare`.
 - [ ] Add `neurowave match`.
@@ -542,6 +543,13 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   `dist/win-unpacked/NeuroWave.exe`, rebuilt the standalone `dist/NeuroWave 0.1.0.exe`,
   verified backend `/health` and `/runtime`, and smoke-launched both desktop builds.
   Commit: `Add first release app UX`
+- Added an ignored `runtime/python/` convention for prepared Python/Torch release
+  runtimes, taught the desktop wrapper to prefer a bundled `resources/python-runtime`
+  interpreter before falling back to developer `.venv` paths, and documented the current
+  Windows release checklist in `docs/WINDOWS_RELEASE.md`. Verified `npm run package:win:dir`
+  still builds and the app still smoke-starts with `.venv` fallback when no prepared
+  runtime is supplied.
+  Commit: `Add Windows runtime packaging hook`
 
 ### 2026-05-27
 

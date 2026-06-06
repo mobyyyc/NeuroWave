@@ -53,6 +53,10 @@ function defaultPythonPath() {
   if (backendSettings.pythonPath) {
     return path.resolve(SETTINGS_BASE, backendSettings.pythonPath);
   }
+  const bundledRuntime = findFirstExistingPath(runtimePythonCandidates());
+  if (bundledRuntime) {
+    return bundledRuntime;
+  }
   if (!app.isPackaged && process.platform === "win32") {
     return path.join(APP_ROOT, ".venv", "Scripts", "python.exe");
   }
@@ -65,6 +69,16 @@ function defaultPythonPath() {
     }
   }
   return "python";
+}
+
+function runtimePythonCandidates() {
+  const runtimeRoots = app.isPackaged
+    ? [path.join(process.resourcesPath, "python-runtime")]
+    : [path.join(APP_ROOT, "runtime", "python")];
+  return runtimeRoots.flatMap((runtimeRoot) => [
+    path.join(runtimeRoot, "python.exe"),
+    path.join(runtimeRoot, "Scripts", "python.exe"),
+  ]);
 }
 
 function candidateBaseDirs() {

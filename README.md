@@ -356,6 +356,9 @@ avoids fragile browser file-path behavior in packaged builds. Optional
 The app also shows runtime readiness from `/runtime`, including CPU/CUDA availability,
 and remembers recent input files plus recent prediction runs in local app storage.
 
+See `docs/WINDOWS_RELEASE.md` for the Windows release checklist and the prepared
+runtime packaging convention.
+
 ## Legacy Scikit-Learn Baseline
 
 Train the old MLP baseline only when you need a quick pipeline sanity check:
