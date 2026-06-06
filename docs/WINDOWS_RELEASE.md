@@ -36,6 +36,34 @@ only appropriate for developer machines.
 Do not commit the prepared runtime. `runtime/python/` is ignored except for its
 placeholder file.
 
+Validate the current development virtual environment dependency shape:
+
+```powershell
+npm run runtime:check:dev
+```
+
+Validate the prepared runtime that will be bundled into the app:
+
+```powershell
+npm run runtime:check
+```
+
+First-release runtime preparation flow:
+
+```powershell
+py -3.14 -m venv --copies runtime\python
+runtime\python\Scripts\python.exe -m pip install -r requirements.txt
+runtime\python\Scripts\python.exe -m pip install -r requirements-cuda.txt
+npm run runtime:check
+npm run package:win:dir
+npm run package:smoke
+npm run package:smoke:predict
+```
+
+This produces a bundled runtime candidate, not proof that the app is clean-machine
+ready. Before shipping, test the packaged app on a Windows machine that does not rely on
+the project repo, project `.venv`, or developer Python installation.
+
 ## Build Commands
 
 Build the unpacked app:
@@ -66,6 +94,7 @@ npm run package:smoke:predict
 
 - `dist\win-unpacked\resources\models\v3.5_noise_detune_loss.pt` exists.
 - `dist\win-unpacked\resources\neurowave-python\scripts\app_backend.py` exists.
+- `npm run runtime:check` passes before packaging.
 - `npm run package:smoke` passes.
 - `npm run package:smoke:predict` passes when `playground\testpluck.wav` exists.
 - If shipping to non-developer machines, `dist\win-unpacked\resources\python-runtime\python.exe`
@@ -86,8 +115,8 @@ npm run package:smoke:predict
 
 ## Known Pre-Website Blockers
 
-- A fully prepared Python/Torch runtime still needs to be produced and tested on a clean
-  Windows machine.
+- A fully prepared Python/Torch runtime still needs to be produced, validated with
+  `npm run runtime:check`, packaged, and tested on a clean Windows machine.
 - Code signing has not been configured.
 - Installer packaging has not been configured; the current target is portable.
 - Manual packaged UI verification is still required after every release build.

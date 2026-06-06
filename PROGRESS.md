@@ -411,6 +411,7 @@ Desktop packaging:
   export WAV, and open-folder flow.
 - [x] Document Windows development package notes.
 - [x] Add a prepared Python runtime packaging hook under ignored `runtime/python/`.
+- [x] Add prepared Python runtime validation command.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
@@ -526,6 +527,11 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   spectrogram display, original/predicted compare-play, JSON/WAV export, and open-folder
   flow passed in the packaged app.
   Commit: `Record packaged UI verification`
+- Added a Windows runtime validator and npm commands for checking both the development
+  `.venv` dependency shape and the ignored `runtime/python/` candidate before packaging.
+  Documented the first-release runtime preparation flow and kept clean-machine runtime
+  readiness open until a real bundled runtime is produced and tested.
+  Commit: `Add Windows runtime validation command`
 
 ### 2026-06-05
 

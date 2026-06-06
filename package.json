@@ -12,7 +12,9 @@
     "package:smoke": "python scripts/smoke_desktop_package.py",
     "package:smoke:predict": "python scripts/smoke_desktop_package.py --audio playground/testpluck.wav",
     "package:win": "electron-builder --win portable --x64",
-    "package:win:dir": "electron-builder --win dir --x64"
+    "package:win:dir": "electron-builder --win dir --x64",
+    "runtime:check": "python scripts/validate_windows_runtime.py",
+    "runtime:check:dev": "python scripts/validate_windows_runtime.py --runtime-dir .venv"
   },
   "build": {
     "appId": "com.neurowave.app",
