@@ -7,6 +7,7 @@ import unittest
 import urllib.error
 import urllib.parse
 import urllib.request
+import wave
 
 from minisynth.app_inference import AppInferenceResult
 
@@ -20,6 +21,18 @@ def load_app_backend_module():
 
 
 app_backend = load_app_backend_module()
+
+
+def write_tiny_wav(path, sample_rate=8000):
+    frames = [0, 1200, 0, -1200] * 20
+    with wave.open(str(path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        frame_bytes = b"".join(
+            int(frame).to_bytes(2, "little", signed=True) for frame in frames
+        )
+        handle.writeframes(frame_bytes)
 
 
 class RunningBackend:
@@ -164,6 +177,86 @@ class TestAppBackend(unittest.TestCase):
         self.assertIn("python", payload)
         self.assertIn("device", payload)
         self.assertIn("cuda_available", payload)
+
+    def test_backend_smoke_flow_registers_prediction_artifacts(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_wav = root / "input.wav"
+            model = root / "model.pt"
+            run_dir = root / "run"
+            target_crop = run_dir / "target_crop.wav"
+            predicted_patch = run_dir / "predicted_patch.json"
+            predicted_wav = run_dir / "predicted.wav"
+            target_spectrogram = run_dir / "target_spectrogram.json"
+            predicted_spectrogram = run_dir / "predicted_spectrogram.json"
+            summary = run_dir / "summary.json"
+
+            write_tiny_wav(input_wav)
+            model.write_bytes(b"fake checkpoint")
+            run_dir.mkdir()
+            target_crop.write_bytes(input_wav.read_bytes())
+            predicted_patch.write_text('{"osc1_wave": "saw"}\n', encoding="utf-8")
+            predicted_wav.write_bytes(input_wav.read_bytes())
+            target_spectrogram.write_text("[]\n", encoding="utf-8")
+            predicted_spectrogram.write_text("[]\n", encoding="utf-8")
+            summary.write_text('{"status": "ok"}\n', encoding="utf-8")
+            opened = []
+
+            def fake_predict(payload):
+                self.assertEqual(Path(payload["audio_path"]), input_wav)
+                self.assertEqual(Path(payload["model_path"]), model)
+                self.assertEqual(payload["freq_hz"], 440)
+                return {
+                    "run_id": "backend_smoke",
+                    "run_dir": str(run_dir),
+                    "target_crop_wav": str(target_crop),
+                    "predicted_patch_json": str(predicted_patch),
+                    "predicted_wav": str(predicted_wav),
+                    "target_spectrogram": str(target_spectrogram),
+                    "predicted_spectrogram": str(predicted_spectrogram),
+                    "summary": str(summary),
+                }
+
+            with RunningBackend(fake_predict, open_folder_function=opened.append) as backend:
+                health_status, health = get_json(f"{backend.base_url}/health")
+                runtime_status, runtime = get_json(f"{backend.base_url}/runtime")
+                predict_status, prediction = post_json(
+                    f"{backend.base_url}/predict",
+                    {
+                        "audio_path": str(input_wav),
+                        "model_path": str(model),
+                        "freq_hz": 440,
+                        "crop_start_seconds": 0.0,
+                        "crop_end_seconds": 0.01,
+                    },
+                )
+                encoded_patch = urllib.parse.quote(str(predicted_patch), safe="")
+                encoded_wav = urllib.parse.quote(str(predicted_wav), safe="")
+                patch_status, _patch_headers, patch_body = get_bytes(
+                    f"{backend.base_url}/artifact?path={encoded_patch}"
+                )
+                wav_status, wav_headers, wav_body = get_bytes(
+                    f"{backend.base_url}/artifact?path={encoded_wav}"
+                )
+                folder_status, folder_payload = post_json(
+                    f"{backend.base_url}/open-folder",
+                    {"path": str(run_dir)},
+                )
+
+        self.assertEqual(health_status, 200)
+        self.assertEqual(health["status"], "ok")
+        self.assertEqual(runtime_status, 200)
+        self.assertIn("device", runtime)
+        self.assertEqual(predict_status, 200)
+        self.assertEqual(prediction["run_id"], "backend_smoke")
+        self.assertEqual(patch_status, 200)
+        self.assertEqual(json.loads(patch_body.decode("utf-8")), {"osc1_wave": "saw"})
+        self.assertEqual(wav_status, 200)
+        self.assertEqual(wav_headers["Content-Type"], "audio/wav")
+        self.assertTrue(wav_body.startswith(b"RIFF"))
+        self.assertEqual(folder_status, 200)
+        self.assertEqual(folder_payload["status"], "ok")
+        self.assertEqual(opened, [str(run_dir.resolve())])
 
     def test_predict_endpoint_returns_prediction_payload(self):
         def fake_predict(payload):

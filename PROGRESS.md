@@ -329,7 +329,7 @@ Local backend service:
 - [x] Add request validation.
 - [x] Add JSON response serialization.
 - [x] Add backend error handling for invalid audio, invalid crop, missing model, and inference failure.
-- [ ] Add backend smoke test using a tiny fixture or generated clip.
+- [x] Add backend smoke test using a tiny fixture or generated clip.
 - [x] Document local backend startup command.
 
 Frontend prototype:
@@ -513,6 +513,15 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-06-06
+
+- Added a backend smoke-flow test that creates a tiny WAV fixture, posts it through
+  `/predict`, verifies `/health` and `/runtime`, fetches registered JSON/WAV artifacts
+  through `/artifact`, and checks registered run-folder opening. Verified
+  `.\.venv\Scripts\python.exe -m unittest tests.test_app_backend` and
+  `.\.venv\Scripts\python.exe -m unittest discover -s tests`.
+  Commit: `Add backend smoke flow test`
 
 ### 2026-06-05
 
