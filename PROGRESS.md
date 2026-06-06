@@ -405,6 +405,8 @@ Desktop packaging:
 - [x] Verify the rebuilt unpacked Windows app starts the packaged backend, uses the bundled
   model checkpoint, predicts from a WAV, renders output audio, and writes a complete run
   under `%LOCALAPPDATA%\NeuroWave\Runs\`.
+- [x] Add automated packaged app smoke commands for backend/runtime readiness and optional
+  prediction artifact verification.
 - [ ] Manually verify the packaged UI drag/drop, visual crop, preview, predict, export JSON,
   export WAV, and open-folder flow.
 - [x] Document Windows development package notes.
@@ -501,7 +503,7 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Add versioned app releases.
 - [ ] Add installer packaging.
 - [ ] Add Windows code-signing investigation.
-- [ ] Add packaged app smoke test.
+- [x] Add packaged app smoke test.
 - [x] Add release checklist.
 - [ ] Add update/changelog workflow.
 - [ ] Add `neurowave compare`.
@@ -550,6 +552,12 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   still builds and the app still smoke-starts with `.venv` fallback when no prepared
   runtime is supplied.
   Commit: `Add Windows runtime packaging hook`
+- Added `npm run package:smoke` and `npm run package:smoke:predict` so the unpacked
+  packaged app can be checked for backend health, runtime readiness, and end-to-end
+  prediction artifacts. Verified both commands against the current `dist/win-unpacked`
+  app; the prediction smoke wrote outputs under
+  `%LOCALAPPDATA%\NeuroWave\Runs\desktop_package_smoke\`.
+  Commit: `Add packaged app smoke test`
 
 ### 2026-05-27
 

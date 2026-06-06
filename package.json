@@ -9,6 +9,8 @@
     "desktop": "electron .",
     "desktop:debug": "set NEUROWAVE_ELECTRON_DEVTOOLS=1&& electron .",
     "desktop:smoke": "set NEUROWAVE_ELECTRON_SMOKE=1&& electron .",
+    "package:smoke": "python scripts/smoke_desktop_package.py",
+    "package:smoke:predict": "python scripts/smoke_desktop_package.py --audio playground/testpluck.wav",
     "package:win": "electron-builder --win portable --x64",
     "package:win:dir": "electron-builder --win dir --x64"
   },

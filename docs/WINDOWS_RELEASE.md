@@ -50,10 +50,24 @@ Build the standalone portable executable:
 npm run package:win
 ```
 
+Smoke-test the unpacked app backend:
+
+```powershell
+npm run package:smoke
+```
+
+Smoke-test prediction with the local `playground\testpluck.wav` clip:
+
+```powershell
+npm run package:smoke:predict
+```
+
 ## Release Verification Checklist
 
 - `dist\win-unpacked\resources\models\v3.5_noise_detune_loss.pt` exists.
 - `dist\win-unpacked\resources\neurowave-python\scripts\app_backend.py` exists.
+- `npm run package:smoke` passes.
+- `npm run package:smoke:predict` passes when `playground\testpluck.wav` exists.
 - If shipping to non-developer machines, `dist\win-unpacked\resources\python-runtime\python.exe`
   or `dist\win-unpacked\resources\python-runtime\Scripts\python.exe` exists.
 - The app opens without a false backend error.
