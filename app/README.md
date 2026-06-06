@@ -1,6 +1,6 @@
-# NeuroWave App Prototype
+# NeuroWave App
 
-Dependency-free frontend prototype for the Windows-first desktop app workflow.
+Dependency-free frontend for the Windows-first desktop app workflow.
 
 Start the Python backend from the repo root:
 
@@ -32,24 +32,26 @@ The shell starts the Python backend automatically in development. It uses
 You can also copy `desktop/settings.example.json` to `desktop/settings.local.json`
 to set the development Python path, backend port, default model, and output folder.
 
-Create the first Windows development package:
+Create the Windows development package:
 
 ```powershell
 npm run package:win
 ```
 
 This writes an ignored portable `.exe` under `dist\`. The current package is a desktop
-wrapper for the app and backend source; it still expects Python dependencies and the
-model checkpoint to be available on the user's machine. A fully bundled consumer
-installer with embedded runtime/model belongs to the later product-hardening phase.
+wrapper for the app, backend source, and selected model checkpoint when
+`models\v3.5_noise_detune_loss.pt` exists at build time. It still expects Python/Torch
+dependencies to be available on the user's machine. A fully bundled consumer installer
+with embedded Python/Torch runtime belongs to the product-hardening phase.
 For packaged testing, place a `settings.local.json` beside the `.exe` if you need to
 override the Python executable, model path, or output folder.
 
-Packaged development builds search common repo/package locations for
-`.venv\Scripts\python.exe` and `models\v3.5_noise_detune_loss.pt`. For portable
-builds, optional `settings.local.json` is read beside the outer portable `.exe`,
-not the temporary extraction folder. Runtime app data is stored under
-`%LOCALAPPDATA%\NeuroWave\` by default:
+Packaged development builds first use the bundled checkpoint under
+`resources\models\v3.5_noise_detune_loss.pt` when present, then search common
+repo/package locations for `models\v3.5_noise_detune_loss.pt`. For portable builds,
+optional `settings.local.json` is read beside the outer portable `.exe`, not the
+temporary extraction folder. Runtime app data is stored under `%LOCALAPPDATA%\NeuroWave\`
+by default:
 
 - imported audio: `Inputs\`
 - prediction runs: `Runs\`
@@ -62,6 +64,10 @@ Current prototype notes:
 
 - Drag/drop loads audio into the browser for waveform, crop, and crop playback.
 - The default UI is producer-facing: drag, crop, confirm pitch, predict, view params, save.
+- Runtime, model, audio, and crop readiness are shown before prediction.
+- Recent files and recent prediction runs are remembered locally.
+- The runtime panel reports CPU/CUDA availability from the local backend.
+- The pitch field warns when note and Hz disagree.
 - The crop region is capped to the current model window so users cannot select more audio
   than the model input can represent.
 - Crop playback draws a vertical playhead over the waveform.

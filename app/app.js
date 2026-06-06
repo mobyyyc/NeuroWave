@@ -14,6 +14,7 @@ const state = {
   audioContext: null,
   backendReady: false,
   modelReady: null,
+  runtimeReady: null,
   predicting: false,
   targetSpectrogram: null,
   predictedSpectrogram: null,
@@ -27,12 +28,14 @@ const els = {
   modelReady: document.getElementById("modelReady"),
   audioReady: document.getElementById("audioReady"),
   cropReady: document.getElementById("cropReady"),
+  runtimeReady: document.getElementById("runtimeReady"),
   backendUrl: document.getElementById("backendUrl"),
   checkBackend: document.getElementById("checkBackend"),
   modelPath: document.getElementById("modelPath"),
   backendAudioPath: document.getElementById("backendAudioPath"),
   noteName: document.getElementById("noteName"),
   freqHz: document.getElementById("freqHz"),
+  freqHint: document.getElementById("freqHint"),
   cropStart: document.getElementById("cropStart"),
   cropEnd: document.getElementById("cropEnd"),
   zoomLevel: document.getElementById("zoomLevel"),
@@ -62,10 +65,15 @@ const els = {
   patchJson: document.getElementById("patchJson"),
   targetSpectrogramCanvas: document.getElementById("targetSpectrogramCanvas"),
   predictedSpectrogramCanvas: document.getElementById("predictedSpectrogramCanvas"),
+  recentFiles: document.getElementById("recentFiles"),
+  recentRuns: document.getElementById("recentRuns"),
 };
 
 const ctx = els.canvas.getContext("2d");
 const SETTINGS_KEY = "neurowave.appSettings.v1";
+const RECENT_FILES_KEY = "neurowave.recentFiles.v1";
+const RECENT_RUNS_KEY = "neurowave.recentRuns.v1";
+const MAX_RECENT_ITEMS = 5;
 const SETTINGS_FIELDS = {
   backendUrl: "http://127.0.0.1:8765",
   modelPath: "models/v3.5_noise_detune_loss.pt",
@@ -84,6 +92,11 @@ function setReadiness(element, kind, value) {
   element.className = `readiness-item status-${kind}`;
   const label = element.querySelector("strong");
   if (label) label.textContent = value;
+}
+
+function setHint(text, kind = "idle") {
+  els.freqHint.textContent = text;
+  els.freqHint.className = `field-hint status-${kind}`;
 }
 
 function backendBaseUrl() {
@@ -198,6 +211,52 @@ function saveSettings() {
   window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings()));
 }
 
+function readRecentItems(key) {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function writeRecentItems(key, items) {
+  window.localStorage.setItem(key, JSON.stringify(items.slice(0, MAX_RECENT_ITEMS)));
+}
+
+function addRecentItem(key, item) {
+  const label = String(item?.label || "").trim();
+  if (!label) return;
+  const existing = readRecentItems(key).filter((entry) => entry.label !== label);
+  writeRecentItems(key, [{ ...item, addedAt: new Date().toISOString() }, ...existing]);
+}
+
+function renderRecentList(element, items, emptyLabel) {
+  element.textContent = "";
+  if (!items.length) {
+    const empty = document.createElement("li");
+    empty.className = "history-empty";
+    empty.textContent = emptyLabel;
+    element.append(empty);
+    return;
+  }
+  for (const item of items.slice(0, MAX_RECENT_ITEMS)) {
+    const li = document.createElement("li");
+    const strong = document.createElement("strong");
+    const span = document.createElement("span");
+    strong.textContent = item.label || "Untitled";
+    span.textContent = item.detail || "";
+    li.title = item.path || item.detail || "";
+    li.append(strong, span);
+    element.append(li);
+  }
+}
+
+function renderRecentItems() {
+  renderRecentList(els.recentFiles, readRecentItems(RECENT_FILES_KEY), "No files yet");
+  renderRecentList(els.recentRuns, readRecentItems(RECENT_RUNS_KEY), "No runs yet");
+}
+
 function applySettings() {
   const stored = readStoredSettings();
   for (const [name, fallback] of Object.entries(SETTINGS_FIELDS)) {
@@ -275,6 +334,22 @@ function formatSeconds(value) {
   return Number(value || 0).toFixed(3);
 }
 
+function formatShortDate(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function cssColor(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
 function modelMaxCropSeconds(sampleRate = state.sampleRate) {
   const rate = Number(sampleRate) || 44100;
   return (MODEL_MEL_FRAMES * MODEL_HOP_LENGTH) / rate;
@@ -314,9 +389,9 @@ function clampCropRange(start, end, anchor = "start") {
 function drawEmptyWaveform() {
   const rect = els.canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, rect.width, rect.height);
-  ctx.fillStyle = "#0e1010";
+  ctx.fillStyle = cssColor("--canvas-bg", "#0e1010");
   ctx.fillRect(0, 0, rect.width, rect.height);
-  ctx.strokeStyle = "#2f3432";
+  ctx.strokeStyle = cssColor("--canvas-line", "#2f3432");
   ctx.beginPath();
   ctx.moveTo(0, rect.height / 2);
   ctx.lineTo(rect.width, rect.height / 2);
@@ -338,7 +413,7 @@ function drawWaveform() {
   const visibleSamples = Math.max(1, endSample - startSample);
   const samplesPerPixel = Math.max(1, Math.floor(visibleSamples / width));
 
-  ctx.strokeStyle = "#8fd3ff";
+  ctx.strokeStyle = cssColor("--wave", "#8fd3ff");
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = 0; x < width; x += 1) {
@@ -363,10 +438,10 @@ function drawWaveform() {
 function drawCropOverlay(width, height) {
   const startX = secondsToX(state.cropStart);
   const endX = secondsToX(state.cropEnd || state.duration);
-  ctx.fillStyle = "rgba(56, 193, 114, 0.18)";
+  ctx.fillStyle = cssColor("--crop", "rgba(56, 193, 114, 0.18)");
   ctx.fillRect(startX, 0, Math.max(1, endX - startX), height);
 
-  ctx.strokeStyle = "#7ee3a1";
+  ctx.strokeStyle = cssColor("--crop-line", "#7ee3a1");
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(startX, 0);
@@ -375,7 +450,7 @@ function drawCropOverlay(width, height) {
   ctx.lineTo(endX, height);
   ctx.stroke();
 
-  ctx.fillStyle = "#7ee3a1";
+  ctx.fillStyle = cssColor("--crop-line", "#7ee3a1");
   ctx.fillRect(startX - 4, 0, 8, height);
   ctx.fillRect(endX - 4, 0, 8, height);
 }
@@ -385,7 +460,7 @@ function drawPlayhead(height) {
   const visible = visibleRange();
   if (state.playheadSeconds < visible.start || state.playheadSeconds > visible.end) return;
   const x = secondsToX(state.playheadSeconds);
-  ctx.strokeStyle = "#f0b84b";
+  ctx.strokeStyle = cssColor("--warn", "#f0b84b");
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(x, 0);
@@ -425,6 +500,12 @@ async function loadAudioFile(file) {
     els.backendAudioPath.value = `playground/${file.name}`;
   }
   setArtifactStatus(importedPath ? "Audio ready" : "Audio loaded");
+  addRecentItem(RECENT_FILES_KEY, {
+    label: file.name,
+    detail: `${formatSeconds(decoded.duration)} s | ${decoded.sampleRate} Hz`,
+    path: importedPath || desktopPath || file.path || "",
+  });
+  renderRecentItems();
   updateAudioCropReadiness();
   drawWaveform();
 }
@@ -626,6 +707,27 @@ function applyNoteInput() {
   if (freq) {
     els.freqHz.value = freq.toFixed(2);
   }
+  updateFrequencyHint();
+}
+
+function updateFrequencyHint() {
+  const freq = Number(els.freqHz.value);
+  const noteFreq = noteToFrequency(els.noteName.value);
+  if (!Number.isFinite(freq) || freq <= 0) {
+    setHint("Frequency must be a positive Hz value", "error");
+    return false;
+  }
+  if (!noteFreq) {
+    setHint(`Pitch context: ${freq.toFixed(2)} Hz`, "idle");
+    return true;
+  }
+  const cents = 1200 * Math.log2(freq / noteFreq);
+  if (Math.abs(cents) > 25) {
+    setHint(`Note and Hz differ by ${Math.round(cents)} cents`, "busy");
+  } else {
+    setHint(`Pitch context: ${els.noteName.value.trim()} / ${freq.toFixed(2)} Hz`, "ok");
+  }
+  return true;
 }
 
 function clearSpectrogramCanvas(canvas) {
@@ -636,7 +738,7 @@ function clearSpectrogramCanvas(canvas) {
   const specCtx = canvas.getContext("2d");
   specCtx.setTransform(scale, 0, 0, scale, 0, 0);
   specCtx.clearRect(0, 0, rect.width, rect.height);
-  specCtx.fillStyle = "#0e1010";
+  specCtx.fillStyle = cssColor("--canvas-bg", "#0e1010");
   specCtx.fillRect(0, 0, rect.width, rect.height);
 }
 
@@ -813,6 +915,9 @@ async function checkBackend(options = {}) {
     state.backendReady = ready;
     setStatus(ready ? "Online" : "Backend", ready ? "ok" : "error");
     setReadiness(els.backendReady, ready ? "ok" : "error", ready ? "Ready" : "Error");
+    if (ready) {
+      loadRuntimeInfo();
+    }
     updateActionAvailability();
     return ready;
   } catch (error) {
@@ -827,6 +932,25 @@ async function checkBackend(options = {}) {
     }
     updateActionAvailability();
     return false;
+  }
+}
+
+async function loadRuntimeInfo() {
+  if (state.runtimeReady === "loading") return;
+  state.runtimeReady = "loading";
+  setReadiness(els.runtimeReady, "busy", "Checking");
+  try {
+    const response = await fetch(`${backendBaseUrl()}/runtime`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const label = payload.cuda_available && payload.cuda_device
+      ? `CUDA: ${payload.cuda_device}`
+      : String(payload.device || "cpu").toUpperCase();
+    state.runtimeReady = payload;
+    setReadiness(els.runtimeReady, "ok", label.length > 22 ? `${label.slice(0, 19)}...` : label);
+  } catch (_error) {
+    state.runtimeReady = null;
+    setReadiness(els.runtimeReady, "error", "Unknown");
   }
 }
 
@@ -894,6 +1018,12 @@ async function runPredict() {
     setStatus("Online", "ok");
     setReadiness(els.backendReady, "ok", "Ready");
     state.lastResult = responsePayload;
+    addRecentItem(RECENT_RUNS_KEY, {
+      label: responsePayload.run_id,
+      detail: formatShortDate(new Date().toISOString()),
+      path: responsePayload.run_dir,
+    });
+    renderRecentItems();
     setResponse(responsePayload);
     setResultSummary(responsePayload);
     try {
@@ -999,6 +1129,7 @@ function bindEvents() {
   els.fitCropZoom.addEventListener("click", fitZoomToCrop);
   els.resetZoom.addEventListener("click", resetZoom);
   els.noteName.addEventListener("change", applyNoteInput);
+  els.freqHz.addEventListener("input", updateFrequencyHint);
   els.playCrop.addEventListener("click", playCrop);
   els.stopPlayback.addEventListener("click", () => {
     stopPlayback();
@@ -1027,6 +1158,7 @@ function init() {
   clearArtifacts();
   updateZoomDisplay();
   applyNoteInput();
+  renderRecentItems();
   const startupDiagnostic = desktopBackendDiagnostic();
   if (startupDiagnostic) {
     setResponse({ desktop_backend: startupDiagnostic });

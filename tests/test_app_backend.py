@@ -156,6 +156,15 @@ class TestAppBackend(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "neurowave-app-backend")
 
+    def test_runtime_endpoint_reports_runtime_shape(self):
+        with RunningBackend(lambda _payload: {}) as backend:
+            status, payload = get_json(f"{backend.base_url}/runtime")
+
+        self.assertEqual(status, 200)
+        self.assertIn("python", payload)
+        self.assertIn("device", payload)
+        self.assertIn("cuda_available", payload)
+
     def test_predict_endpoint_returns_prediction_payload(self):
         def fake_predict(payload):
             return {

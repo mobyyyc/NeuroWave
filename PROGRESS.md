@@ -354,7 +354,7 @@ Frontend prototype:
 - [x] Display rendered predicted WAV player.
 - [x] Display target spectrogram.
 - [x] Display predicted spectrogram.
-- [x] Add A/B playback controls.
+- [x] Add original/predicted comparison playback controls.
 - [x] Add export predicted JSON button.
 - [x] Add export predicted WAV button.
 - [x] Add open run folder button.
@@ -411,20 +411,21 @@ Desktop packaging:
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
+- [x] Rebuild the standalone portable Windows `.exe` after first-release UX updates.
 - [ ] Document final Windows install/run notes.
 
 Product UX polish:
 
 - [x] Hide developer/runtime fields behind Advanced by default.
 - [x] Add first-release readiness states for backend, model, audio, and crop validity.
-- [ ] Add recent input files.
-- [ ] Add recent prediction runs.
+- [x] Add recent input files.
+- [x] Add recent prediction runs.
 - [x] Add app output folder setting.
 - [x] Add model/version display in prediction results.
-- [ ] Add CPU/CUDA runtime indicator.
-- [ ] Add warning when frequency is missing or likely wrong.
+- [x] Add CPU/CUDA runtime indicator.
+- [x] Add warning when frequency is missing or likely wrong.
 - [x] Add clear copy explaining best input: clean one-note clips.
-- [ ] Add limitations panel.
+- [x] Add limitations panel.
 - [x] Polish the first-release app shell with clean product styling, clear states, and
   interactive hover/focus feedback.
 - [ ] Add app screenshots for website use.
@@ -438,7 +439,7 @@ Acceptance checklist:
 - [x] The app produces predicted JSON and predicted WAV.
 - [x] The app produces target and predicted spectrogram artifacts.
 - [ ] The app displays target and predicted spectrograms in the packaged UI.
-- [ ] The app can A/B play target crop and prediction.
+- [ ] The app can compare-play original crop and prediction.
 - [x] The app saves a complete local run folder.
 - [x] The app handles invalid inputs without crashing.
 - [ ] Commit Milestone I completion.
@@ -455,7 +456,7 @@ Website planning:
 - [ ] Define product positioning.
 - [ ] Define first call to action: download, waitlist, or contact.
 - [ ] Gather app screenshots.
-- [ ] Gather A/B audio examples.
+- [ ] Gather audio comparison examples.
 - [ ] Gather spectrogram comparison images.
 
 Website build:
@@ -481,7 +482,7 @@ Website build:
 Website acceptance checklist:
 
 - [ ] First viewport clearly says what NeuroWave does.
-- [ ] Website shows at least one A/B audio example.
+- [ ] Website shows at least one audio comparison example.
 - [ ] Website shows the drag/crop/predict app flow.
 - [ ] Website explains Windows-first availability.
 - [ ] Website provides a download or waitlist/contact path.
@@ -535,6 +536,12 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   `predicted_patch.json`, `predicted.wav`, both spectrogram JSON files, and `summary.json`
   under `%LOCALAPPDATA%\NeuroWave\Runs\packaged_backend_testpluck_final\`.
   Commit: `Verify packaged app backend`
+- Added the remaining first-release app UX pieces: runtime CPU/CUDA indicator, separate
+  `/runtime` backend endpoint, pitch mismatch warning, recent files, recent runs, clearer
+  original/predicted compare labels, and a compact limitations panel. Rebuilt
+  `dist/win-unpacked/NeuroWave.exe`, rebuilt the standalone `dist/NeuroWave 0.1.0.exe`,
+  verified backend `/health` and `/runtime`, and smoke-launched both desktop builds.
+  Commit: `Add first release app UX`
 
 ### 2026-05-27
 

@@ -8,6 +8,7 @@ import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import platform
 import sys
 import threading
 import traceback
@@ -41,6 +42,30 @@ def health_response():
         "status": "ok",
         "service": "neurowave-app-backend",
     }
+
+
+def runtime_response():
+    payload = {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "torch": None,
+        "device": "cpu",
+        "cuda_available": False,
+        "cuda_device": None,
+    }
+    try:
+        import torch
+
+        payload["torch"] = torch.__version__
+        payload["cuda_available"] = bool(torch.cuda.is_available())
+        if payload["cuda_available"]:
+            payload["device"] = "cuda"
+            payload["cuda_device"] = torch.cuda.get_device_name(0)
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            payload["device"] = "mps"
+    except Exception as error:
+        payload["torch_error"] = str(error)
+    return payload
 
 
 def error_response(message, status=HTTPStatus.BAD_REQUEST, details=None):
@@ -144,6 +169,9 @@ class NeuroWaveBackendHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/health":
             self._send_json(health_response())
+            return
+        if parsed.path == "/runtime":
+            self._send_json(runtime_response())
             return
         if parsed.path == "/artifact":
             self._send_artifact(parsed)

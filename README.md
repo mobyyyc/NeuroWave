@@ -253,6 +253,12 @@ Check that it is alive:
 python -c "import requests; print(requests.get('http://127.0.0.1:8765/health').json())"
 ```
 
+Check local runtime details:
+
+```bash
+python -c "import requests; print(requests.get('http://127.0.0.1:8765/runtime').json())"
+```
+
 Prediction endpoint:
 
 ```text
@@ -271,8 +277,8 @@ Content-Type: application/json
 ```
 
 The website should come after the first usable desktop prototype and should publish the
-product story, screenshots, A/B examples, model limitations, and Windows download or
-waitlist flow.
+product story, screenshots, audio comparison examples, model limitations, and Windows
+download or waitlist flow.
 
 Run the static frontend prototype:
 
@@ -307,7 +313,7 @@ The Electron shell loads `app/index.html` in a desktop window and starts
 other than the project-local `.venv`.
 
 The default app surface is producer-facing: drag audio, crop, confirm pitch,
-predict, inspect parameters, A/B audio, and save JSON/WAV. Backend URL, model
+predict, inspect parameters, compare original/predicted audio, and save JSON/WAV. Backend URL, model
 path, raw audio path, output folder, and raw response JSON remain available only
 as advanced/developer controls during the prototype phase.
 
@@ -346,6 +352,9 @@ In the Electron app, dropped or selected audio is copied into the app data input
 folder before prediction. The Python backend receives that copied file path, which
 avoids fragile browser file-path behavior in packaged builds. Optional
 `settings.local.json` beside the packaged `.exe` can still override these paths.
+
+The app also shows runtime readiness from `/runtime`, including CPU/CUDA availability,
+and remembers recent input files plus recent prediction runs in local app storage.
 
 ## Legacy Scikit-Learn Baseline
 
