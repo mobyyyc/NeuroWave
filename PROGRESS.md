@@ -407,7 +407,7 @@ Desktop packaging:
   under `%LOCALAPPDATA%\NeuroWave\Runs\`.
 - [x] Add automated packaged app smoke commands for backend/runtime readiness and optional
   prediction artifact verification.
-- [ ] Manually verify the packaged UI drag/drop, visual crop, preview, predict, export JSON,
+- [x] Manually verify the packaged UI drag/drop, visual crop, preview, predict, export JSON,
   export WAV, and open-folder flow.
 - [x] Document Windows development package notes.
 - [x] Add a prepared Python runtime packaging hook under ignored `runtime/python/`.
@@ -435,14 +435,14 @@ Product UX polish:
 
 Acceptance checklist:
 
-- [ ] A user can drag a WAV into the app.
-- [ ] A user can crop the one-note region visually.
-- [ ] A user can preview the crop.
-- [ ] A user can enter frequency and run prediction.
+- [x] A user can drag a WAV into the app.
+- [x] A user can crop the one-note region visually.
+- [x] A user can preview the crop.
+- [x] A user can enter frequency and run prediction.
 - [x] The app produces predicted JSON and predicted WAV.
 - [x] The app produces target and predicted spectrogram artifacts.
-- [ ] The app displays target and predicted spectrograms in the packaged UI.
-- [ ] The app can compare-play original crop and prediction.
+- [x] The app displays target and predicted spectrograms in the packaged UI.
+- [x] The app can compare-play original crop and prediction.
 - [x] The app saves a complete local run folder.
 - [x] The app handles invalid inputs without crashing.
 - [ ] Commit Milestone I completion.
@@ -522,6 +522,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   `.\.venv\Scripts\python.exe -m unittest tests.test_app_backend` and
   `.\.venv\Scripts\python.exe -m unittest discover -s tests`.
   Commit: `Add backend smoke flow test`
+- Recorded manual packaged UI verification after the drag/drop, crop, preview, predict,
+  spectrogram display, original/predicted compare-play, JSON/WAV export, and open-folder
+  flow passed in the packaged app.
+  Commit: `Record packaged UI verification`
 
 ### 2026-06-05
 
