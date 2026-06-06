@@ -402,7 +402,11 @@ Desktop packaging:
   `/health` while running.
 - [x] Store packaged app inputs, prediction runs, and backend logs under
   `%LOCALAPPDATA%\NeuroWave\` by default.
-- [ ] Verify the packaged build can import a WAV, crop, predict, render, and export outputs.
+- [x] Verify the rebuilt unpacked Windows app starts the packaged backend, uses the bundled
+  model checkpoint, predicts from a WAV, renders output audio, and writes a complete run
+  under `%LOCALAPPDATA%\NeuroWave\Runs\`.
+- [ ] Manually verify the packaged UI drag/drop, visual crop, preview, predict, export JSON,
+  export WAV, and open-folder flow.
 - [x] Document Windows development package notes.
 - [ ] Bundle or provision a stable Python runtime for non-developer machines.
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
@@ -432,7 +436,8 @@ Acceptance checklist:
 - [ ] A user can preview the crop.
 - [ ] A user can enter frequency and run prediction.
 - [x] The app produces predicted JSON and predicted WAV.
-- [ ] The app displays target and predicted spectrograms.
+- [x] The app produces target and predicted spectrogram artifacts.
+- [ ] The app displays target and predicted spectrograms in the packaged UI.
 - [ ] The app can A/B play target crop and prediction.
 - [x] The app saves a complete local run folder.
 - [x] The app handles invalid inputs without crashing.
@@ -523,6 +528,13 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   blocked both localhost and file URLs by policy. The packaged end-to-end WAV import,
   crop, predict, render, and export checklist item remains open.
   Commit: `Finalize desktop app UX`
+- Rebuilt the unpacked Windows app with `npm run package:win:dir`, confirmed the bundled
+  checkpoint exists under `dist/win-unpacked/resources/models/`, smoke-launched
+  `dist/win-unpacked/NeuroWave.exe`, verified `/health`, and posted a packaged-backend
+  prediction request using `playground/testpluck.wav`. The run produced `target_crop.wav`,
+  `predicted_patch.json`, `predicted.wav`, both spectrogram JSON files, and `summary.json`
+  under `%LOCALAPPDATA%\NeuroWave\Runs\packaged_backend_testpluck_final\`.
+  Commit: `Verify packaged app backend`
 
 ### 2026-05-27
 
