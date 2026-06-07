@@ -412,7 +412,9 @@ Desktop packaging:
 - [x] Document Windows development package notes.
 - [x] Add a prepared Python runtime packaging hook under ignored `runtime/python/`.
 - [x] Add prepared Python runtime validation command.
-- [ ] Bundle or provision a stable Python runtime for non-developer machines.
+- [x] Bundle or provision a stable Python runtime for non-developer machines.
+- [ ] Test the packaged app on a clean Windows machine without the repo, project `.venv`,
+  or developer Python installation.
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
 - [x] Rebuild the standalone portable Windows `.exe` after first-release UX updates.
@@ -532,6 +534,12 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   Documented the first-release runtime preparation flow and kept clean-machine runtime
   readiness open until a real bundled runtime is produced and tested.
   Commit: `Add Windows runtime validation command`
+- Added a repeatable `npm run runtime:prepare` flow that stages the active Python 3.14
+  runtime and working dependency set into ignored `runtime/python/`, filters stale venv
+  markers out of packaged `resources/python-runtime/`, rebuilt `dist/win-unpacked`, and
+  verified packaged backend health plus prediction smoke against the bundled runtime.
+  Clean-machine verification remains the next external release gate.
+  Commit: `Prepare bundled Windows runtime`
 
 ### 2026-06-05
 

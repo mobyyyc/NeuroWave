@@ -51,16 +51,20 @@ npm run runtime:check
 First-release runtime preparation flow:
 
 ```powershell
-py -3.14 -m venv --copies runtime\python
-runtime\python\Scripts\python.exe -m pip install -r requirements.txt
-runtime\python\Scripts\python.exe -m pip install -r requirements-cuda.txt
+npm run runtime:prepare
 npm run runtime:check
 npm run package:win:dir
 npm run package:smoke
 npm run package:smoke:predict
 ```
 
-This produces a bundled runtime candidate, not proof that the app is clean-machine
+`runtime:prepare` copies the active Python install and the current working
+`site-packages` set into ignored `runtime/python/`. This is intentionally a release
+candidate staging command, not a source-controlled dependency lock. The package step
+excludes venv marker files such as `pyvenv.cfg` from `resources/python-runtime/`.
+Re-run `runtime:check` after preparing it.
+
+This produces a bundled runtime candidate, not final proof that the app is clean-machine
 ready. Before shipping, test the packaged app on a Windows machine that does not rely on
 the project repo, project `.venv`, or developer Python installation.
 
@@ -115,8 +119,9 @@ npm run package:smoke:predict
 
 ## Known Pre-Website Blockers
 
-- A fully prepared Python/Torch runtime still needs to be produced, validated with
-  `npm run runtime:check`, packaged, and tested on a clean Windows machine.
+- The bundled runtime has been prepared and smoke-tested on the development machine, but
+  the packaged app still needs a clean Windows machine test that does not rely on the
+  project repo, project `.venv`, or developer Python installation.
 - Code signing has not been configured.
 - Installer packaging has not been configured; the current target is portable.
 - Manual packaged UI verification is still required after every release build.
