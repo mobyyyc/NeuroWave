@@ -288,11 +288,12 @@ label {
   color: var(--error);
 }
 
-.advanced-panel {
+.advanced-panel,
+.info-panel {
   margin: 14px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  padding: 10px 0 2px;
+  padding: 0;
 }
 
 .advanced-panel summary,
@@ -300,6 +301,8 @@ label {
   color: var(--muted);
   cursor: pointer;
   font-size: 12px;
+  line-height: 1;
+  padding: 12px 0;
   text-transform: uppercase;
   transition: color var(--fast);
 }
@@ -309,14 +312,8 @@ label {
   color: var(--text);
 }
 
-.info-panel {
-  margin: 14px 0;
-  border-top: 1px solid var(--line);
-  padding: 10px 0 0;
-}
-
 .info-panel ul {
-  margin: 10px 0 0;
+  margin: 2px 0 12px;
   padding-left: 18px;
   color: var(--muted);
   font-size: 12px;
@@ -327,7 +324,7 @@ label {
 }
 
 .advanced-panel[open] summary {
-  margin-bottom: 14px;
+  margin-bottom: 2px;
 }
 
 .advanced-panel:not([open]) > :not(summary) {
