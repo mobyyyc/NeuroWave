@@ -89,7 +89,8 @@ function setStatus(text, kind = "idle") {
 
 function setReadiness(element, kind, value) {
   if (!element) return;
-  element.className = `readiness-item status-${kind}`;
+  const isWide = element.classList.contains("readiness-wide");
+  element.className = `readiness-item status-${kind}${isWide ? " readiness-wide" : ""}`;
   const label = element.querySelector("strong");
   if (label) label.textContent = value;
 }
