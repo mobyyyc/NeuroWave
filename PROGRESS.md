@@ -459,7 +459,7 @@ local-processing privacy copy, and a verified Windows release/download path.
 Website planning:
 
 - [x] Create Impeccable brand and seed design context in `PRODUCT.md` and `DESIGN.md`.
-- [ ] Confirm Next.js App Router as the dedicated `website/` project stack.
+- [x] Confirm Next.js App Router as the dedicated `website/` project stack.
 - [x] Choose Vercel as hosting target.
 - [ ] Define the one-sentence product promise and approved limitations copy.
 - [ ] Define release-state CTA behavior: waitlist/contact before public release, versioned
@@ -472,10 +472,11 @@ Website planning:
 
 Website build:
 
-- [ ] Create isolated `website/` Next.js project without changing Electron/Python tooling.
-- [ ] Add the shared app shell, responsive navigation, dark-first design tokens, and
+- [x] Create isolated `website/` Next.js project without changing Electron/Python tooling.
+- [x] Add the shared app shell, responsive navigation, near-monochrome design tokens, and
   accessible focus states.
-- [ ] Add Home page with product promise, local-processing explanation, screenshots, and CTA.
+- [x] Add Home page shell with product promise, local-processing explanation, release-status
+  CTA, and an evidence-style signal-to-patch illustration.
 - [ ] Add How It Works page for import -> crop -> pitch -> predict -> compare.
 - [ ] Add Examples page with accessible audio players and spectrogram pairs.
 - [ ] Add Download page with release status, Windows requirements, installer steps, and
@@ -534,6 +535,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added Impeccable brand and seed design context for the website: a modern, precise,
   near-monochrome system with EB Garamond display typography, purposeful reduced-motion-safe
   animation, and explicit bans on neon/cyberpunk and generic AI-SaaS styling.
+- Scaffolded the isolated `website/` Next.js App Router project, self-hosted the EB Garamond
+  and Manrope font packages, built the responsive Home shell, and refreshed the Impeccable
+  design context with implemented tokens and component rules. Verified lint, static build,
+  desktop rendering, mobile rendering, and no mobile horizontal overflow.
 
 ### 2026-07-13
 

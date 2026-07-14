@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-14T00:00:00-04:00",
+  "title": "Design System: NeuroWave Website",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Paper Light", "canonical": "oklch(96.8% 0.006 92)", "tonalRamp": ["#191916", "#35342f", "#5f5e59", "#85827a", "#a7a49b", "#cfcdc4", "#ebe9e2", "#f6f5f1"] },
+      "ink": { "role": "primary", "displayName": "Instrument Ink", "canonical": "oklch(20% 0.005 92)", "tonalRamp": ["#171716", "#302f2c", "#4a4944", "#65635d", "#828078", "#a09d94", "#c0bdb3", "#dfdcd2"] },
+      "signal": { "role": "secondary", "displayName": "Signal Green", "canonical": "oklch(40% 0.04 173)", "tonalRamp": ["#1d2a27", "#2c3f3a", "#3a504a", "#46605a", "#59756e", "#73928a", "#9cb6af", "#cbdad5"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Crafted Display", "purpose": "Hero and decisive release statements only." },
+      "body": { "displayName": "Precise Interface Sans", "purpose": "All explanation, navigation, and controls." }
+    },
+    "shadows": [
+      { "name": "patch-offset", "value": "12px 12px 0 rgb(23 23 22 / 0.07)", "purpose": "Separates the generated patch from the signal illustration." }
+    ],
+    "motion": [
+      { "name": "reveal", "value": "850ms cubic-bezier(.16, 1, .3, 1)", "purpose": "Initial section reveal, removed under reduced-motion preferences." },
+      { "name": "action", "value": "220ms ease-out", "purpose": "Button and link state feedback." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The direct, release-state action used once per content moment.",
+      "html": "<button class=\"ds-btn-primary\">Windows release status <svg viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><path d=\"M3 13 13 3M6 3h7v7\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:10px;padding:14px 17px;border:0;border-radius:0;background:#171716;color:#f6f5f1;font:700 .73rem 'Manrope Variable',Arial,sans-serif;letter-spacing:.01em;transition:background 220ms ease-out,transform 220ms ease-out}.ds-btn-primary svg{width:15px;height:15px}.ds-btn-primary:hover{background:#46605a;transform:translateY(-2px)}.ds-btn-primary:focus-visible{outline:2px solid #46605a;outline-offset:4px}"
+    },
+    {
+      "name": "Signal Patch",
+      "kind": "custom",
+      "refersTo": "signal-patch",
+      "description": "A compact generated-patch object that proves editable output without becoming a dashboard.",
+      "html": "<div class=\"ds-patch\"><span>osc</span><b>triangle</b><span>filter</span><b>1.8 kHz</b><span>envelope</span><b>short decay</b></div>",
+      "css": ".ds-patch{display:grid;grid-template-columns:100px 1fr;gap:11px 24px;padding:28px 31px;border:1px solid #cfcdc4;background:#f6f5f1;box-shadow:12px 12px 0 rgb(23 23 22 / .07);font:400 .78rem 'Manrope Variable',Arial,sans-serif}.ds-patch span{color:#5f5e59}.ds-patch b{font-weight:700}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Instrument Manual",
+    "overview": "A light, near-monochrome brand surface built around proof, not spectacle. It uses real product evidence, exact typography, and choreographed but optional motion to make the audio-to-patch workflow legible.",
+    "keyCharacteristics": ["Warm paper and instrument ink, never pure black and white.", "Crafted display type with a precise interface sans.", "Flat structure and fine rules rather than decorative panels.", "Release state is always honest and explicit."],
+    "rules": [
+      { "name": "Evidence Rule", "body": "Signal Green clarifies a transformation or action and never competes with product evidence.", "section": "colors" },
+      { "name": "Flat-By-Default Rule", "body": "Elevation appears only when an object must separate from an illustration or respond to interaction.", "section": "elevation" }
+    ],
+    "dos": ["Do use real app screenshots, spectrograms, and approved audio examples.", "Do preserve reduced-motion alternatives for every choreographed reveal."],
+    "donts": ["Don't use neon, cyberpunk, sci-fi control-room, or glowing-grid aesthetics.", "Don't use generic AI SaaS cards, oversized metrics, or empty claims.", "Don't add complicated decorative elements, dense dashboards, glassmorphism, or gradient text."]
+  }
+}
