@@ -453,38 +453,44 @@ Acceptance checklist:
 
 ## Milestone J: Product Website
 
-Goal: publish NeuroWave as a product with a clear landing page, examples, and a Windows
-download or waitlist flow.
+Goal: publish a Vercel-hosted, static-first NeuroWave product site with honest examples,
+local-processing privacy copy, and a verified Windows release/download path.
 
 Website planning:
 
-- [ ] Choose website stack: Next.js, static HTML, or another lightweight framework.
-- [ ] Choose hosting target.
-- [ ] Define product positioning.
-- [ ] Define first call to action: download, waitlist, or contact.
-- [ ] Gather app screenshots.
-- [ ] Gather audio comparison examples.
-- [ ] Gather spectrogram comparison images.
+- [ ] Confirm Next.js App Router as the dedicated `website/` project stack.
+- [x] Choose Vercel as hosting target.
+- [ ] Define the one-sentence product promise and approved limitations copy.
+- [ ] Define release-state CTA behavior: waitlist/contact before public release, versioned
+  GitHub Release download after artifact publication.
+- [ ] Capture approved app screenshots: ready/import, crop, prediction, and comparison.
+- [ ] Gather publishable target/predicted audio A/B examples with source notes.
+- [ ] Gather matching spectrogram comparison images and model/version labels.
+- [ ] Choose low-maintenance initial contact path (`mailto:` or external form) and document
+  privacy/spam ownership before collecting user data.
 
 Website build:
 
-- [ ] Create website app or docs site directory.
-- [ ] Add Home page.
-- [ ] Add How It Works page.
-- [ ] Add Examples page.
-- [ ] Add Download page.
-- [ ] Add Changelog page.
-- [ ] Add responsive layout.
-- [ ] Add audio players for examples.
-- [ ] Add product screenshots.
-- [ ] Add model/version labels for examples.
-- [ ] Add known limitations copy.
-- [ ] Add Windows requirements copy.
-- [ ] Add privacy note explaining audio is processed locally in the desktop app.
-- [ ] Add contact or waitlist form/link.
-- [ ] Add basic SEO metadata.
-- [ ] Add website build/test command.
-- [ ] Deploy first website version.
+- [ ] Create isolated `website/` Next.js project without changing Electron/Python tooling.
+- [ ] Add the shared app shell, responsive navigation, dark-first design tokens, and
+  accessible focus states.
+- [ ] Add Home page with product promise, local-processing explanation, screenshots, and CTA.
+- [ ] Add How It Works page for import -> crop -> pitch -> predict -> compare.
+- [ ] Add Examples page with accessible audio players and spectrogram pairs.
+- [ ] Add Download page with release status, Windows requirements, installer steps, and
+  accurate model limitations.
+- [ ] Add Changelog page linked to model/app versions and GitHub Releases.
+- [ ] Add model/version labels and usage/source notes for every public example.
+- [ ] Add privacy note stating that website and desktop inference do not upload user audio.
+- [ ] Add configured contact/waitlist link without collecting data until ownership is defined.
+- [ ] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
+- [ ] Add lint, type-check, static build, and local preview commands.
+- [ ] Link the Vercel project with `website/` as its root and verify preview deployments.
+- [ ] Verify responsive layout, keyboard navigation, audio controls, links, and metadata on
+  the Vercel preview.
+- [ ] Deploy the reviewed `main` build to Vercel production.
+- [ ] Publish desktop artifacts to GitHub Releases and update the site to the verified
+  versioned download URL.
 
 Website acceptance checklist:
 
@@ -492,7 +498,7 @@ Website acceptance checklist:
 - [ ] Website shows at least one audio comparison example.
 - [ ] Website shows the drag/crop/predict app flow.
 - [ ] Website explains Windows-first availability.
-- [ ] Website provides a download or waitlist/contact path.
+- [ ] Website provides an accurate release-state CTA and a verified download or contact path.
 - [ ] Commit Milestone J completion.
 
 ## Milestone K: Product Hardening
@@ -517,6 +523,13 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-07-14
+
+- Expanded Milestone J into a Vercel-ready website and release plan: a dedicated static-first
+  Next.js site, Vercel preview/production deployment flow, GitHub Releases for the large
+  Windows payload, release-state CTA rules, content ownership requirements, and explicit
+  accessibility/verification gates before launch.
 
 ### 2026-07-13
 

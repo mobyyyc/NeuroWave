@@ -964,39 +964,81 @@ Acceptance criteria for the first desktop prototype:
 
 ### Milestone J: Product Website
 
-Goal: publish a website for NeuroWave that explains the product, shows examples, and gives
-users a place to download or request the desktop app.
+Goal: publish a fast, trustworthy NeuroWave product website that explains the Windows desktop
+app, demonstrates results honestly, and gives users a clear release/download path.
 
-The website should be a simple product site first, not an online inference product. Browser
-inference can wait until model size, packaging, and rights around user audio are understood.
+The website is a static-first product site, not an online inference product. User audio is
+processed locally by the desktop app; browser inference, uploads, accounts, and a database
+are explicitly out of scope for v1.
 
-Recommended website architecture:
+#### Architecture and Distribution Decisions
 
-- Framework: Next.js or a simple static site.
-- Hosting target: Vercel or another static-friendly host.
-- First content:
-  - product name and one-sentence promise,
-  - short demo video or audio A/B examples,
-  - screenshots of drag/drop, crop, prediction, and comparison views,
-  - explanation that the first app is Windows desktop,
-  - model limitations,
-  - download/waitlist/contact section.
+- Hosting: Vercel, connected to the GitHub repository.
+- Deployment model: Vercel previews for branch/PR changes and production from `main` after
+  preview review.
+- Site structure: a dedicated `website/` Next.js App Router project so website dependencies
+  and build scripts do not affect the Electron/Python root project.
+- Rendering: static-first pages with no server-side data dependency for v1.
+- Desktop distribution: GitHub Releases hosts the NSIS web bootstrapper, versioned payload,
+  and `latest.yml`; Vercel only hosts the website and links to the release.
+- Release CTA: show an honest Windows release-status call to action until a public GitHub
+  Release is ready; switch to the versioned download link only after the release artifacts
+  are published and verified.
+- Contact/waitlist: begin with a low-maintenance external link or `mailto:` link. Add a
+  hosted form only after privacy, spam handling, and data-retention requirements are chosen.
 
-Website pages:
+#### Information Architecture
 
-- Home: product value, screenshots, short demo, download/waitlist.
-- How It Works: audio clip -> crop -> model predicts synth params -> render and compare.
-- Examples: target clips, predicted clips, spectrogram comparisons, model version labels.
-- Download: Windows build, install notes, GPU/CPU notes, known limitations.
-- Changelog: model/app versions and benchmark highlights.
+- Home: one-sentence promise, Windows-first status, primary CTA, product screenshots, and
+  a short explanation of local processing.
+- How It Works: clean one-note clip -> crop -> confirm pitch -> predict editable synth
+  parameters -> render and compare.
+- Examples: target/predicted audio A/B controls, spectrogram pairs, source/usage rights,
+  model version, and limitations for each example.
+- Download: current release status, Windows installer instructions, CPU/GPU notes, release
+  version, checksum/release-link handoff, and known limitations.
+- Changelog: concise app/model release entries linked to GitHub Releases and benchmark notes.
 
-Website acceptance criteria:
+#### Content and Trust Requirements
 
-- The first viewport clearly communicates NeuroWave as an audio-to-synth-parameter app.
-- The website includes at least one real A/B example.
-- It includes a Windows download or waitlist/contact flow.
-- It documents that results depend on clean one-note clips and correct pitch/frequency.
-- It links to model/app version notes so users understand limitations.
+- Capture app screenshots for four states: ready/import, crop selection, completed
+  prediction, and audio/spectrogram comparison.
+- Use only audio, images, and screenshots that NeuroWave may publish; retain a short source
+  note for every example.
+- Present `v3.5_noise_detune_loss` wherever the current model is demonstrated.
+- State that results are strongest for clean, single-note clips with correct frequency.
+- State that audio is processed locally, not uploaded by the website or desktop app.
+- Do not claim general instrument recreation, cloud inference, or a signed installer until
+  those capabilities exist.
+
+#### Build and Deployment Sequence
+
+1. Confirm the site stack and visual direction, then scaffold `website/` with Next.js.
+2. Build the shared shell, typography, metadata, responsive navigation, and an accessible
+   dark-first visual system aligned with the desktop app.
+3. Implement Home and How It Works using real product language and screenshot placeholders.
+4. Add Examples only after approved A/B audio and spectrogram assets are available.
+5. Add Download and Changelog with a release-status configuration so the CTA can move from
+   waitlist/contact to a versioned GitHub Release link without redesigning the site.
+6. Add static build, lint/type-check, and local preview commands.
+7. Create/link the Vercel project with `website/` as its root directory; do not add runtime
+   secrets unless a future form or analytics feature needs them.
+8. Verify every preview on desktop and mobile, test audio controls and download links, then
+   deploy `main` to production.
+9. When the first public desktop release is ready, publish the GitHub Release artifacts
+   together and update the website's release version/link in a reviewed deployment.
+
+#### Website Acceptance Criteria
+
+- The first viewport clearly explains NeuroWave as an audio-to-editable-synth-parameter app.
+- The site is responsive, keyboard accessible, and has working metadata/social previews.
+- The site includes at least one approved A/B example plus a spectrogram comparison.
+- The flow visibly demonstrates import, crop, predict, and compare.
+- The Download page explains Windows-first availability, installation requirements, and
+  model limitations without making unsupported claims.
+- The primary CTA accurately reflects release state and links only to a verified GitHub
+  Release when downloads are public.
+- Preview and production Vercel deployments build successfully from the `website/` project.
 
 ### Milestone K: Product Hardening
 

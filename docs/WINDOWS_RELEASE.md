@@ -146,5 +146,7 @@ npm run package:smoke:predict
 - The release bootstrapper, payload, and `latest.yml` must be uploaded together to the
   configured GitHub Release before an online install can succeed. Keep the generated
   payload beside the bootstrapper when testing offline or in Windows Sandbox.
+- The future Vercel website Download page must link only to a verified public GitHub Release;
+  Vercel is not the distribution host for the multi-gigabyte installer payload.
 - Code signing has not been configured.
 - Manual packaged UI verification is still required after every release build.

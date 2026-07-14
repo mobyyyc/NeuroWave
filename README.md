@@ -276,9 +276,22 @@ Content-Type: application/json
 }
 ```
 
-The website should come after the first usable desktop prototype and should publish the
-product story, screenshots, audio comparison examples, model limitations, and Windows
-download or waitlist flow.
+## Product Website Plan
+
+The product website will live in a dedicated `website/` Next.js project and deploy to
+Vercel. It is a static-first marketing and documentation site: the desktop app continues to
+process audio locally, and v1 does not accept audio uploads, run browser inference, or
+require accounts.
+
+Vercel will host the website only. The large Windows NSIS web-installer bootstrapper,
+versioned payload, and `latest.yml` metadata are published together to GitHub Releases; the
+website Download page links to that verified release. Before a public release exists, the
+primary CTA must clearly communicate the release state instead of exposing a dead download.
+
+The first website content will be the product story, four app screenshots, approved audio
+A/B examples with spectrogram comparisons, `v3.5_noise_detune_loss` labels, Windows-first
+requirements, local-processing privacy copy, and known limitations. See `PLAN.md` and
+`PROGRESS.md` for the detailed website and Vercel rollout sequence.
 
 Run the static frontend prototype:
 
