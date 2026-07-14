@@ -69,6 +69,21 @@ export default function Home() {
         <p>Local processing</p><span aria-hidden="true">/</span><p>Windows desktop</p><span aria-hidden="true">/</span><p>Editable results</p>
       </section>
 
+      <section className="fit-section" aria-labelledby="fit-heading">
+        <div className="fit-intro reveal">
+          <p className="eyebrow">A focused starting point</p>
+          <h2 id="fit-heading">Built for one clear note.</h2>
+        </div>
+        <div className="fit-notes">
+          <p className="fit-lead reveal reveal-one">NeuroWave is most useful when there is one sound worth studying, not a whole mix to untangle.</p>
+          <dl className="fit-list">
+            <div className="reveal reveal-one"><dt>Bring</dt><dd>A short, clean single-note WAV with the character you want to explore.</dd></div>
+            <div className="reveal reveal-two"><dt>Confirm</dt><dd>The pitch, so the model can attend to the sound’s shape rather than guess its musical context.</dd></div>
+            <div className="reveal reveal-three"><dt>Receive</dt><dd>An editable patch and a rendered comparison, ready for your own ears and decisions.</dd></div>
+          </dl>
+        </div>
+      </section>
+
       <section className="workflow-section" id="workflow" aria-labelledby="workflow-heading">
         <div className="section-intro reveal">
           <p className="eyebrow">A clear path from sound to control</p>

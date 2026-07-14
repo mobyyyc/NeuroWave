@@ -461,7 +461,7 @@ Website planning:
 - [x] Create Impeccable brand and seed design context in `PRODUCT.md` and `DESIGN.md`.
 - [x] Confirm Next.js App Router as the dedicated `website/` project stack.
 - [x] Choose Vercel as hosting target.
-- [ ] Define the one-sentence product promise and approved limitations copy.
+- [x] Define the one-sentence product promise and approved limitations copy.
 - [ ] Define release-state CTA behavior: waitlist/contact before public release, versioned
   GitHub Release download after artifact publication.
 - [ ] Capture approved app screenshots: ready/import, crop, prediction, and comparison.
@@ -539,6 +539,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   and Manrope font packages, built the responsive Home shell, and refreshed the Impeccable
   design context with implemented tokens and component rules. Verified lint, static build,
   desktop rendering, mobile rendering, and no mobile horizontal overflow.
+- Added Home-page guidance describing the focused clean-note input, pitch confirmation, and
+  editable patch outcome. Verified lint, production build, browser content, error-free render,
+  and mobile overflow behavior before the Git deployment check.
 
 ### 2026-07-13
 
