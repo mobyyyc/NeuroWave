@@ -458,6 +458,7 @@ local-processing privacy copy, and a verified Windows release/download path.
 
 Website planning:
 
+- [x] Create Impeccable brand and seed design context in `PRODUCT.md` and `DESIGN.md`.
 - [ ] Confirm Next.js App Router as the dedicated `website/` project stack.
 - [x] Choose Vercel as hosting target.
 - [ ] Define the one-sentence product promise and approved limitations copy.
@@ -530,6 +531,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   Next.js site, Vercel preview/production deployment flow, GitHub Releases for the large
   Windows payload, release-state CTA rules, content ownership requirements, and explicit
   accessibility/verification gates before launch.
+- Added Impeccable brand and seed design context for the website: a modern, precise,
+  near-monochrome system with EB Garamond display typography, purposeful reduced-motion-safe
+  animation, and explicit bans on neon/cyberpunk and generic AI-SaaS styling.
 
 ### 2026-07-13
 
