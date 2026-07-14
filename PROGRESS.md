@@ -417,7 +417,8 @@ Desktop packaging:
   or developer Python installation (Windows Sandbox validation passed).
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
-- [ ] Build and validate the Windows x64 NSIS installer after first-release UX updates.
+- [~] Build and validate the Windows x64 NSIS web installer and versioned payload after
+  first-release UX updates.
 - [x] Document Windows release checklist and current install/run notes.
 
 Product UX polish:
@@ -448,7 +449,7 @@ Acceptance checklist:
 - [x] The app can compare-play original crop and prediction.
 - [x] The app saves a complete local run folder.
 - [x] The app handles invalid inputs without crashing.
-- [ ] Close out Milestone I after NSIS installer validation and screenshots for the website.
+- [ ] Close out Milestone I after NSIS web-installer validation and screenshots for the website.
 
 ## Milestone J: Product Website
 
@@ -504,7 +505,7 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Add app settings persistence.
 - [ ] Add model/checkpoint selection UI.
 - [ ] Add versioned app releases.
-- [ ] Validate and ship the NSIS installer package.
+- [ ] Validate and ship the NSIS web-installer package.
 - [ ] Add Windows code-signing investigation.
 - [x] Add packaged app smoke test.
 - [x] Add release checklist.
@@ -525,6 +526,14 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - The first NSIS build reached final assembly but could not memory-map its 2.36 GB
   compressed archive (from a 5.35 GB installed payload), so installer validation remains
   open pending a large-payload delivery strategy.
+- Adopted Electron Builder's NSIS web-installer target for the large payload: local builds
+  create a bootstrapper plus verified sibling payload, and release builds publish both to a
+  draft GitHub Release. This replaces the blocked monolithic NSIS approach.
+- Built the local NSIS web release successfully: `dist\nsis-web\NeuroWave Web Setup
+  0.1.0.exe` is a 632 KB bootstrapper paired with the 2.36 GB
+  `neurowave-0.1.0-x64.nsis.7z` payload and checksum metadata. The unpacked backend and
+  end-to-end prediction smoke tests passed again; Windows Sandbox installation validation
+  remains in progress.
 - Recorded the completed Windows Sandbox clean-machine test: the packaged app started its
   bundled backend and loaded the bundled v3.5 model without the repo, project `.venv`, or
   developer Python installation.

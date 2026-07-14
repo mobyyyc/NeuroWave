@@ -329,13 +329,18 @@ Build the first Windows desktop development package:
 npm run package:win
 ```
 
-This is configured to create an ignored Windows NSIS installer under `dist/`. It installs the Electron
-app shell, NeuroWave Python source resources, prepared Python/Torch runtime, and the
-selected local model checkpoint when `models/v3.5_noise_detune_loss.pt` exists at build
-time. The installer extracts the large ML dependencies once during installation, so
-later app launches do not repeat a multi-gigabyte portable self-extraction. In a completed
-installed build, optional `settings.local.json` can be placed beside `NeuroWave.exe` to
-override Python, backend port, default model path, and output folder.
+This creates an ignored Windows NSIS web installer and its separately packaged app payload
+under `dist/`. It installs the Electron app shell, NeuroWave Python source resources,
+prepared Python/Torch runtime, and the selected local model checkpoint when
+`models/v3.5_noise_detune_loss.pt` exists at build time. The small bootstrap installer
+downloads the large, versioned payload during installation, so app launches never repeat a
+multi-gigabyte portable self-extraction. For offline testing, keep the generated payload in
+the same folder as the installer; Electron Builder verifies and uses it without downloading.
+
+Use `npm run package:win:release` only from the release workflow with a GitHub publishing
+token configured. It uploads the bootstrapper and versioned payload to a draft GitHub
+Release. In an installed build, optional `settings.local.json` can be placed beside
+`NeuroWave.exe` to override Python, backend port, default model path, and output folder.
 
 Packaged development builds first use a bundled
 `resources/models/v3.5_noise_detune_loss.pt` checkpoint when present. If the model

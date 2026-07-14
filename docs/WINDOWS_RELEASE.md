@@ -2,11 +2,14 @@
 
 ## Current Package Shape
 
-NeuroWave is configured to build as a Windows x64 Electron app delivered by an NSIS installer.
+NeuroWave is configured to build as a Windows x64 Electron app delivered by an NSIS web
+installer and a separately packaged, versioned payload.
 
-The installer extracts the large bundled Python, CUDA PyTorch, and ML dependencies once
-during installation. This avoids the repeated multi-gigabyte Temp-folder extraction that
-made the previous portable executable slow to start.
+The small bootstrap installer downloads the large bundled Python, CUDA PyTorch, and ML
+payload once during installation. This avoids the repeated multi-gigabyte Temp-folder
+extraction that made the previous portable executable slow to start and avoids NSIS's
+single-embedded-payload size limit. For offline or Windows Sandbox validation, place the
+generated payload beside the installer; its checksum is verified before use.
 
 The package includes:
 
@@ -80,11 +83,24 @@ Build the unpacked app:
 npm run package:win:dir
 ```
 
-Build the NSIS installer:
+Build the NSIS web installer and local payload without publishing:
 
 ```powershell
 npm run package:win
 ```
+
+Publish the installer and payload to a draft GitHub Release (requires `GH_TOKEN` or
+`GITHUB_RELEASE_TOKEN` with repository contents permission):
+
+```powershell
+npm run package:win:release
+```
+
+For an offline Windows Sandbox test, copy the complete `dist\nsis-web\` directory into
+the Sandbox and run `NeuroWave Web Setup 0.1.0.exe` with
+`neurowave-0.1.0-x64.nsis.7z` beside it. The bootstrapper validates that payload before
+installing it. A published GitHub Release must include the bootstrapper, payload, and
+`latest.yml` metadata generated in that directory.
 
 Smoke-test the unpacked app backend:
 
@@ -120,15 +136,13 @@ npm run package:smoke:predict
 - Save WAV works.
 - Folder opens the run directory.
 - Backend log is written under `%LOCALAPPDATA%\NeuroWave\Logs\`.
-- The NSIS installer installs successfully and the installed app completes the same
+- The NSIS web installer installs successfully and the installed app completes the same
   startup and prediction checks.
 
 ## Known Pre-Website Blockers
 
-- The current 5.35 GB installed runtime payload produces a 2.36 GB compressed archive,
-  which the local NSIS compiler cannot memory-map into a single embedded installer.
-  `npm run package:win` therefore stops at final NSIS assembly. Resolve this by
-  reducing/splitting the runtime payload or by using a staged/download installer before
-  treating the NSIS package as releasable.
+- The release bootstrapper, payload, and `latest.yml` must be uploaded together to the
+  configured GitHub Release before an online install can succeed. Keep the generated
+  payload beside the bootstrapper when testing offline or in Windows Sandbox.
 - Code signing has not been configured.
 - Manual packaged UI verification is still required after every release build.
