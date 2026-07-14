@@ -413,11 +413,11 @@ Desktop packaging:
 - [x] Add a prepared Python runtime packaging hook under ignored `runtime/python/`.
 - [x] Add prepared Python runtime validation command.
 - [x] Bundle or provision a stable Python runtime for non-developer machines.
-- [ ] Test the packaged app on a clean Windows machine without the repo, project `.venv`,
-  or developer Python installation.
+- [x] Test the packaged app on a clean Windows machine without the repo, project `.venv`,
+  or developer Python installation (Windows Sandbox validation passed).
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
-- [x] Rebuild the standalone portable Windows `.exe` after first-release UX updates.
+- [ ] Build and validate the Windows x64 NSIS installer after first-release UX updates.
 - [x] Document Windows release checklist and current install/run notes.
 
 Product UX polish:
@@ -448,7 +448,7 @@ Acceptance checklist:
 - [x] The app can compare-play original crop and prediction.
 - [x] The app saves a complete local run folder.
 - [x] The app handles invalid inputs without crashing.
-- [ ] Commit Milestone I completion.
+- [ ] Close out Milestone I after NSIS installer validation and screenshots for the website.
 
 ## Milestone J: Product Website
 
@@ -504,7 +504,7 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Add app settings persistence.
 - [ ] Add model/checkpoint selection UI.
 - [ ] Add versioned app releases.
-- [ ] Add installer packaging.
+- [ ] Validate and ship the NSIS installer package.
 - [ ] Add Windows code-signing investigation.
 - [x] Add packaged app smoke test.
 - [x] Add release checklist.
@@ -516,6 +516,18 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-07-13
+
+- Switched the Windows release target from Electron Builder's portable executable to an
+  x64 NSIS installer. The installer extracts the bundled Python, CUDA PyTorch, and ML
+  payload once at installation instead of re-extracting it on every launch.
+- The first NSIS build reached final assembly but could not memory-map its 2.36 GB
+  compressed archive (from a 5.35 GB installed payload), so installer validation remains
+  open pending a large-payload delivery strategy.
+- Recorded the completed Windows Sandbox clean-machine test: the packaged app started its
+  bundled backend and loaded the bundled v3.5 model without the repo, project `.venv`, or
+  developer Python installation.
 
 ### 2026-06-06
 

@@ -38,19 +38,17 @@ Create the Windows development package:
 npm run package:win
 ```
 
-This writes an ignored portable `.exe` under `dist\`. The current package is a desktop
-wrapper for the app, backend source, and selected model checkpoint when
-`models\v3.5_noise_detune_loss.pt` exists at build time. It still expects Python/Torch
-dependencies to be available on the user's machine. A fully bundled consumer installer
-with embedded Python/Torch runtime belongs to the product-hardening phase.
-For packaged testing, place a `settings.local.json` beside the `.exe` if you need to
-override the Python executable, model path, or output folder.
+This is configured to create an ignored Windows NSIS installer under `dist\`. It bundles
+the desktop app, backend source, selected model checkpoint, and prepared Python/Torch
+runtime when present at build time. The installer extracts the large ML dependencies once
+during installation, instead of re-extracting them on every app launch. For an installed
+build, place a `settings.local.json` beside `NeuroWave.exe` if you need to override the
+Python executable, model path, or output folder.
 
 Packaged development builds first use the bundled checkpoint under
 `resources\models\v3.5_noise_detune_loss.pt` when present, then search common
-repo/package locations for `models\v3.5_noise_detune_loss.pt`. For portable builds,
-optional `settings.local.json` is read beside the outer portable `.exe`, not the
-temporary extraction folder. Runtime app data is stored under `%LOCALAPPDATA%\NeuroWave\`
+repo/package locations for `models\v3.5_noise_detune_loss.pt`. For installed builds,
+optional `settings.local.json` is read beside `NeuroWave.exe`. Runtime app data is stored under `%LOCALAPPDATA%\NeuroWave\`
 by default:
 
 - imported audio: `Inputs\`
