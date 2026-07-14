@@ -417,7 +417,7 @@ Desktop packaging:
   or developer Python installation (Windows Sandbox validation passed).
 - [x] Bundle the selected production model checkpoint when the local ignored `.pt` file
   exists at package time.
-- [~] Build and validate the Windows x64 NSIS web installer and versioned payload after
+- [x] Build and validate the Windows x64 NSIS web installer and versioned payload after
   first-release UX updates.
 - [x] Document Windows release checklist and current install/run notes.
 
@@ -534,6 +534,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   `neurowave-0.1.0-x64.nsis.7z` payload and checksum metadata. The unpacked backend and
   end-to-end prediction smoke tests passed again; Windows Sandbox installation validation
   remains in progress.
+- Completed Windows Sandbox validation of the NSIS web installer and adjacent payload.
+  The installed app passed the clean-machine release check without relying on the repo,
+  project `.venv`, or developer Python installation.
 - Recorded the completed Windows Sandbox clean-machine test: the packaged app started its
   bundled backend and loaded the bundled v3.5 model without the repo, project `.venv`, or
   developer Python installation.

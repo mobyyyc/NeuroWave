@@ -138,6 +138,8 @@ npm run package:smoke:predict
 - Backend log is written under `%LOCALAPPDATA%\NeuroWave\Logs\`.
 - The NSIS web installer installs successfully and the installed app completes the same
   startup and prediction checks.
+- Windows Sandbox clean-machine installer validation has passed without the project repo,
+  project `.venv`, or developer Python installation.
 
 ## Known Pre-Website Blockers
 
