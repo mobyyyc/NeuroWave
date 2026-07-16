@@ -462,7 +462,7 @@ Website planning:
 - [x] Confirm Next.js App Router as the dedicated `website/` project stack.
 - [x] Choose Vercel as hosting target.
 - [x] Define the one-sentence product promise and approved limitations copy.
-- [ ] Define release-state CTA behavior: waitlist/contact before public release, versioned
+- [x] Define release-state CTA behavior: preparation notes before public release, versioned
   GitHub Release download after artifact publication.
 - [ ] Capture approved app screenshots: ready/import, crop, prediction, and comparison.
 - [ ] Gather publishable target/predicted audio A/B examples with source notes.
@@ -481,7 +481,7 @@ Website build:
 - [ ] Add Examples page with accessible audio players and spectrogram pairs.
 - [ ] Add Download page with release status, Windows requirements, installer steps, and
   accurate model limitations.
-- [ ] Add Changelog page linked to model/app versions and GitHub Releases.
+- [x] Add Changelog page linked to model/app versions and GitHub Releases.
 - [ ] Add model/version labels and usage/source notes for every public example.
 - [ ] Add privacy note stating that website and desktop inference do not upload user audio.
 - [ ] Add configured contact/waitlist link without collecting data until ownership is defined.
@@ -549,6 +549,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added canonical metadata, per-route descriptions, a generated Open Graph social preview,
   custom NeuroWave icon, sitemap, and robots policy. Verified static generation, metadata
   tags, social-image rendering, icon response, sitemap, and robots output locally.
+- Added a single release-state configuration and a Changelog page for version `0.1.0`. The
+  current site links to preparation notes rather than a false download, and will switch to a
+  versioned GitHub Release URL only after the full public artifact set is verified. Verified
+  lint, static build, release-state rendering, CTA routing, browser errors, and mobile overflow.
 
 ### 2026-07-13
 

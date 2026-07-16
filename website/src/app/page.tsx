@@ -1,3 +1,5 @@
+import { currentRelease } from "./site";
+
 const ArrowUpRight = () => (
   <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
     <path d="M3 13 13 3M6 3h7v7" stroke="currentColor" strokeWidth="1.5" />
@@ -99,10 +101,19 @@ export default function Home() {
       <section className="release-section" id="release" aria-labelledby="release-heading">
         <p className="eyebrow">Windows desktop app</p>
         <div className="release-grid">
-          <h2 id="release-heading">The first public release is being prepared.</h2>
+          <h2 id="release-heading">{currentRelease.heading}</h2>
           <div>
-            <p>The installer, bundled runtime, and model are validated on clean Windows. The public release will appear here with clear installation notes.</p>
-            <p className="release-note">For best results, start with a clean one-note clip and correct pitch.</p>
+            <p>{currentRelease.summary}</p>
+            <p className="release-note">{currentRelease.preparationNote}</p>
+            {currentRelease.isPublic && currentRelease.githubReleaseUrl ? (
+              <a className="text-link release-link" href={currentRelease.githubReleaseUrl}>
+                Download NeuroWave {currentRelease.version} <ArrowUpRight />
+              </a>
+            ) : (
+              <a className="text-link release-link" href="/changelog">
+                Read preparation notes <ArrowUpRight />
+              </a>
+            )}
           </div>
         </div>
       </section>
