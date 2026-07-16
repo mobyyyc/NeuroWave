@@ -2,8 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "How NeuroWave works | Audio to editable synthesis",
+  title: "How NeuroWave works",
   description: "See how NeuroWave turns a clean one-note clip into an editable synthesizer patch on Windows.",
+  alternates: { canonical: "/how-it-works" },
+  openGraph: {
+    title: "How NeuroWave works",
+    description: "A clear, local workflow from one clean note to an editable synth patch.",
+    url: "/how-it-works",
+  },
+  twitter: {
+    title: "How NeuroWave works",
+    description: "A clear, local workflow from one clean note to an editable synth patch.",
+  },
 };
 
 const steps = [

@@ -485,7 +485,7 @@ Website build:
 - [ ] Add model/version labels and usage/source notes for every public example.
 - [ ] Add privacy note stating that website and desktop inference do not upload user audio.
 - [ ] Add configured contact/waitlist link without collecting data until ownership is defined.
-- [ ] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
+- [x] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
 - [ ] Add lint, type-check, static build, and local preview commands.
 - [ ] Link the Vercel project with `website/` as its root and verify preview deployments.
 - [ ] Verify responsive layout, keyboard navigation, audio controls, links, and metadata on
@@ -546,6 +546,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   boundary, and local-processing explanation. Updated Home navigation and verified lint,
   static build, desktop and mobile route navigation, error-free rendering, and no mobile
   horizontal overflow.
+- Added canonical metadata, per-route descriptions, a generated Open Graph social preview,
+  custom NeuroWave icon, sitemap, and robots policy. Verified static generation, metadata
+  tags, social-image rendering, icon response, sitemap, and robots output locally.
 
 ### 2026-07-13
 
