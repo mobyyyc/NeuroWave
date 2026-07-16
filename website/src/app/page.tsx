@@ -24,7 +24,7 @@ export default function Home() {
           Neuro<span>Wave</span>
         </a>
         <div className="nav-links">
-          <a href="#workflow">How it works</a>
+          <a href="/how-it-works">How it works</a>
           <a href="#release">Windows release</a>
         </div>
       </nav>
@@ -44,7 +44,7 @@ export default function Home() {
             <a className="button button-primary" href="#release">
               Windows release status <ArrowUpRight />
             </a>
-            <a className="text-link" href="#workflow">
+            <a className="text-link" href="/how-it-works">
               See the process <span aria-hidden="true">↓</span>
             </a>
           </div>

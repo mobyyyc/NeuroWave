@@ -477,7 +477,7 @@ Website build:
   accessible focus states.
 - [x] Add Home page shell with product promise, local-processing explanation, release-status
   CTA, and an evidence-style signal-to-patch illustration.
-- [ ] Add How It Works page for import -> crop -> pitch -> predict -> compare.
+- [x] Add How It Works page for import -> crop -> pitch -> predict -> compare.
 - [ ] Add Examples page with accessible audio players and spectrogram pairs.
 - [ ] Add Download page with release status, Windows requirements, installer steps, and
   accurate model limitations.
@@ -542,6 +542,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added Home-page guidance describing the focused clean-note input, pitch confirmation, and
   editable patch outcome. Verified lint, production build, browser content, error-free render,
   and mobile overflow behavior before the Git deployment check.
+- Added the static `/how-it-works` page with the full import-to-comparison process, model
+  boundary, and local-processing explanation. Updated Home navigation and verified lint,
+  static build, desktop and mobile route navigation, error-free rendering, and no mobile
+  horizontal overflow.
 
 ### 2026-07-13
 
