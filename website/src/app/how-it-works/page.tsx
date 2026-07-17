@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
         </Link>
         <div className="nav-links">
           <Link href="/how-it-works" aria-current="page">How it works</Link>
-          <Link href="/#release">Windows release</Link>
+          <Link href="/download">Windows release</Link>
           <Link href="/privacy">Privacy</Link>
         </div>
       </nav>
@@ -108,7 +108,7 @@ export default function HowItWorksPage() {
         <p className="eyebrow">Windows desktop app</p>
         <h2 id="close-heading">The listening stays local.</h2>
         <p>Audio is processed on your machine. The website does not receive the clip.</p>
-        <Link className="button button-primary" href="/#release">See Windows release status</Link>
+        <Link className="button button-primary" href="/download">See Windows release status</Link>
       </section>
 
       <footer>

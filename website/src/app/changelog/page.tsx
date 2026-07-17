@@ -22,7 +22,7 @@ export default function ChangelogPage() {
         </Link>
         <div className="nav-links">
           <Link href="/how-it-works">How it works</Link>
-          <Link href="/#release">Windows release</Link>
+          <Link href="/download">Windows release</Link>
           <Link href="/privacy">Privacy</Link>
         </div>
       </nav>

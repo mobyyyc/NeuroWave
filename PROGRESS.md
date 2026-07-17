@@ -479,7 +479,7 @@ Website build:
   CTA, and an evidence-style signal-to-patch illustration.
 - [x] Add How It Works page for import -> crop -> pitch -> predict -> compare.
 - [ ] Add Examples page with accessible audio players and spectrogram pairs.
-- [ ] Add Download page with release status, Windows requirements, installer steps, and
+- [x] Add Download page with release status, Windows requirements, installer steps, and
   accurate model limitations.
 - [x] Add Changelog page linked to model/app versions and GitHub Releases.
 - [ ] Add model/version labels and usage/source notes for every public example.
@@ -556,6 +556,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added a dedicated privacy note covering the static website, local desktop inference, and
   packaged Windows app-data location. Linked it from site navigation and verified static build,
   privacy copy, browser errors, navigation, and mobile overflow.
+- Added a pre-release Download page with Windows x64 requirements, NSIS web-installer steps,
+  local-processing guidance, and the v3.5 model boundary. The page reads the shared release
+  configuration and exposes no installer link until a verified GitHub Release is published.
 
 ### 2026-07-13
 
