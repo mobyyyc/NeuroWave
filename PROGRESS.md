@@ -483,7 +483,7 @@ Website build:
   accurate model limitations.
 - [x] Add Changelog page linked to model/app versions and GitHub Releases.
 - [ ] Add model/version labels and usage/source notes for every public example.
-- [ ] Add privacy note stating that website and desktop inference do not upload user audio.
+- [x] Add privacy note stating that website and desktop inference do not upload user audio.
 - [ ] Add configured contact/waitlist link without collecting data until ownership is defined.
 - [x] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
 - [ ] Add lint, type-check, static build, and local preview commands.
@@ -553,6 +553,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   current site links to preparation notes rather than a false download, and will switch to a
   versioned GitHub Release URL only after the full public artifact set is verified. Verified
   lint, static build, release-state rendering, CTA routing, browser errors, and mobile overflow.
+- Added a dedicated privacy note covering the static website, local desktop inference, and
+  packaged Windows app-data location. Linked it from site navigation and verified static build,
+  privacy copy, browser errors, navigation, and mobile overflow.
 
 ### 2026-07-13
 

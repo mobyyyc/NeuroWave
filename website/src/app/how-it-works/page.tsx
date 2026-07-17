@@ -54,6 +54,7 @@ export default function HowItWorksPage() {
         <div className="nav-links">
           <Link href="/how-it-works" aria-current="page">How it works</Link>
           <Link href="/#release">Windows release</Link>
+          <Link href="/privacy">Privacy</Link>
         </div>
       </nav>
 

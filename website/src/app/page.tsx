@@ -28,6 +28,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="/how-it-works">How it works</a>
           <a href="#release">Windows release</a>
+          <a href="/privacy">Privacy</a>
         </div>
       </nav>
 
