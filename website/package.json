@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "preview": "next start"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "^5.2.7",

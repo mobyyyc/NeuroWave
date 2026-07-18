@@ -486,7 +486,7 @@ Website build:
 - [x] Add privacy note stating that website and desktop inference do not upload user audio.
 - [x] Add configured contact/waitlist link without collecting data until ownership is defined.
 - [x] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
-- [ ] Add lint, type-check, static build, and local preview commands.
+- [x] Add lint, type-check, static build, and local preview commands.
 - [ ] Link the Vercel project with `website/` as its root and verify preview deployments.
 - [ ] Verify responsive layout, keyboard navigation, audio controls, links, and metadata on
   the Vercel preview.
@@ -562,6 +562,8 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added a configured public `mailto:` contact path without a website form or data store. The
   privacy note now states that messages go to the project owner and asks visitors not to send
   audio by email.
+- Documented website lint, type-check, build, local preview, responsive, accessibility, release
+  CTA, privacy, and Vercel alias verification. Added explicit `typecheck` and `preview` scripts.
 
 ### 2026-07-13
 
