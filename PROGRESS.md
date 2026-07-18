@@ -467,7 +467,7 @@ Website planning:
 - [ ] Capture approved app screenshots: ready/import, crop, prediction, and comparison.
 - [ ] Gather publishable target/predicted audio A/B examples with source notes.
 - [ ] Gather matching spectrogram comparison images and model/version labels.
-- [ ] Choose low-maintenance initial contact path (`mailto:` or external form) and document
+- [x] Choose low-maintenance initial contact path (`mailto:` or external form) and document
   privacy/spam ownership before collecting user data.
 
 Website build:
@@ -484,7 +484,7 @@ Website build:
 - [x] Add Changelog page linked to model/app versions and GitHub Releases.
 - [ ] Add model/version labels and usage/source notes for every public example.
 - [x] Add privacy note stating that website and desktop inference do not upload user audio.
-- [ ] Add configured contact/waitlist link without collecting data until ownership is defined.
+- [x] Add configured contact/waitlist link without collecting data until ownership is defined.
 - [x] Add SEO metadata, social preview asset, favicon, sitemap, and robots policy.
 - [ ] Add lint, type-check, static build, and local preview commands.
 - [ ] Link the Vercel project with `website/` as its root and verify preview deployments.
@@ -559,6 +559,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - Added a pre-release Download page with Windows x64 requirements, NSIS web-installer steps,
   local-processing guidance, and the v3.5 model boundary. The page reads the shared release
   configuration and exposes no installer link until a verified GitHub Release is published.
+- Added a configured public `mailto:` contact path without a website form or data store. The
+  privacy note now states that messages go to the project owner and asks visitors not to send
+  audio by email.
 
 ### 2026-07-13
 

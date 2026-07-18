@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { contactEmail } from "../site";
 
 export const metadata: Metadata = {
   title: "Privacy note",
@@ -65,16 +66,19 @@ export default function PrivacyPage() {
         <p className="eyebrow">If the product changes</p>
         <h2 id="privacy-note-heading">New data collection would be stated before it exists.</h2>
         <p>
-          A future contact form, analytics service, cloud feature, or account system would require
-          an updated privacy notice before it collects user information or audio.
+          The Contact link opens your email application. Messages go to the project owner, not to
+          a website form or audio database. Do not send audio by email. A future analytics service,
+          cloud feature, or account system would require an updated privacy notice before it collects
+          user information or audio.
         </p>
-        <Link className="text-link privacy-link" href="/">Return to overview <span aria-hidden="true">↓</span></Link>
+        <a className="text-link privacy-link" href={`mailto:${contactEmail}`}>Contact the project owner <span aria-hidden="true">↗</span></a>
       </section>
 
       <footer>
         <Link className="wordmark" href="/">Neuro<span>Wave</span></Link>
         <p>Audio is processed locally in the desktop app.</p>
         <p>Current model: v3.5_noise_detune_loss</p>
+        <a className="text-link" href={`mailto:${contactEmail}`}>Contact</a>
       </footer>
     </main>
   );

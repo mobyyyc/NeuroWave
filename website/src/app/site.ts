@@ -1,4 +1,5 @@
 export const siteUrl = "https://neurowave-synth.vercel.app";
+export const contactEmail = "versorrrai@gmail.com";
 
 export const currentRelease = {
   version: "0.1.0",

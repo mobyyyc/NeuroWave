@@ -1,4 +1,4 @@
-import { currentRelease } from "./site";
+import { contactEmail, currentRelease } from "./site";
 
 const ArrowUpRight = () => (
   <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
@@ -123,6 +123,7 @@ export default function Home() {
         <a className="wordmark" href="#top">Neuro<span>Wave</span></a>
         <p>Audio is processed locally in the desktop app.</p>
         <p>Current model: v3.5_noise_detune_loss</p>
+        <a className="text-link" href={`mailto:${contactEmail}`}>Contact</a>
       </footer>
     </main>
   );

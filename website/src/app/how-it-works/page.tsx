@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { contactEmail } from "../site";
 
 export const metadata: Metadata = {
   title: "How NeuroWave works",
@@ -115,6 +116,7 @@ export default function HowItWorksPage() {
         <Link className="wordmark" href="/">Neuro<span>Wave</span></Link>
         <p>Audio is processed locally in the desktop app.</p>
         <p>Current model: v3.5_noise_detune_loss</p>
+        <a className="text-link" href={`mailto:${contactEmail}`}>Contact</a>
       </footer>
     </main>
   );

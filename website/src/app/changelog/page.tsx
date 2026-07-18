@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { currentRelease } from "../site";
+import { contactEmail, currentRelease } from "../site";
 
 export const metadata: Metadata = {
   title: "Changelog",
@@ -82,6 +82,7 @@ export default function ChangelogPage() {
         <Link className="wordmark" href="/">Neuro<span>Wave</span></Link>
         <p>Audio is processed locally in the desktop app.</p>
         <p>Current model: v3.5_noise_detune_loss</p>
+        <a className="text-link" href={`mailto:${contactEmail}`}>Contact</a>
       </footer>
     </main>
   );
