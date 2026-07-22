@@ -534,8 +534,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   output directories without touching the existing CUDA artifacts. The resulting NSIS web
   payload is 347,300,597 bytes (0.323 GiB), safely below GitHub's 2 GiB asset limit.
   The CPU unpacked app passed backend-readiness and end-to-end prediction smoke tests.
-  A fresh CPU installer Windows Sandbox test remains required before the GitHub draft is
-  published and the website Download link is enabled.
+- Published GitHub Release `v0.1.0` with the CPU-only NSIS web-installer bootstrapper,
+  347 MB payload, and `latest.yml` metadata. The website Download CTA now points to that
+  public release. The CPU artifact was not re-tested in Windows Sandbox at release time by
+  explicit product-owner direction; post-release installation verification remains open.
 
 ### 2026-07-14
 
