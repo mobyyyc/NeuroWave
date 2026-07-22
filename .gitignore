@@ -24,6 +24,8 @@ desktop/settings.local.json
 app-inputs/
 runtime/python/**
 !runtime/python/.gitkeep
+runtime/python-cpu/**
+!runtime/python-cpu/.gitkeep
 
 # Generated audio and experiment outputs
 *.wav

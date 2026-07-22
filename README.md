@@ -350,8 +350,20 @@ downloads the large, versioned payload during installation, so app launches neve
 multi-gigabyte portable self-extraction. For offline testing, keep the generated payload in
 the same folder as the installer; Electron Builder verifies and uses it without downloading.
 
-Use `npm run package:win:release` only from the release workflow with a GitHub publishing
-token configured. It uploads the bootstrapper and versioned payload to a draft GitHub
+The public GitHub Release build uses the CPU-only runtime so its payload stays below GitHub's
+2 GiB asset limit. Prepare and build that release candidate with:
+
+```powershell
+npm run runtime:prepare:cpu -- --replace
+npm run runtime:check -- --runtime-dir runtime/python-cpu --require-cpu
+npm run package:win:cpu
+```
+
+The CUDA-enabled `runtime/python/` and `npm run package:win` remain available for local
+developer validation; they are intentionally not the public GitHub payload.
+
+Use `npm run package:win:cpu:release` only from the release workflow with a GitHub publishing
+token configured. It uploads the CPU bootstrapper and versioned payload to a draft GitHub
 Release. In an installed build, optional `settings.local.json` can be placed beside
 `NeuroWave.exe` to override Python, backend port, default model path, and output folder.
 

@@ -513,7 +513,7 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Add app settings persistence.
 - [ ] Add model/checkpoint selection UI.
 - [ ] Add versioned app releases.
-- [ ] Validate and ship the NSIS web-installer package.
+- [~] Validate and ship the CPU-only NSIS web-installer package.
 - [ ] Add Windows code-signing investigation.
 - [x] Add packaged app smoke test.
 - [x] Add release checklist.
@@ -525,6 +525,17 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-07-22
+
+- Added a reproducible CPU-only Windows release-runtime path. It stages the project
+  dependencies into ignored `runtime/python-cpu/`, replaces CUDA Torch packages with
+  pinned official CPU wheels, validates CPU-only inference, and packages isolated CPU
+  output directories without touching the existing CUDA artifacts. The resulting NSIS web
+  payload is 347,300,597 bytes (0.323 GiB), safely below GitHub's 2 GiB asset limit.
+  The CPU unpacked app passed backend-readiness and end-to-end prediction smoke tests.
+  A fresh CPU installer Windows Sandbox test remains required before the GitHub draft is
+  published and the website Download link is enabled.
 
 ### 2026-07-14
 

@@ -11,80 +11,16 @@
     "desktop:smoke": "set NEUROWAVE_ELECTRON_SMOKE=1&& electron .",
     "package:smoke": "python scripts/smoke_desktop_package.py",
     "package:smoke:predict": "python scripts/smoke_desktop_package.py --audio playground/testpluck.wav",
-    "package:win": "electron-builder --win nsis-web --x64 --publish never",
-    "package:win:release": "electron-builder --win nsis-web --x64 --publish always",
-    "package:win:dir": "electron-builder --win dir --x64",
+    "package:win": "electron-builder --config electron-builder.config.cjs --win nsis-web --x64 --publish never",
+    "package:win:release": "electron-builder --config electron-builder.config.cjs --win nsis-web --x64 --publish always",
+    "package:win:dir": "electron-builder --config electron-builder.config.cjs --win dir --x64",
+    "package:win:cpu": "set NEUROWAVE_RUNTIME_DIR=runtime/python-cpu&& set NEUROWAVE_OUTPUT_DIR=dist/cpu-nsis-web&& electron-builder --config electron-builder.config.cjs --win nsis-web --x64 --publish never",
+    "package:win:cpu:release": "set NEUROWAVE_RUNTIME_DIR=runtime/python-cpu&& set NEUROWAVE_OUTPUT_DIR=dist/cpu-nsis-web&& electron-builder --config electron-builder.config.cjs --win nsis-web --x64 --publish always",
+    "package:win:cpu:dir": "set NEUROWAVE_RUNTIME_DIR=runtime/python-cpu&& set NEUROWAVE_OUTPUT_DIR=dist/cpu&& electron-builder --config electron-builder.config.cjs --win dir --x64",
     "runtime:prepare": "python scripts/prepare_windows_runtime.py",
+    "runtime:prepare:cpu": "python scripts/prepare_windows_cpu_runtime.py",
     "runtime:check": "python scripts/validate_windows_runtime.py",
     "runtime:check:dev": "python scripts/validate_windows_runtime.py --runtime-dir .venv"
-  },
-  "build": {
-    "appId": "com.neurowave.app",
-    "productName": "NeuroWave",
-    "asar": true,
-    "npmRebuild": false,
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "app/**/*",
-      "desktop/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "scripts",
-        "to": "neurowave-python/scripts"
-      },
-      {
-        "from": "minisynth",
-        "to": "neurowave-python/minisynth"
-      },
-      {
-        "from": "requirements.txt",
-        "to": "neurowave-python/requirements.txt"
-      },
-      {
-        "from": "requirements-cuda.txt",
-        "to": "neurowave-python/requirements-cuda.txt"
-      },
-      {
-        "from": "runtime/python",
-        "to": "python-runtime",
-        "filter": [
-          "**/*",
-          "!pyvenv.cfg",
-          "!.gitignore",
-          "!.gitkeep"
-        ]
-      },
-      {
-        "from": "models/v3.5_noise_detune_loss.pt",
-        "to": "models/v3.5_noise_detune_loss.pt"
-      }
-    ],
-    "win": {
-      "signAndEditExecutable": false,
-      "target": [
-        {
-          "target": "nsis-web",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsisWeb": {
-      "artifactName": "${productName} Web Setup ${version}.${ext}"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "mobyyyc",
-        "repo": "NeuroWave",
-        "releaseType": "draft"
-      }
-    ]
   },
   "devDependencies": {
     "electron": "^42.3.3",

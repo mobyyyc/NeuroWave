@@ -102,6 +102,11 @@ def parse_args():
         help="Fail if torch imports but CUDA is unavailable.",
     )
     parser.add_argument(
+        "--require-cpu",
+        action="store_true",
+        help="Fail if CUDA is available in the prepared runtime.",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=120.0,
@@ -164,6 +169,9 @@ def main():
     payload = parse_probe_output(completed.stdout)
     if args.require_cuda and not payload.get("torch", {}).get("cuda_available"):
         print("Runtime validation failed: CUDA is required but unavailable.", file=sys.stderr)
+        return 1
+    if args.require_cpu and payload.get("torch", {}).get("cuda_available"):
+        print("Runtime validation failed: CPU-only runtime unexpectedly has CUDA available.", file=sys.stderr)
         return 1
     return 0
 
