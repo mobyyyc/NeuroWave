@@ -1,0 +1,35 @@
+{
+  "id": "nwsd_v1",
+  "display_name": "NeuroWave Synthetic Dataset v1",
+  "format_version": 1,
+  "root": "data/generated/nwsd_v1",
+  "generation": {
+    "workers": 28,
+    "chunk_size": 2000,
+    "progress": false
+  },
+  "tensor_export": {
+    "workers": 28,
+    "chunk_size": 2000,
+    "shard_size": 50000,
+    "frames": 256,
+    "progress": false
+  },
+  "partitions": {
+    "train": {
+      "role": "training only",
+      "seed_start": 100000,
+      "count": 500000
+    },
+    "dev": {
+      "role": "checkpoint selection only",
+      "seed_start": 600000,
+      "count": 10000
+    },
+    "benchmark": {
+      "role": "final evaluation only; never use for training or tuning",
+      "seed_start": 610000,
+      "count": 2000
+    }
+  }
+}

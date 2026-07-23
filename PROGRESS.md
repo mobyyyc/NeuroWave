@@ -281,8 +281,13 @@ Next recommended task:
 - [x] Document the product-quality evaluation loop: fixed scientific holdout, versioned
   product benchmark, saved artifacts, listening review, one-variable experiments, and
   promotion gates.
+- [x] Define the reproducible NWSD-v1 dataset release: separate train, development, and
+  immutable benchmark partitions; quiet multicore generation; sharded tensor export; and
+  manifest validation before training.
+- [ ] Generate and validate NWSD-v1 `train`, `dev`, and `benchmark` partitions from the
+  committed manifest. Generated assets stay local and ignored.
 - [ ] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
-  `v3.4_audible_loss` on the fixed d8 1000-clip holdout; save the baseline report and
+  `v3.4_audible_loss` on the NWSD-v1 benchmark partition; save the baseline report and
   decide whether v3.5 meets its documented acceptance criteria.
 - [ ] Define and commit the versioned product-benchmark manifest and category coverage.
 - [ ] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
@@ -535,6 +540,15 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 - [ ] Commit Milestone J completion.
 
 ## Progress Log
+
+### 2026-07-23
+
+- Added the source-controlled `nwsd_v1` (NeuroWave Synthetic Dataset v1) release
+  manifest: 500,000 train, 10,000 development, and 2,000 immutable benchmark clips with
+  non-overlapping seed ranges. Added quiet multicore partition generation, 50,000-row
+  sharded tensor export, partition/shard validation, and separate development-tensor support
+  for checkpoint selection. The training CLI now rejects benchmark paths, protecting the
+  final evaluation partition from accidental training or tuning leakage.
 
 ### 2026-07-22
 

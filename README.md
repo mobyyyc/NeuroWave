@@ -101,6 +101,42 @@ python scripts/random_patch.py --dataset-version d3 --seed 3000 --count 10000 --
 python scripts/export_mel_tensors.py --dataset-version d3 --workers 0
 ```
 
+## NWSD-v1 Dataset Release
+
+New model work uses **NeuroWave Synthetic Dataset v1** (`nwsd_v1`), a reproducible
+partitioned release rather than a mixed generated-data directory:
+
+- `train`: 500,000 clips, used only for fitting model weights.
+- `dev`: 10,000 clips, used only for checkpoint selection and early stopping.
+- `benchmark`: 2,000 clips, never used for training or tuning; use it for every final
+  model comparison.
+
+The tracked manifest at `datasets/nwsd_v1.json` fixes the non-overlapping seed ranges,
+performance settings, tensor frame shape, and shard size. Generated audio, metadata, and
+tensors remain ignored by Git.
+
+Generate one empty partition without progress output:
+
+```powershell
+$Python = ".\.venv\Scripts\python.exe"
+& $Python scripts/build_dataset_release.py generate --partition train --quiet
+```
+
+Export its tensors as 50,000-row shards:
+
+```powershell
+& $Python scripts/build_dataset_release.py export --partition train --quiet
+```
+
+Validate generated files and shards before training:
+
+```powershell
+& $Python scripts/validate_dataset_release.py --partition train --require-tensors
+```
+
+Run the equivalent generate, export, and validate commands for `dev` and `benchmark`.
+The release builder refuses to mix a new generation into a non-empty partition directory.
+
 Worker rules:
 
 - `--workers 1`: serial mode.
@@ -123,13 +159,18 @@ Template for future models:
 ```bash
 python scripts/train_torch.py \
   --model-id v3.5_noise_detune_loss \
-  --tensor-data data/generated/dN/features \
+  --tensor-data data/generated/nwsd_v1/train/features \
+  --validation-tensor-data data/generated/nwsd_v1/dev/features \
   --epochs 50 \
   --batch-size 128 \
   --device cuda \
   --model-output models/v3.5_noise_detune_loss.pt \
   --metrics-output runs/training/v3.5_noise_detune_loss_metrics.json
 ```
+
+The benchmark tensor directory is deliberately not accepted as a validation source. Evaluate
+candidate checkpoints against `data/generated/nwsd_v1/benchmark/metadata.jsonl` only after
+checkpoint selection is complete.
 
 Training output:
 

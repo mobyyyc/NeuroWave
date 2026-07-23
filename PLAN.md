@@ -847,6 +847,12 @@ The loop has two complementary benchmark layers:
    cases. Clean external one-note recordings may be added later as a separately labelled
    domain-gap slice; they must never be confused with synthetic ground truth.
 
+The first replacement for historical d8/d9 work is **NeuroWave Synthetic Dataset v1**
+(`nwsd_v1`): 500,000 training clips, 10,000 development clips for checkpoint selection,
+and 2,000 immutable benchmark clips. The split uses committed, non-overlapping seed ranges.
+Training reads sharded tensors from `train`, checkpoint selection reads only `dev`, and all
+future final synthetic evaluations read only `benchmark`.
+
 Every benchmark entry must record an ID, source kind, deterministic source reference or
 audio path, pitch context, category labels, and any known limitation. Each evaluation run
 must save the checkpoint ID, repository revision, benchmark version, preprocessing settings,

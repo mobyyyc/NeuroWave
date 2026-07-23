@@ -665,6 +665,40 @@ class TestTorchInverseModel(unittest.TestCase):
         self.assertIn("benchmark_per_parameter_mae", metrics)
         self.assertIn("benchmark_grouped_mae", metrics)
 
+    def test_train_inverse_model_uses_separate_sharded_validation_source(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            train_dir = root / "train"
+            dev_dir = root / "dev"
+            train_dir.mkdir()
+            dev_dir.mkdir()
+            for directory, count in ((train_dir, 4), (dev_dir, 3)):
+                np.savez_compressed(
+                    directory / "mel_tensors_part_000.npz",
+                    features=np.zeros((count, 1, DEFAULT_MEL_BINS, 16), dtype=np.float32),
+                    targets=np.full((count, len(VECTOR_PARAMETERS)), 0.5, dtype=np.float32),
+                    indices=np.arange(count, dtype=np.int64),
+                    seeds=np.arange(100, 100 + count, dtype=np.int64),
+                    metadata_path="metadata.jsonl",
+                    frames=np.asarray(16, dtype=np.int64),
+                )
+
+            result = train_inverse_model(
+                tensor_path=train_dir,
+                validation_tensor_path=dev_dir,
+                model_id="v_test_separate_validation",
+                epochs=1,
+                batch_size=2,
+                random_state=1,
+                device=torch.device("cpu"),
+            )
+
+        metrics = result["metrics"]
+        self.assertEqual(metrics["train_samples"], 4)
+        self.assertEqual(metrics["test_samples"], 3)
+        self.assertEqual(metrics["benchmark_samples"], 0)
+        self.assertEqual(metrics["validation_tensor_path"], str(dev_dir))
+
     def test_train_inverse_model_supports_pitch_conditioned_timbre_mode(self):
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "mel_tensors.npz"

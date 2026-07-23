@@ -54,6 +54,11 @@ def parse_args():
         default=5000,
         help="Number of samples to submit per multiprocessing chunk.",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-clip progress output; keep only the final summary.",
+    )
     parser.add_argument("--output", help="Optional single patch JSON path.")
     return parser.parse_args()
 
@@ -80,7 +85,7 @@ def main() -> int:
             seed=args.seed,
             count=args.count,
             workers=args.workers,
-            progress=args.count > 1,
+            progress=args.count > 1 and not args.quiet,
             chunk_size=args.chunk_size,
         )
 

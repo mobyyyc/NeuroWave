@@ -40,6 +40,10 @@ def parse_args():
         help="Path to exported mel tensor NPZ data.",
     )
     parser.add_argument(
+        "--validation-tensor-data",
+        help="Optional separate sharded tensor directory for checkpoint selection.",
+    )
+    parser.add_argument(
         "--epochs",
         type=int,
         default=50,
@@ -109,10 +113,20 @@ def parse_args():
     return parser.parse_args()
 
 
+def reject_benchmark_tensor_path(path, argument_name):
+    if path is None:
+        return
+    if "benchmark" in {part.lower() for part in Path(path).parts}:
+        raise ValueError(f"{argument_name} must not use an immutable benchmark partition")
+
+
 def main() -> int:
     args = parse_args()
+    reject_benchmark_tensor_path(args.tensor_data, "--tensor-data")
+    reject_benchmark_tensor_path(args.validation_tensor_data, "--validation-tensor-data")
     result = train_inverse_model(
         tensor_path=args.tensor_data,
+        validation_tensor_path=args.validation_tensor_data,
         model_id=args.model_id,
         epochs=args.epochs,
         batch_size=args.batch_size,

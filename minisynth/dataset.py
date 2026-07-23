@@ -192,13 +192,13 @@ def generate_random_dataset_records(
                     (index, seed, str(param_dir), str(audio_dir))
                     for index in range(chunk_start, chunk_end)
                 ]
-                futures = [
-                    executor.submit(_generate_random_dataset_record_task, task)
-                    for task in tasks
-                ]
-
-                for future in concurrent.futures.as_completed(futures):
-                    records.append(future.result())
+                map_chunk_size = max(1, min(64, len(tasks) // max(1, workers)))
+                for record in executor.map(
+                    _generate_random_dataset_record_task,
+                    tasks,
+                    chunksize=map_chunk_size,
+                ):
+                    records.append(record)
                     if progress:
                         print_progress("Generating audio", len(records), count, workers)
     except (OSError, PermissionError) as error:
@@ -407,13 +407,13 @@ def load_mel_tensor_records(
                     (row, str(metadata_path), frames)
                     for row in rows[chunk_start:chunk_end]
                 ]
-                futures = [
-                    executor.submit(_mel_tensor_dataset_record_task, task)
-                    for task in tasks
-                ]
-
-                for future in concurrent.futures.as_completed(futures):
-                    records.append(future.result())
+                map_chunk_size = max(1, min(64, len(tasks) // max(1, workers)))
+                for record in executor.map(
+                    _mel_tensor_dataset_record_task,
+                    tasks,
+                    chunksize=map_chunk_size,
+                ):
+                    records.append(record)
                     if progress:
                         print_progress("Exporting tensors", len(records), total, workers)
     except (OSError, PermissionError) as error:

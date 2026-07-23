@@ -1918,6 +1918,7 @@ def sharded_parameter_metrics_torch(
 
 def train_inverse_model_sharded(
     tensor_path=DEFAULT_TORCH_TENSOR_PATH,
+    validation_tensor_path=None,
     model_id=DEFAULT_TORCH_MODEL_ID,
     epochs=DEFAULT_EPOCHS,
     batch_size=DEFAULT_BATCH_SIZE,
@@ -1960,6 +1961,13 @@ def train_inverse_model_sharded(
 
     torch.manual_seed(random_state)
     source = load_mel_tensor_shard_source(tensor_path)
+    validation_source = None
+    if validation_tensor_path is not None:
+        validation_source = load_mel_tensor_shard_source(validation_tensor_path)
+        if validation_source["feature_shape"] != source["feature_shape"]:
+            raise ValueError("validation tensor feature shape must match the training tensor source")
+        if validation_source["target_dim"] != source["target_dim"]:
+            raise ValueError("validation tensor target dimension must match the training tensor source")
     target_parameters = target_parameters_for_mode(target_mode)
     input_channels = int(source["feature_shape"][0])
     if target_mode in (
@@ -1969,12 +1977,21 @@ def train_inverse_model_sharded(
     ):
         input_channels += 1
 
-    split = split_sample_indices(
-        source["sample_count"],
-        test_size=test_size,
-        benchmark_size=benchmark_size,
-        random_state=random_state,
-    )
+    if validation_source is None:
+        split = split_sample_indices(
+            source["sample_count"],
+            test_size=test_size,
+            benchmark_size=benchmark_size,
+            random_state=random_state,
+        )
+        test_source = source
+    else:
+        split = {
+            "train_indices": np.arange(source["sample_count"], dtype=np.int64),
+            "test_indices": np.arange(validation_source["sample_count"], dtype=np.int64),
+            "benchmark_indices": np.asarray([], dtype=np.int64),
+        }
+        test_source = validation_source
     model = create_inverse_model(
         output_dim=len(target_parameters),
         waveform_mode=waveform_mode,
@@ -2063,7 +2080,7 @@ def train_inverse_model_sharded(
         completed_epochs = epoch + 1
         test_epoch_loss = sharded_sample_loss_torch(
             model,
-            source,
+            test_source,
             split["test_indices"],
             device=device,
             batch_size=batch_size,
@@ -2106,7 +2123,7 @@ def train_inverse_model_sharded(
     )
     test_parameter_metrics = sharded_parameter_metrics_torch(
         model,
-        source,
+        test_source,
         split["test_indices"],
         device=device,
         batch_size=batch_size,
@@ -2131,6 +2148,7 @@ def train_inverse_model_sharded(
         if loss_preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE, LOSS_PRESET_NOISE_DETUNE)
         else {},
         "tensor_path": str(tensor_path),
+        "validation_tensor_path": str(validation_tensor_path) if validation_tensor_path else None,
         "tensor_sharded": True,
         "tensor_shard_count": len(source["shard_paths"]),
         "metadata_path": source["metadata_path"],
@@ -2156,8 +2174,8 @@ def train_inverse_model_sharded(
         "best_epoch": int(best_epoch),
         "best_test_loss": float(best_test_loss),
         "best_test_objective_loss": float(best_test_loss),
-        "test_size": float(test_size),
-        "benchmark_size": float(benchmark_size),
+        "test_size": float(test_size) if validation_source is None else None,
+        "benchmark_size": float(benchmark_size) if validation_source is None else 0.0,
         "device": device.type,
         "train_loss": epoch_losses[-1],
         "train_objective_loss": epoch_losses[-1],
@@ -2176,7 +2194,7 @@ def train_inverse_model_sharded(
         ),
         "test_loss": sharded_parameter_mse_torch(
             model,
-            source,
+            test_source,
             split["test_indices"],
             device=device,
             batch_size=batch_size,
@@ -2251,6 +2269,7 @@ def train_inverse_model_sharded(
 
 def train_inverse_model(
     tensor_path=DEFAULT_TORCH_TENSOR_PATH,
+    validation_tensor_path=None,
     model_id=DEFAULT_TORCH_MODEL_ID,
     epochs=DEFAULT_EPOCHS,
     batch_size=DEFAULT_BATCH_SIZE,
@@ -2277,6 +2296,7 @@ def train_inverse_model(
     if is_sharded_tensor_path(tensor_path):
         return train_inverse_model_sharded(
             tensor_path=tensor_path,
+            validation_tensor_path=validation_tensor_path,
             model_id=model_id,
             epochs=epochs,
             batch_size=batch_size,
@@ -2300,6 +2320,9 @@ def train_inverse_model(
             device=device,
             progress=progress,
         )
+
+    if validation_tensor_path is not None:
+        raise ValueError("validation_tensor_path requires sharded tensor directories")
 
     if epochs < 1:
         raise ValueError("epochs must be at least 1")

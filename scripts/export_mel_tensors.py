@@ -55,13 +55,18 @@ def parse_args():
     parser.add_argument(
         "--shard-size",
         type=int,
-        default=0,
-        help="Rows per output shard. Use 0 for the original single-NPZ behavior.",
+        default=50000,
+        help="Rows per output shard. Use 0 only for small compatibility exports.",
     )
     parser.add_argument(
         "--include-shards",
         action="store_true",
         help="Print every shard summary instead of only first/last shard paths.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-clip and per-shard progress output; keep only the final summary.",
     )
     return parser.parse_args()
 
@@ -94,7 +99,7 @@ def main() -> int:
         output_path=output_path,
         frames=args.frames,
         workers=args.workers,
-        progress=True,
+        progress=not args.quiet,
         chunk_size=args.chunk_size,
         shard_size=args.shard_size,
     )
