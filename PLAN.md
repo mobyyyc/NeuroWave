@@ -831,6 +831,64 @@ Acceptance criteria for `v3.5`:
   lower noise waveform error.
 - High-detune pitched oscillator clips do not regress versus v3.4.
 
+### Product Quality Evaluation Loop
+
+Model work must now follow a fixed evaluation loop. The public desktop app makes a model
+change meaningful only when it improves the sounds users hear, not merely a training loss or
+one aggregate parameter metric.
+
+The loop has two complementary benchmark layers:
+
+1. **Scientific holdout:** the fixed d8 synthetic evaluation split remains untouched by
+   training and tuning. It protects fair checkpoint-to-checkpoint comparisons.
+2. **Product benchmark:** a small, versioned manifest of deliberately selected clips. Its
+   initial clips are deterministic synthetic renders covering clean waveform identity,
+   detune, audible noise, ADSR shapes, filter movement, quiet sounds, and known difficult
+   cases. Clean external one-note recordings may be added later as a separately labelled
+   domain-gap slice; they must never be confused with synthetic ground truth.
+
+Every benchmark entry must record an ID, source kind, deterministic source reference or
+audio path, pitch context, category labels, and any known limitation. Each evaluation run
+must save the checkpoint ID, repository revision, benchmark version, preprocessing settings,
+aggregate metrics, per-clip metrics, rendered predictions, and ranked failure groups.
+
+The required loop is:
+
+```text
+Freeze benchmark version
+        -> evaluate current baseline checkpoint
+        -> save report, renders, and ranked failures
+        -> complete a short blind A/B listening review
+        -> choose one dominant failure category
+        -> make one intentional model, target, loss, or data change
+        -> compare candidate to the unchanged baseline
+        -> promote only when the evidence passes the gates
+```
+
+The listening review should score each target/prediction pair for waveform/timbre similarity,
+envelope similarity, and overall usefulness on a small 1-5 scale. It does not replace the
+objective report; it catches cases where parameter MAE and rendered-audio distance disagree
+with what a user hears.
+
+A candidate checkpoint may replace the app's current model only when it has no material
+overall regression on the fixed d8 holdout, improves the targeted failure slice, and does not
+lose in the listening review. A report must document any trade-off explicitly. Train one
+intentional experiment at a time; do not combine architecture, target, loss, and dataset
+changes in a single comparison.
+
+Implementation sequence:
+
+1. Define and commit the product-benchmark manifest and evaluation protocol.
+2. Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against v3.4 on the fixed d8
+   holdout; establish the baseline report before changing the model again.
+3. Add a repeatable evaluation command that emits the required report, artifacts, and
+   failure-group summaries for either benchmark layer.
+4. Run the first product-benchmark baseline and record the listening scores.
+5. Use the dominant measured failure—not intuition alone—to select the next model experiment.
+
+The next likely representation decision is continuous wave-mix targets, but it must wait
+until the v3.5 baseline shows that waveform identity remains the dominant product failure.
+
 ### Milestone I: Product Prototype - Windows Desktop App
 
 Goal: turn NeuroWave from a research CLI into a usable single-platform desktop application
@@ -1126,11 +1184,7 @@ Models trained on clean synthetic audio may fail on real recordings. Real-clip m
 
 ## Immediate Next Step
 
-The next implementation task should be the first product slice of Milestone I:
-
-1. Extract the current external-WAV prediction flow into a reusable app inference module.
-2. Add crop start/end support to that module.
-3. Save a deterministic app run folder containing cropped target WAV, predicted JSON,
-   predicted WAV, summary JSON, and spectrogram artifacts.
-4. Add tests for crop validation, mono conversion, output paths, and prediction response shape.
-5. Only after the backend helper is stable, add a local desktop/web UI around it.
+The Windows product slice is complete enough for a public 0.1.0 release. The active
+improvement track is Milestone H's product-quality evaluation loop: establish the v3.5
+baseline on the fixed d8 holdout, then build the versioned product benchmark before changing
+the model again.

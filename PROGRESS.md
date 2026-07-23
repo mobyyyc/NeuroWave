@@ -31,7 +31,7 @@ Status meanings:
 - `[~]` In progress. Avoid leaving this state at the end of a session.
 - `[!]` Blocked. Add a note explaining the blocker.
 
-Current active phase: Milestone I - Product Prototype - Windows Desktop App.
+Current active phase: Milestone H - Model Capability And Target Quality.
 
 ## Completed Baseline
 
@@ -278,8 +278,18 @@ Completed v3.5 setup before training:
 
 Next recommended task:
 
-- Train `v3.5_noise_detune_loss` on the current 500k tensor dataset and compare it against
-  `v3.4_audible_loss` on the fixed d8 1000-clip evaluation.
+- [x] Document the product-quality evaluation loop: fixed scientific holdout, versioned
+  product benchmark, saved artifacts, listening review, one-variable experiments, and
+  promotion gates.
+- [ ] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
+  `v3.4_audible_loss` on the fixed d8 1000-clip holdout; save the baseline report and
+  decide whether v3.5 meets its documented acceptance criteria.
+- [ ] Define and commit the versioned product-benchmark manifest and category coverage.
+- [ ] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
+  metrics, rendered predictions, and ranked failure-group summaries.
+- [ ] Run the first product-benchmark baseline and record a short blind A/B listening review.
+- [ ] Select one next model experiment from measured dominant failures; do not combine
+  architecture, target, loss, and dataset changes in that comparison.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 
@@ -528,6 +538,11 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-22
 
+- Replanned Milestone H around a product-quality evaluation loop. The fixed d8 holdout
+  remains the scientific comparison set, while a new versioned product benchmark will
+  represent deliberate user-relevant sound categories. Every candidate must now be compared
+  against a saved v3.5 baseline using objective metrics, rendered artifacts, ranked failures,
+  and a short listening review before it can replace the app checkpoint.
 - Added a reproducible CPU-only Windows release-runtime path. It stages the project
   dependencies into ignored `runtime/python-cpu/`, replaces CUDA Torch packages with
   pinned official CPU wheels, validates CPU-only inference, and packages isolated CPU
