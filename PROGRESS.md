@@ -284,6 +284,8 @@ Next recommended task:
 - [x] Define the reproducible NWSD-v1 dataset release: separate train, development, and
   immutable benchmark partitions; quiet multicore generation; sharded tensor export; and
   manifest validation before training.
+- [x] Archive pre-NWSD-v1 generated run artifacts and route future NWSD-v1 reports to
+  dedicated training, evaluation, and prediction directories.
 - [ ] Generate and validate NWSD-v1 `train`, `dev`, and `benchmark` partitions from the
   committed manifest. Generated assets stay local and ignored.
 - [x] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
@@ -544,6 +546,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Archived local pre-NWSD-v1 app, prediction, training, and evaluation artifacts under
+  `runs/legacy_pre_nwsd_v1/`. Moved the new NWSD-v1 v3.4/v3.5 reports and logs to
+  `runs/nwsd_v1/evaluation/`, and changed future PyTorch training/evaluation defaults to
+  NWSD-v1-specific run directories. No generated reports or model checkpoints were deleted.
 - Generated the local ignored NWSD-v1 partitions from the committed manifest: 500,000
   training clips in ten tensor shards, 10,000 development clips, and 2,000 immutable
   benchmark clips. Validated the development and benchmark metadata/tensors. The full

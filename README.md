@@ -137,6 +137,26 @@ Validate generated files and shards before training:
 Run the equivalent generate, export, and validate commands for `dev` and `benchmark`.
 The release builder refuses to mix a new generation into a non-empty partition directory.
 
+## Run Artifact Layout
+
+Historical generated artifacts from the pre-NWSD-v1 d1-d9 workflow live under the ignored
+`runs/legacy_pre_nwsd_v1/` archive. Do not add new reports there.
+
+All NWSD-v1 work stays outside that archive:
+
+```text
+runs/
+  legacy_pre_nwsd_v1/     # historical app, prediction, training, and evaluation artifacts
+  nwsd_v1/
+    training/             # future NWSD-v1 training metrics
+    evaluation/           # future NWSD-v1 checkpoint comparisons and logs
+    predictions/          # future NWSD-v1 prediction artifacts
+```
+
+The PyTorch training and dataset-evaluation defaults write to the NWSD-v1 training and
+evaluation directories. Always pass an explicit output path inside `runs/nwsd_v1/` for
+other analysis scripts.
+
 Worker rules:
 
 - `--workers 1`: serial mode.

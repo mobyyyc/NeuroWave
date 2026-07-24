@@ -37,7 +37,7 @@ from minisynth.torch_model import (
 )
 
 
-DEFAULT_OUTPUT = Path("runs/evaluation/eval.json")
+DEFAULT_OUTPUT = Path("runs/nwsd_v1/evaluation/eval.json")
 
 
 def parse_args():

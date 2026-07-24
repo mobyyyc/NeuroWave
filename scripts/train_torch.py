@@ -107,7 +107,7 @@ def parse_args():
     )
     parser.add_argument(
         "--metrics-output",
-        default="runs/training/v3.5_noise_detune_loss_metrics.json",
+        default="runs/nwsd_v1/training/v3.5_noise_detune_loss_metrics.json",
         help="Path where training metrics JSON should be saved.",
     )
     return parser.parse_args()
