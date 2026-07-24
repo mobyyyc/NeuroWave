@@ -45,7 +45,6 @@ boost. This isolates the unproven component most plausibly associated with the v
 and timbre regressions. Evaluate the resulting checkpoint against both v3.4 and v3.5 on the
 unchanged 2,000-clip NWSD-v1 benchmark and this product benchmark before any promotion.
 
-Local ignored artifacts are retained in:
-
-- `runs/nwsd_v1/evaluation/product_benchmark/neurowave_product_benchmark_v1/v3.4_audible_loss/20260724T014654Z/`
-- `runs/nwsd_v1/evaluation/product_benchmark/neurowave_product_benchmark_v1/v3.5_noise_detune_loss/20260724T014634Z/`
+The local ignored reports and completed listening-review evidence are retained in
+`runs/nwsd_v1/evaluation/archive/product_benchmark_v1_v3_4_v3_5_20260724/`. Regenerable
+target/prediction WAV and copied patch artifacts were intentionally pruned after review.

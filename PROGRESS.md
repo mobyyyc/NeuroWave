@@ -556,6 +556,8 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   objective baseline, v3.5's extra audible-noise waveform boost is unproven and likely
   contributes to audible waveform/timbre regressions. The next single-variable experiment
   will retain noise-detune suppression but remove that boost; v3.4 is the control.
+- Archived the compact v3.4/v3.5 product-benchmark reports and completed review evidence;
+  pruned the regenerable target/prediction WAV and copied patch caches after review.
 - Added the repeatable product-benchmark evaluator. It writes a timestamped isolated run
   containing all 36 target/prediction WAV and JSON artifact pairs, a full per-case report,
   aggregate/category metrics, and ranked failure groups. The first objective baseline found
