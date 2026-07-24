@@ -298,9 +298,10 @@ Next recommended task:
 - [x] Define and commit the versioned product-benchmark manifest and category coverage.
 - [x] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
   metrics, rendered predictions, and ranked failure-group summaries.
-- [ ] Run the first product-benchmark baseline and record a short blind A/B listening review.
-- [ ] Select one next model experiment from measured dominant failures; do not combine
-  architecture, target, loss, and dataset changes in that comparison.
+- [x] Run the first product-benchmark baseline and record a short blind A/B listening review.
+- [x] Select one next model experiment from measured dominant failures; do not combine
+  architecture, target, loss, and dataset changes in that comparison. Decision: ablate only
+  v3.5's audible-noise waveform boost while retaining its noise-detune suppression.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 
@@ -549,6 +550,12 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Completed and unblinded the first balanced 12-case product-benchmark listening review.
+  v3.4 received 6 preferences, v3.5 received 3, and 3 cases tied; mean timbre was `4.75`
+  for v3.4 versus `4.67` for v3.5, while both scored `5.00` for envelope. Combined with the
+  objective baseline, v3.5's extra audible-noise waveform boost is unproven and likely
+  contributes to audible waveform/timbre regressions. The next single-variable experiment
+  will retain noise-detune suppression but remove that boost; v3.4 is the control.
 - Added the repeatable product-benchmark evaluator. It writes a timestamped isolated run
   containing all 36 target/prediction WAV and JSON artifact pairs, a full per-case report,
   aggregate/category metrics, and ranked failure groups. The first objective baseline found

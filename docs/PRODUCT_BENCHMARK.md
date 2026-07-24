@@ -55,6 +55,17 @@ The first objective checkpoint comparison is recorded in
 `docs/PRODUCT_BENCHMARK_BASELINE.md`. It is not a promotion decision until the required blind
 listening review is complete.
 
+After filling a score sheet, validate and unblind it into a local summary:
+
+```powershell
+& $Python scripts/summarize_product_benchmark_review.py `
+  --scores <blind-review-folder>/scores.csv `
+  --answer-key <blind-review-folder>/answer_key.json
+```
+
+The importer accepts UTF-8 and common Windows Excel encodings. It rejects missing scores,
+out-of-range ratings, invalid preferences, or a score sheet that does not match its answer key.
+
 ## Prepare a blind A/B review
 
 Use two completed evaluator reports to create a balanced package with two high-disagreement

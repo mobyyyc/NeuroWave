@@ -889,8 +889,10 @@ Implementation sequence:
    holdout; establish the baseline report before changing the model again.
 3. [x] Add a repeatable evaluation command that emits the required report, artifacts, and
    failure-group summaries for either benchmark layer.
-4. Run the first product-benchmark baseline and record the listening scores.
-5. Use the dominant measured failure—not intuition alone—to select the next model experiment.
+4. [x] Run the first product-benchmark baseline and record the listening scores.
+5. [x] Use the dominant measured failure—not intuition alone—to select the next model experiment:
+   one v3.5 loss ablation that removes only the audible-noise waveform boost while retaining
+   noise-detune suppression; v3.4 is the control checkpoint.
 
 The next likely representation decision is continuous wave-mix targets, but it must wait
 until the v3.5 baseline shows that waveform identity remains the dominant product failure.

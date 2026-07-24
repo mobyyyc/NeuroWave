@@ -5,6 +5,7 @@ import unittest
 from minisynth.product_benchmark import load_product_benchmark, validate_product_benchmark
 from scripts.evaluate_product_benchmark import category_summaries, ranked_failure_groups
 from scripts.prepare_product_benchmark_review import select_review_cases
+from scripts.summarize_product_benchmark_review import summarize_review
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,3 +79,28 @@ class TestProductBenchmark(unittest.TestCase):
         selected = select_review_cases(report_a, report_b, cases_per_category=1)
 
         self.assertEqual(selected, ["noise-high", "detune-high"])
+
+    def test_review_summary_unblinds_scores_and_preferences(self):
+        rows = [
+            {
+                "review_id": "case-01",
+                "a_timbre_1_to_5": "4",
+                "b_timbre_1_to_5": "5",
+                "a_envelope_1_to_5": "3",
+                "b_envelope_1_to_5": "5",
+                "overall_preference_a_b_tie": "b",
+                "notes": "b is closer",
+            }
+        ]
+        answer_key = {
+            "benchmark_id": "example",
+            "options": {
+                "case-01": {"case_id": "noise-001", "category": ["audible_noise"], "a": "v3.5", "b": "v3.4"}
+            },
+        }
+
+        summary = summarize_review(rows, answer_key)
+
+        self.assertEqual(summary["preference_counts"]["v3.4"], 1)
+        self.assertEqual(summary["models"]["v3.5"]["mean_timbre"], 4.0)
+        self.assertEqual(summary["models"]["v3.4"]["mean_envelope"], 5.0)
