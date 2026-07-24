@@ -89,6 +89,11 @@ def parse_args():
         action="store_true",
         help="Include full per-clip patches, comparisons, and parameter errors.",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-clip progress output.",
+    )
     return parser.parse_args()
 
 
@@ -107,7 +112,8 @@ def main() -> int:
     total_clips = len(selected_rows)
 
     for offset, row in enumerate(selected_rows, start=1):
-        print(f"\rEvaluating clip {offset}/{total_clips}", end="", flush=True)
+        if not args.quiet:
+            print(f"\rEvaluating clip {offset}/{total_clips}", end="", flush=True)
         audio_path = resolve_metadata_path(args.metadata, row["audio_path"])
         target_audio, target_sample_rate = sf.read(audio_path)
         clip_result = {
@@ -166,7 +172,8 @@ def main() -> int:
                     )
 
         clip_results.append(clip_result)
-    print()
+    if not args.quiet:
+        print()
 
     successful_results = [result for result in clip_results if "comparison" in result]
     if not successful_results:

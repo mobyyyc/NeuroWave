@@ -224,7 +224,7 @@ compact checkpoint metrics, prediction-distribution diagnostics, and a
 parameter errors. Use `--diagnostics-top-n 20` for a larger worst-case review set,
 `--include-clips` for compact per-clip rows, or `--include-full-clips` when you need
 full target patches, predicted patches, and normalized per-parameter errors for
-debugging.
+debugging. Use `--quiet` for long benchmark runs to suppress per-clip terminal output.
 
 ## Pitch And Length Strategy
 

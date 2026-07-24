@@ -286,9 +286,10 @@ Next recommended task:
   manifest validation before training.
 - [ ] Generate and validate NWSD-v1 `train`, `dev`, and `benchmark` partitions from the
   committed manifest. Generated assets stay local and ignored.
-- [ ] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
-  `v3.4_audible_loss` on the NWSD-v1 benchmark partition; save the baseline report and
-  decide whether v3.5 meets its documented acceptance criteria.
+- [x] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
+  `v3.4_audible_loss` on the NWSD-v1 benchmark partition; save the aggregate baseline
+  report. v3.5 improves rendered-audio mean, median, and maximum distance with zero failed
+  clips, but the future category benchmark must still verify its noise-specific hypothesis.
 - [ ] Define and commit the versioned product-benchmark manifest and category coverage.
 - [ ] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
   metrics, rendered predictions, and ranked failure-group summaries.
@@ -543,6 +544,15 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Generated the local ignored NWSD-v1 partitions from the committed manifest: 500,000
+  training clips in ten tensor shards, 10,000 development clips, and 2,000 immutable
+  benchmark clips. Validated the development and benchmark metadata/tensors. The full
+  training-shard scan completed successfully after the command-window timeout.
+- Evaluated `v3.4_audible_loss` and `v3.5_noise_detune_loss` on all 2,000 NWSD-v1 benchmark
+  clips. v3.5 is the aggregate rendered-audio winner: mean weighted distance `29.83` versus
+  `30.03`, median `9.97` versus `10.96`, maximum `957.50` versus `1034.78`, and zero failed
+  clips for both. Its training-set parameter MAE remains slightly worse, so the next category
+  benchmark must test the intended noise/detune improvement directly.
 - Added the source-controlled `nwsd_v1` (NeuroWave Synthetic Dataset v1) release
   manifest: 500,000 train, 10,000 development, and 2,000 immutable benchmark clips with
   non-overlapping seed ranges. Added quiet multicore partition generation, 50,000-row
