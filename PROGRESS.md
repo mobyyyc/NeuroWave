@@ -296,7 +296,7 @@ Next recommended task:
   report. v3.5 improves rendered-audio mean, median, and maximum distance with zero failed
   clips, but the future category benchmark must still verify its noise-specific hypothesis.
 - [x] Define and commit the versioned product-benchmark manifest and category coverage.
-- [ ] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
+- [x] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
   metrics, rendered predictions, and ranked failure-group summaries.
 - [ ] Run the first product-benchmark baseline and record a short blind A/B listening review.
 - [ ] Select one next model experiment from measured dominant failures; do not combine
@@ -549,6 +549,14 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Added the repeatable product-benchmark evaluator. It writes a timestamped isolated run
+  containing all 36 target/prediction WAV and JSON artifact pairs, a full per-case report,
+  aggregate/category metrics, and ranked failure groups. The first objective baseline found
+  v3.4 lower than v3.5 on this deliberately hard product slice (mean weighted distance
+  `24.01` versus `33.27`), although v3.5 improved pitched detune, quiet mixes, and
+  filter/resonance extremes. v3.5 did not improve audible noise and regressed strongly on
+  waveform identity and envelope extremes; a blind listening review remains required before
+  any shipped-model decision.
 - Added `neurowave_product_benchmark_v1`: 36 fixed, category-balanced deterministic cases
   selected from the immutable NWSD-v1 benchmark partition. The source-controlled manifest
   covers waveform identity, pitched detune, audible noise, quiet mixes, envelope extremes,

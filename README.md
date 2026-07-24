@@ -176,6 +176,16 @@ Validate its references and category coverage with:
 
 See `docs/PRODUCT_BENCHMARK.md` for the required comparison record and promotion gates.
 
+Run a checkpoint against all 36 product cases and save its report and comparison artifacts:
+
+```powershell
+& $Python scripts/evaluate_product_benchmark.py --model models/v3.5_noise_detune_loss.pt --device cuda --quiet
+```
+
+Pass `--output-dir` only for a new or empty directory. The evaluator refuses to mix artifacts
+into an existing run and otherwise creates a timestamped run under
+`runs/nwsd_v1/evaluation/product_benchmark/`.
+
 Worker rules:
 
 - `--workers 1`: serial mode.

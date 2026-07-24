@@ -887,7 +887,7 @@ Implementation sequence:
 1. [x] Define and commit the product-benchmark manifest and evaluation protocol.
 2. Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against v3.4 on the fixed d8
    holdout; establish the baseline report before changing the model again.
-3. Add a repeatable evaluation command that emits the required report, artifacts, and
+3. [x] Add a repeatable evaluation command that emits the required report, artifacts, and
    failure-group summaries for either benchmark layer.
 4. Run the first product-benchmark baseline and record the listening scores.
 5. Use the dominant measured failure—not intuition alone—to select the next model experiment.

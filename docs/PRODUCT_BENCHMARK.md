@@ -38,3 +38,19 @@ on waveform/timbre similarity, envelope similarity, and overall usefulness (1–
 Promote a candidate only when it avoids a material scientific-holdout regression, improves
 its intended category, and does not lose the listening review. Change one model variable at a
 time between comparisons.
+
+## Run an evaluation
+
+```powershell
+& $Python scripts/evaluate_product_benchmark.py --model models/v3.5_noise_detune_loss.pt --device cuda --quiet
+```
+
+The evaluator creates a timestamped ignored run directory containing `report.json` and, for
+each case, target/predicted WAV files plus target/predicted patch JSON. The report includes
+aggregate metrics, category metrics, per-case metrics, ranked category failure groups, and
+the highest-distance cases. Use a fresh empty `--output-dir` only when a predictable location
+is needed.
+
+The first objective checkpoint comparison is recorded in
+`docs/PRODUCT_BENCHMARK_BASELINE.md`. It is not a promotion decision until the required blind
+listening review is complete.
