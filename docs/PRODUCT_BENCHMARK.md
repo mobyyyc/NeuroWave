@@ -1,0 +1,40 @@
+# Product Benchmark v1
+
+`datasets/product_benchmark_v1.json` is the fixed, versioned product-quality benchmark for
+NeuroWave model comparisons. It selects 36 deterministic clips from the immutable
+`nwsd_v1/benchmark` partition; it is not a training set, a development set, or a random
+sample to regenerate between experiments.
+
+## Coverage
+
+Each category contains six unique cases:
+
+- dominant pitched waveform identity;
+- substantial pitched detune;
+- audible noise;
+- quiet oscillator mixes;
+- envelope extremes; and
+- filter or resonance extremes.
+
+Each case records its release, partition, deterministic seed/index, exact pitch context,
+category label, and scope limitation. The benchmark intentionally remains synthetic in v1.
+Future external recordings must be added as a separately labelled domain-gap benchmark
+version, never mixed with synthetic ground-truth comparisons.
+
+## Validate
+
+```powershell
+& $Python scripts/validate_product_benchmark.py
+```
+
+## Required evaluation record
+
+For every checkpoint comparison, save the benchmark ID, checkpoint path and ID, repository
+revision, preprocessing settings, aggregate and per-category metrics, per-case metrics,
+rendered target/prediction pairs, and ranked failure groups under
+`runs/nwsd_v1/evaluation/`. Record a brief blind listening review for target/prediction pairs
+on waveform/timbre similarity, envelope similarity, and overall usefulness (1–5 each).
+
+Promote a candidate only when it avoids a material scientific-holdout regression, improves
+its intended category, and does not lose the listening review. Change one model variable at a
+time between comparisons.

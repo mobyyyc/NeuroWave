@@ -165,6 +165,17 @@ The PyTorch training and dataset-evaluation defaults write to the NWSD-v1 traini
 evaluation directories. Always pass an explicit output path inside `runs/nwsd_v1/` for
 other analysis scripts.
 
+The fixed, category-balanced product benchmark is declared in
+`datasets/product_benchmark_v1.json`. It selects 36 deterministic clips from the immutable
+NWSD-v1 benchmark partition and must never be used for training or checkpoint selection.
+Validate its references and category coverage with:
+
+```powershell
+& $Python scripts/validate_product_benchmark.py
+```
+
+See `docs/PRODUCT_BENCHMARK.md` for the required comparison record and promotion gates.
+
 Worker rules:
 
 - `--workers 1`: serial mode.

@@ -884,7 +884,7 @@ changes in a single comparison.
 
 Implementation sequence:
 
-1. Define and commit the product-benchmark manifest and evaluation protocol.
+1. [x] Define and commit the product-benchmark manifest and evaluation protocol.
 2. Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against v3.4 on the fixed d8
    holdout; establish the baseline report before changing the model again.
 3. Add a repeatable evaluation command that emits the required report, artifacts, and

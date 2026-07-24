@@ -295,7 +295,7 @@ Next recommended task:
   `v3.4_audible_loss` on the NWSD-v1 benchmark partition; save the aggregate baseline
   report. v3.5 improves rendered-audio mean, median, and maximum distance with zero failed
   clips, but the future category benchmark must still verify its noise-specific hypothesis.
-- [ ] Define and commit the versioned product-benchmark manifest and category coverage.
+- [x] Define and commit the versioned product-benchmark manifest and category coverage.
 - [ ] Add a repeatable benchmark evaluation command that saves aggregate and per-clip
   metrics, rendered predictions, and ranked failure-group summaries.
 - [ ] Run the first product-benchmark baseline and record a short blind A/B listening review.
@@ -549,6 +549,12 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Added `neurowave_product_benchmark_v1`: 36 fixed, category-balanced deterministic cases
+  selected from the immutable NWSD-v1 benchmark partition. The source-controlled manifest
+  covers waveform identity, pitched detune, audible noise, quiet mixes, envelope extremes,
+  and filter/resonance extremes, with six unique cases per category. Added manifest
+  validation, tests, and a documented comparison/promotion protocol; it remains strictly
+  separate from training and development data.
 - Archived superseded one-off source scripts under `legacy/scripts/pre_nwsd_v1/` and local
   historical checkpoints under `models/legacy_pre_nwsd_v1/`; nothing was deleted. Retained
   the active `v3.5_noise_detune_loss` release model, the `v3.4_audible_loss` NWSD-v1
