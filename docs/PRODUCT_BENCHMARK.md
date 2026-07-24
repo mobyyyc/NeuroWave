@@ -54,3 +54,19 @@ is needed.
 The first objective checkpoint comparison is recorded in
 `docs/PRODUCT_BENCHMARK_BASELINE.md`. It is not a promotion decision until the required blind
 listening review is complete.
+
+## Prepare a blind A/B review
+
+Use two completed evaluator reports to create a balanced package with two high-disagreement
+cases per category:
+
+```powershell
+& $Python scripts/prepare_product_benchmark_review.py `
+  --report-a <v3.4-report.json> --label-a v3.4_audible_loss `
+  --report-b <v3.5-report.json> --label-b v3.5_noise_detune_loss `
+  --output-dir runs/nwsd_v1/evaluation/product_benchmark/neurowave_product_benchmark_v1/blind_review_v3_4_vs_v3_5
+```
+
+Listen to the target and each randomized A/B option in every case folder, then fill
+`scores.csv`. Score timbre and envelope from 1–5, choose `a`, `b`, or `tie` for overall
+usefulness, and add concise notes. Do not open `answer_key.json` until every row is scored.

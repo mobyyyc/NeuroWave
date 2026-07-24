@@ -4,6 +4,7 @@ import unittest
 
 from minisynth.product_benchmark import load_product_benchmark, validate_product_benchmark
 from scripts.evaluate_product_benchmark import category_summaries, ranked_failure_groups
+from scripts.prepare_product_benchmark_review import select_review_cases
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,3 +55,26 @@ class TestProductBenchmark(unittest.TestCase):
         self.assertEqual(summaries["noise"]["worst_case_ids"], ["one", "two"])
         self.assertEqual(summaries["detune"]["failed_count"], 1)
         self.assertEqual(ranked_failure_groups(summaries)[0]["category"], "noise")
+
+    def test_review_selection_balances_categories_by_model_disagreement(self):
+        report_a = {
+            "benchmark_id": "example",
+            "ranked_failure_groups": [{"category": "noise"}, {"category": "detune"}],
+            "cases": [
+                {"case_id": "noise-low", "categories": ["noise"], "comparison": {"weighted_distance": 1}},
+                {"case_id": "noise-high", "categories": ["noise"], "comparison": {"weighted_distance": 2}},
+                {"case_id": "detune-low", "categories": ["detune"], "comparison": {"weighted_distance": 3}},
+                {"case_id": "detune-high", "categories": ["detune"], "comparison": {"weighted_distance": 4}},
+            ],
+        }
+        report_b = {
+            **report_a,
+            "cases": [
+                {**case, "comparison": {"weighted_distance": case["comparison"]["weighted_distance"] + delta}}
+                for case, delta in zip(report_a["cases"], (1, 10, 2, 9))
+            ],
+        }
+
+        selected = select_review_cases(report_a, report_b, cases_per_category=1)
+
+        self.assertEqual(selected, ["noise-high", "detune-high"])

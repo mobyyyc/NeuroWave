@@ -557,6 +557,9 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
   filter/resonance extremes. v3.5 did not improve audible noise and regressed strongly on
   waveform identity and envelope extremes; a blind listening review remains required before
   any shipped-model decision.
+- Prepared the local 12-case balanced blind A/B listening package for the v3.4 versus v3.5
+  comparison. It contains randomized option WAVs, targets, instructions, a blank score sheet,
+  and a separate answer key; subjective ratings are still pending.
 - Added `neurowave_product_benchmark_v1`: 36 fixed, category-balanced deterministic cases
   selected from the immutable NWSD-v1 benchmark partition. The source-controlled manifest
   covers waveform identity, pitched detune, audible noise, quiet mixes, envelope extremes,
