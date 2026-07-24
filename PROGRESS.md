@@ -286,6 +286,9 @@ Next recommended task:
   manifest validation before training.
 - [x] Archive pre-NWSD-v1 generated run artifacts and route future NWSD-v1 reports to
   dedicated training, evaluation, and prediction directories.
+- [x] Archive superseded pre-NWSD-v1 one-off prediction scripts and historical local
+  checkpoints while retaining the active v3.4/v3.5 comparison models and the maintained
+  scikit-learn regression baseline.
 - [ ] Generate and validate NWSD-v1 `train`, `dev`, and `benchmark` partitions from the
   committed manifest. Generated assets stay local and ignored.
 - [x] Evaluate the shipped `v3.5_noise_detune_loss` checkpoint against
@@ -546,6 +549,11 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Archived superseded one-off source scripts under `legacy/scripts/pre_nwsd_v1/` and local
+  historical checkpoints under `models/legacy_pre_nwsd_v1/`; nothing was deleted. Retained
+  the active `v3.5_noise_detune_loss` release model, the `v3.4_audible_loss` NWSD-v1
+  comparison baseline, and the scikit-learn code because `ML_DECISION.md` still defines it
+  as a lightweight regression reference.
 - Archived local pre-NWSD-v1 app, prediction, training, and evaluation artifacts under
   `runs/legacy_pre_nwsd_v1/`. Moved the new NWSD-v1 v3.4/v3.5 reports and logs to
   `runs/nwsd_v1/evaluation/`, and changed future PyTorch training/evaluation defaults to

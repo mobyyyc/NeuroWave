@@ -995,7 +995,8 @@ returns:
 
 Suggested implementation order:
 
-1. Extract reusable inference code from `scripts/playground_predict_wav.py` into a small
+1. Extract reusable inference code from the former playground script (now archived at
+   `legacy/scripts/pre_nwsd_v1/playground_predict_wav.py`) into a small
    `minisynth.app_inference` module.
 2. Add crop-aware prediction/render helper tests.
 3. Add a local JSON backend with `/health` and `/predict`. The first implementation can

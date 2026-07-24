@@ -142,6 +142,14 @@ The release builder refuses to mix a new generation into a non-empty partition d
 Historical generated artifacts from the pre-NWSD-v1 d1-d9 workflow live under the ignored
 `runs/legacy_pre_nwsd_v1/` archive. Do not add new reports there.
 
+Superseded one-off prediction and playground scripts live in
+`legacy/scripts/pre_nwsd_v1/`. They are retained for source history only; use the current
+desktop app, `scripts/predict_patch_torch.py`, and dataset-level evaluation commands for
+new work. Local historical model checkpoints likewise live in the ignored
+`models/legacy_pre_nwsd_v1/` archive. The active release checkpoint is
+`models/v3.5_noise_detune_loss.pt`; keep `models/v3.4_audible_loss.pt` only as the current
+NWSD-v1 comparison baseline.
+
 All NWSD-v1 work stays outside that archive:
 
 ```text
@@ -450,9 +458,12 @@ and remembers recent input files plus recent prediction runs in local app storag
 See `docs/WINDOWS_RELEASE.md` for the Windows release checklist and the prepared
 runtime packaging convention.
 
-## Legacy Scikit-Learn Baseline
+## Maintenance Scikit-Learn Baseline
 
-Train the old MLP baseline only when you need a quick pipeline sanity check:
+The scikit-learn MLP is retained as a small, quick regression baseline, not as a
+model-quality path. Use it only to diagnose the data pipeline; use PyTorch and NWSD-v1 for
+new model development. Its historical d2 commands and outputs belong under the legacy
+archives above.
 
 ```bash
 python scripts/train_mlp.py \
