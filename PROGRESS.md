@@ -302,6 +302,10 @@ Next recommended task:
 - [x] Select one next model experiment from measured dominant failures; do not combine
   architecture, target, loss, and dataset changes in that comparison. Decision: ablate only
   v3.5's audible-noise waveform boost while retaining its noise-detune suppression.
+- [x] Implement `v3.6_noise_detune_ablation` and isolated checkpoint/metrics output defaults.
+- [ ] Train v3.6 using NWSD-v1 train/dev only, with quiet console output and retained compact
+  checkpoint/metrics artifacts.
+- [ ] Evaluate v3.6 against v3.4 and v3.5 on the frozen NWSD-v1 and product benchmarks.
 - [ ] Decide whether the current waveform enum target must become continuous wave-mix before aiming for `test_mae <= 0.05`.
 - [ ] Commit Milestone H completion.
 
@@ -550,6 +554,10 @@ Goal: make NeuroWave reliable enough for repeated use outside the developer envi
 
 ### 2026-07-23
 
+- Added the v3.6 loss-only ablation preset. It retains v3.5's suppression of detune loss for
+  noise targets but removes only its extra audible-noise waveform-classification boost. The
+  training CLI now defaults to separate v3.6 checkpoint and compact metrics paths; training
+  itself remains user-run and has not started.
 - Completed and unblinded the first balanced 12-case product-benchmark listening review.
   v3.4 received 6 preferences, v3.5 received 3, and 3 cases tied; mean timbre was `4.75`
   for v3.4 versus `4.67` for v3.5, while both scored `5.00` for envelope. Combined with the

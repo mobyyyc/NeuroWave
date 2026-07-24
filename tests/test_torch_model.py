@@ -32,6 +32,7 @@ from minisynth.torch_model import (
     inverse_model_loss,
     LOSS_PRESET_AUDIBLE,
     LOSS_PRESET_NOISE_DETUNE,
+    LOSS_PRESET_NOISE_DETUNE_ABLATION,
     load_mel_tensor_npz,
     load_torch_checkpoint,
     parameter_mae_by_name,
@@ -436,6 +437,31 @@ class TestTorchInverseModel(unittest.TestCase):
 
         self.assertGreater(boosted[0].item(), boosted[1].item())
         self.assertAlmostEqual(float(torch.mean(boosted)), 1.0)
+
+    def test_noise_detune_ablation_loss_is_supported_without_wave_boost(self):
+        parameters = target_parameters_for_mode(TARGET_MODE_MAIN_DETUNED_MIX)
+        model = create_inverse_model(
+            output_dim=len(parameters),
+            input_channels=2,
+            waveform_mode="classification",
+            parameters=parameters,
+        )
+        features = torch.zeros(2, 2, DEFAULT_MEL_BINS, 8)
+        targets = torch.full((2, len(parameters)), 0.5)
+
+        loss = inverse_model_loss(
+            model,
+            model(features),
+            targets,
+            features=features,
+            loss_preset=LOSS_PRESET_NOISE_DETUNE_ABLATION,
+        )
+
+        self.assertTrue(torch.isfinite(loss))
+        self.assertEqual(
+            len(parameter_loss_weights(parameters, preset=LOSS_PRESET_NOISE_DETUNE_ABLATION)),
+            len(parameters),
+        )
 
     def test_parameter_mae_by_name_reports_each_target(self):
         targets = np.zeros((2, len(VECTOR_PARAMETERS)), dtype=np.float32)

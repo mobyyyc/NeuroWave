@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import soundfile as sf
+import torch
 from sklearn.exceptions import ConvergenceWarning
 
 from minisynth.constants import DEFAULT_SAMPLE_RATE
@@ -251,6 +252,7 @@ class TestPredictionEvaluation(unittest.TestCase):
     def test_evaluate_dataset_torch_cli_writes_summary_report(self):
         from scripts.evaluate_dataset_torch import main
 
+        torch.manual_seed(1)
         model = create_inverse_model()
 
         with TemporaryDirectory() as temp_dir:

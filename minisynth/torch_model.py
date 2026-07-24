@@ -51,6 +51,7 @@ LOSS_PRESET_HYBRID = "hybrid"
 LOSS_PRESET_GROUP_BALANCED = "groupbalanced"
 LOSS_PRESET_AUDIBLE = "audible"
 LOSS_PRESET_NOISE_DETUNE = "noise_detune"
+LOSS_PRESET_NOISE_DETUNE_ABLATION = "noise_detune_ablation"
 DEFAULT_LOSS_PRESET = LOSS_PRESET_FLAT
 OPTIMIZER_ADAM = "adam"
 OPTIMIZER_ADAMW = "adamw"
@@ -853,7 +854,12 @@ def parameter_loss_weights(parameters=None, preset=DEFAULT_LOSS_PRESET):
         if torch.sum(values) <= 0:
             raise ValueError("loss weights must include at least one positive value")
         return values * (len(values) / torch.sum(values))
-    if preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE, LOSS_PRESET_NOISE_DETUNE):
+    if preset in (
+        LOSS_PRESET_GROUP_BALANCED,
+        LOSS_PRESET_AUDIBLE,
+        LOSS_PRESET_NOISE_DETUNE,
+        LOSS_PRESET_NOISE_DETUNE_ABLATION,
+    ):
         return torch.ones(len(parameters), dtype=torch.float32)
 
     raise ValueError(f"Unsupported loss preset: {preset}")
@@ -1021,7 +1027,14 @@ def _suppress_noise_detune_weights(base_weights, noise_mask):
     return weights / torch.clamp(torch.mean(weights.detach()), min=1.0e-6)
 
 
-def audible_main_detuned_loss(model, predictions, targets, features=None, noise_aware_detune=False):
+def audible_main_detuned_loss(
+    model,
+    predictions,
+    targets,
+    features=None,
+    noise_aware_detune=False,
+    boost_noise_wave=False,
+):
     required = {"main_wave", "detuned_wave", "osc_total_level", "detuned_balance", "detune_amount"}
     parameter_indices = _parameter_indices_by_name(model.parameters_schema)
     if not required.issubset(parameter_indices):
@@ -1062,8 +1075,16 @@ def audible_main_detuned_loss(model, predictions, targets, features=None, noise_
         "detuned_wave",
     )
     if noise_aware_detune:
-        main_wave_weights = _boost_noise_wave_weights(main_audibility, main_noise_mask)
-        detuned_wave_weights = _boost_noise_wave_weights(detuned_audibility, detuned_noise_mask)
+        main_wave_weights = (
+            _boost_noise_wave_weights(main_audibility, main_noise_mask)
+            if boost_noise_wave
+            else main_audibility
+        )
+        detuned_wave_weights = (
+            _boost_noise_wave_weights(detuned_audibility, detuned_noise_mask)
+            if boost_noise_wave
+            else detuned_audibility
+        )
         detune_weights = _suppress_noise_detune_weights(detuned_audibility, detuned_noise_mask)
     else:
         main_wave_weights = main_audibility
@@ -1151,6 +1172,16 @@ def inverse_model_loss(
             targets,
             features=features,
             noise_aware_detune=True,
+            boost_noise_wave=True,
+        )
+    if loss_preset == LOSS_PRESET_NOISE_DETUNE_ABLATION:
+        return audible_main_detuned_loss(
+            model,
+            predictions,
+            targets,
+            features=features,
+            noise_aware_detune=True,
+            boost_noise_wave=False,
         )
 
     if model.waveform_mode == WAVEFORM_MODE_CLASSIFICATION:
@@ -2145,7 +2176,12 @@ def train_inverse_model_sharded(
             for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
         },
         "loss_groups": loss_groups_for_parameters(target_parameters)
-        if loss_preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE, LOSS_PRESET_NOISE_DETUNE)
+        if loss_preset in (
+            LOSS_PRESET_GROUP_BALANCED,
+            LOSS_PRESET_AUDIBLE,
+            LOSS_PRESET_NOISE_DETUNE,
+            LOSS_PRESET_NOISE_DETUNE_ABLATION,
+        )
         else {},
         "tensor_path": str(tensor_path),
         "validation_tensor_path": str(validation_tensor_path) if validation_tensor_path else None,
@@ -2494,7 +2530,12 @@ def train_inverse_model(
             for parameter, weight in zip(target_parameters, loss_weights.detach().cpu().numpy())
         },
         "loss_groups": loss_groups_for_parameters(target_parameters)
-        if loss_preset in (LOSS_PRESET_GROUP_BALANCED, LOSS_PRESET_AUDIBLE, LOSS_PRESET_NOISE_DETUNE)
+        if loss_preset in (
+            LOSS_PRESET_GROUP_BALANCED,
+            LOSS_PRESET_AUDIBLE,
+            LOSS_PRESET_NOISE_DETUNE,
+            LOSS_PRESET_NOISE_DETUNE_ABLATION,
+        )
         else {},
         "tensor_path": str(tensor_path),
         "metadata_path": dataset["metadata_path"],

@@ -207,14 +207,15 @@ Template for future models:
 
 ```bash
 python scripts/train_torch.py \
-  --model-id v3.5_noise_detune_loss \
+  --model-id v3.6_noise_detune_ablation \
   --tensor-data data/generated/nwsd_v1/train/features \
   --validation-tensor-data data/generated/nwsd_v1/dev/features \
   --epochs 50 \
   --batch-size 128 \
   --device cuda \
-  --model-output models/v3.5_noise_detune_loss.pt \
-  --metrics-output runs/training/v3.5_noise_detune_loss_metrics.json
+  --quiet \
+  --model-output models/v3.6_noise_detune_ablation.pt \
+  --metrics-output runs/nwsd_v1/training/v3.6_noise_detune_ablation_metrics.json
 ```
 
 The benchmark tensor directory is deliberately not accepted as a validation source. Evaluate
@@ -224,10 +225,16 @@ checkpoint selection is complete.
 Training output:
 
 - Checkpoint: `models/<model_id>.pt`
-- Metrics report: `runs/training/<model_id>_metrics.json`
+- Metrics report: `runs/nwsd_v1/training/<model_id>_metrics.json`
 - Console progress: device selection, epochs, batches, and final metrics unless `--quiet` is used.
 - Metrics include train/test loss, train/test MAE, continuous-parameter MAE,
   per-parameter MAE, grouped MAE, waveform accuracy, and compact loss-history tails.
+
+For a professional training record, keep the checkpoint and compact metrics JSON for every
+candidate, plus its exact command and later benchmark reports. Use `--quiet` for long runs:
+batch-by-batch console output is disposable noise and can slow a Windows terminal, while the
+saved metrics/checkpoint are the durable audit trail. Do not retain copied WAV or patch caches
+once a reviewed benchmark report and score summary exist; they can be regenerated.
 
 The current best proven model family is the v3 pitch-conditioned grouped-head setup. It keeps exact synthetic pitch as context, uses separate heads for duration, oscillator, filter, and ADSR controls, and trains with group-balanced loss so one parameter group cannot hide another.
 
@@ -237,7 +244,7 @@ The current best proven model family is the v3 pitch-conditioned grouped-head se
 
 `v3.4_audible_loss` keeps the v3.3 target and architecture, but changes the training objective so waveform, balance, and detune mistakes matter more when the affected oscillator is audible and matter less when it is nearly silent.
 
-The next planned model is `v3.5_noise_detune_loss`. It keeps v3.4's audibility-aware objective, but reduces detune loss when the detuned oscillator is noise because noise does not carry a meaningful pitched offset. It also boosts audible noise waveform classification so the model learns noise identity instead of chasing noise detune labels.
+`v3.5_noise_detune_loss` keeps v3.4's audibility-aware objective, reduces detune loss when the detuned oscillator is noise, and boosts audible-noise waveform classification. The next planned experiment is `v3.6_noise_detune_ablation`: it keeps the same architecture, data, optimizer, and noise-detune suppression, but removes only that waveform-classification boost.
 
 The v3 defaults are intentionally not exposed as routine CLI switches. If a future
 experiment needs a different architecture or loss, change the code deliberately and
